@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "leitor-simulados"
+version = "0.0.1"
+description = ""
+authors = ["Einstein Floripa <vale@einsteinfloripa.com.br>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "leitor_simulados"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pandas = "^2.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
