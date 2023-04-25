@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  training_environment:
+    restart: always
+    container_name: detection_deploy_environment
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+    command: tail -F anything
