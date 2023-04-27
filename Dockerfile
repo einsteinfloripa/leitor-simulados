@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:focal
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -11,7 +11,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 RUN apt update
 
-RUN apt install -y python3-pip libgl1
+RUN apt install -y python3-pip libgl1 libglib2.0-0
 
 RUN python3 -m pip install --upgrade pip
 
