@@ -1,8 +1,0 @@
-item { 
-	name:'cpf_block'
-	id:1
-}
-item { 
-	name:'questions_block'
-	id:2
-}

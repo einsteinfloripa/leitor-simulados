@@ -29,13 +29,8 @@ def crop_objects_on_image(img, detection, output_directory, output_img_file_name
 
 def draw_bounding_box_on_image(img, detection):
     ymin, xmin, ymax, xmax = get_bounding_box_pixels(img, detection["bounding_box"])
-
-    if detection["class_id"] == "cpf_block":
-        bounding_box_color = (0, 0, 255)
-    elif detection["class_id"] == "questions_block":
-        bounding_box_color = (255, 0, 0)
-
-    cv2.rectangle(img, (xmin, ymin), (xmax, ymax), bounding_box_color, 5)
+    bounding_box_color = (255, 0, 0)
+    cv2.rectangle(img, (xmin, ymin), (xmax, ymax), bounding_box_color, 3)
 
 
 def run_detection_model(
@@ -82,7 +77,7 @@ def run_detection_model(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model_name", type=str, default="macro_block_detection_v0_0_0"
+        "--model_name", type=str, default="1st_stage_v0_0_0"
     )
     parser.add_argument(
         "--label_map",
