@@ -169,7 +169,13 @@ def main():
         "--label_map_2nd_stage",
         type=str,
         nargs="+",
-        default=["cpf_column", "question_line", "selected_ball", "question_number"],
+        default=[
+            "cpf_column",
+            "question_line",
+            "selected_ball",
+            "unselected_ball",
+            "question_number",
+        ],
     )
     parser.add_argument("--score_threshold_1st_stage", type=float, default=0.5)
     parser.add_argument("--score_threshold_2nd_stage", type=float, default=0.5)
