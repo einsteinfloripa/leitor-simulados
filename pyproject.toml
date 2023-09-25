@@ -10,6 +10,8 @@ packages = [{include = "leitor_simulados"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 pandas = "^2.0.0"
+tflite-runtime = "^2.13.0"
+opencv-python = "^4.8.0.76"
 
 
 [build-system]
