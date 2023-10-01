@@ -28,8 +28,9 @@ class Image():
         return wrapper
     
     
-    def make_detections_with_model(self, model):
-        self.detections = detect_objects_on_img_file(model, self.raw)
+    def make_detections_with_model(self, model, score_threshold):
+        detections = detect_objects_on_img_file(model, self.raw)
+        self.detections = [d for d in detections if d.score > score_threshold]
 
     @_has_detections
     def save_cropped(self):
