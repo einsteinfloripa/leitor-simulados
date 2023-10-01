@@ -1,74 +1,44 @@
-import os
 import argparse
 import json
-import glob
 import uuid
 
 import cv2
-import numpy as np
-import tflite_runtime.interpreter as tflite
 
-from object_detection import Model, detect_objects_on_img_file, get_bounding_box_pixels
-
-global IMG_EXTENSIONS
-IMG_EXTENSIONS = ("**/*.jpg", "**/*.jpeg", "**/*.png")
-
-global EXPECTED_CPF_BLOCK_COUNT
-EXPECTED_CPF_BLOCK_COUNT = 1
-
-global EXPECTED_CPF_COLUMN_COUNT
-EXPECTED_CPF_COLUMN_COUNT = 11
-
-global EXPECTED_QUESTIONS_BLOCK_COUNT
-EXPECTED_QUESTIONS_BLOCK_COUNT = 6
-
-global EXPECTED_QUESTION_LINE_COUNT
-EXPECTED_QUESTION_LINE_COUNT = 10
-
-global EXPECTED_QUESTION_NUMBER_COUNT
-EXPECTED_QUESTION_NUMBER_COUNT = EXPECTED_QUESTION_LINE_COUNT
-
-global EXPECTED_QUESTION_SELECTED_BALL_COUNT
-EXPECTED_QUESTION_SELECTED_BALL_COUNT = 1
-
+from object_detection import Model, Detection, detect_objects_on_img_file, get_bounding_box_pixels
+from filesystem import FileSystem
 
 def run_model(
     img,
     detection_model,
-    label_map,
     score_threshold,
-):
+)-> list[Detection]:
     detections = detect_objects_on_img_file(detection_model, img)
 
     filtered_detections = []
     for detection in detections:
-        if detection["score"] >= score_threshold:
-            detection["bounding_box"] = detection["bounding_box"]
-            classes_index = int(detection["class_id"])
-            detection["class_id"] = label_map[classes_index]
-            detection["score"] = float(detection["score"])
+        if detection.score >= score_threshold:
             filtered_detections.append(detection)
-
+    
     return filtered_detections
 
 
-def approved_1st_stage_detections(detections_1st_stage):
+def approved_1st_stage_detections(detections_1st_stage : list[Detection]):
     cpf_block_count = 0
     questions_block_count = 0
     for detection in detections_1st_stage:
-        if detection["class_id"] == "cpf_block":
+        if detection.class_id == 1: # cpf_block
             cpf_block_count += 1
             # TODO: Check if cpf_block is near the top of the page
-        if detection["class_id"] == "questions_block":
+        if detection.class_id == 2: # questions_block
             questions_block_count += 1
             # TODO: Check if all questions_block have similar width and height
             # TODO: Check if all questions_block are placed in the expected grid (e.g 2 lines and 3 columns)
 
-    if (
-        cpf_block_count != EXPECTED_CPF_BLOCK_COUNT
-        or questions_block_count != EXPECTED_QUESTIONS_BLOCK_COUNT
-    ):
-        return False
+    # if (
+    #     cpf_block_count != EXPECTED_CPF_BLOCK_COUNT
+    #     or questions_block_count != EXPECTED_QUESTIONS_BLOCK_COUNT
+    # ):
+    #   return False
 
     return True
 
@@ -101,22 +71,12 @@ def scan_exam(
     label_map_2nd_stage,
     score_threshold_1st_stage,
     score_threshold_2nd_stage,
-    input_directory,
-    output_directory,
 ):
     detection_model_1st_stage = Model(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
 
-    imgs_paths = []
-    for ext in IMG_EXTENSIONS:
-        imgs_paths.extend(glob.glob(os.path.join(input_directory, ext), recursive=True))
 
-    if not os.path.exists(
-        output_directory
-    ):  # TODO check if it makes sense to exit the function in case the dir already exists
-        os.makedirs(output_directory)
-
-    for img_path in imgs_paths:
+    for img_path in FileSystem.INPUT_PATHS:
         img = cv2.imread(img_path)
         detections_1st_stage = run_model(
             img,
@@ -182,6 +142,10 @@ def main():
     parser.add_argument("--output_directory", type=str, default="detection_output")
     args = parser.parse_args()
 
+    FileSystem.get_valid_dir("INPUT_DIR", args.input_directory)
+    FileSystem.get_valid_dir("OUTPUT_DIR", args.output_directory)
+    FileSystem.get_input_paths(recursive=True)
+
     scan_exam(
         args.model_name_1st_stage,
         args.model_name_2nd_stage,
@@ -189,8 +153,6 @@ def main():
         args.label_map_2nd_stage,
         args.score_threshold_1st_stage,
         args.score_threshold_2nd_stage,
-        args.input_directory,
-        args.output_directory,
     )
 
 

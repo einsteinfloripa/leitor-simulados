@@ -19,8 +19,6 @@ class Model:
 
 class Detection:
 
-    label_map = []
-
     def __init__(self, bounding_box, class_id, score, width, height):
         self.bounding_box : list[float, float, float, float] = bounding_box
         self.class_id : int = int(class_id)

@@ -11,6 +11,7 @@ class FileSystem:
     CROPPED_OUTPUT_DIR = None
 
     INPUT_PATHS = None
+    ACCEPTED_IMAGE_EXTENTIONS = (".jpg", ".jpeg", ".png")
 
     MODELS_PATH = None
 
@@ -20,22 +21,27 @@ class FileSystem:
         setattr(cls, attrib, Path(value))
 
     @classmethod    
-    def set_valid_dir(cls, path_varname, path):
+    def get_valid_dir(cls, path_varname, path):
         path = Path(path)
         if not path.exists():
             path.mkdir()
         setattr(cls, path_varname, path)
 
     @classmethod
-    def get_input_paths(cls):
+    def get_input_paths(cls, recursive=False):
         if not hasattr(cls, "INPUT_DIR"):
             raise Exception("Input paths not set!")
         try:
-            cls.INPUT_PATHS = (
-                sorted(glob.glob(f"{cls.INPUT_DIR}/*.jpg"))
-                + sorted(glob.glob(f"{cls.INPUT_DIR}/*.jpeg"))
-                + sorted(glob.glob(f"{cls.INPUT_DIR}/*.png"))
-            )
+            cls.INPUT_PATHS = [] 
+            for extention in cls.ACCEPTED_IMAGE_EXTENTIONS:
+                if recursive:
+                    cls.INPUT_PATHS.extend(
+                        sorted(glob.glob(f"{cls.INPUT_DIR}/**/*{extention}", recursive=True))
+                    )
+                else:
+                    cls.INPUT_PATHS.extend(
+                        sorted(glob.glob(f"{cls.INPUT_DIR}/*{extention}"))
+                    )          
         except Exception as e:
             raise e
         
