@@ -10,9 +10,6 @@ import tflite_runtime.interpreter as tflite
 
 from object_detection import Model, detect_objects_on_img_file, get_bounding_box_pixels
 
-global MODELS_PATH
-MODELS_PATH = "/workspace/models"
-
 global IMG_EXTENSIONS
 IMG_EXTENSIONS = ("**/*.jpg", "**/*.jpeg", "**/*.png")
 
