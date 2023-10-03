@@ -4,8 +4,9 @@ import uuid
 
 import cv2
 
-from object_detection import Model, Detection, detect_objects_on_img_file, get_bounding_box_pixels
+from object_detection import Model, Detection, detect_objects_on_img_file
 from filesystem import FileSystem
+import checks
 
 def run_model(
     img,
@@ -23,24 +24,33 @@ def run_model(
 
 
 def approved_1st_stage_detections(detections_1st_stage : list[Detection]):
-    cpf_block_count = 0
-    questions_block_count = 0
-    for detection in detections_1st_stage:
-        if detection.class_id == 1: # cpf_block
-            cpf_block_count += 1
-            # TODO: Check if cpf_block is near the top of the page
-        if detection.class_id == 2: # questions_block
-            questions_block_count += 1
-            # TODO: Check if all questions_block have similar width and height
-            # TODO: Check if all questions_block are placed in the expected grid (e.g 2 lines and 3 columns)
 
-    # if (
-    #     cpf_block_count != EXPECTED_CPF_BLOCK_COUNT
-    #     or questions_block_count != EXPECTED_QUESTIONS_BLOCK_COUNT
-    # ):
-    #   return False
+    checks.dispatch_detections(detections_1st_stage, stage=1)
+    report = checks.get_report()
 
-    return True
+    #print just for debugging
+    for class_name, checks_ in report.items():
+            print(class_name.upper().center(80, '-'))
+            for check_type in checks_:
+                line = f'{list(check_type.keys())[0]}: |'.rjust(40)
+                for results in check_type.values():
+                    for result_type, result in results.items():
+                        line += f'{result_type}={str(result):.10}|'.ljust(10)
+                print(line)
+    exit()
+            
+    #     if detection.class_id == 2: # questions_block
+    #         questions_block_count += 1
+    #         # TODO: Check if all questions_block have similar width and height
+    #         # TODO: Check if all questions_block are placed in the expected grid (e.g 2 lines and 3 columns)
+
+    # # if (
+    # #     cpf_block_count != EXPECTED_CPF_BLOCK_COUNT
+    # #     or questions_block_count != EXPECTED_QUESTIONS_BLOCK_COUNT
+    # # ):
+    # #   return False
+
+    # return True
 
 
 def approved_2nd_stage_detections(detections_2nd_stage):
@@ -75,13 +85,12 @@ def scan_exam(
     detection_model_1st_stage = Model(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
 
-
+    Detection.label_map = label_map_1st_stage
     for img_path in FileSystem.INPUT_PATHS:
         img = cv2.imread(img_path)
         detections_1st_stage = run_model(
             img,
             detection_model_1st_stage,
-            label_map_1st_stage,
             score_threshold_1st_stage,
         )
         if not approved_1st_stage_detections(detections_1st_stage):
@@ -90,7 +99,7 @@ def scan_exam(
             )  # TODO save these img path to a TXT file containing names of images that should be manually reviewed
         else:
             print("1st stage OK!")
-
+        Detection.label_map = label_map_2nd_stage
         for detection in detections_1st_stage:
             ymin, xmin, ymax, xmax = get_bounding_box_pixels(
                 img, detection["bounding_box"]
@@ -142,6 +151,8 @@ def main():
     parser.add_argument("--output_directory", type=str, default="detection_output")
     args = parser.parse_args()
 
+    FileSystem.set_path( "MODELS_PATH", './models' ) # FOR DEBUGGING
+    # FileSystem.set_path("MODELS_PATH", "/workspace/models")
     FileSystem.get_valid_dir("INPUT_DIR", args.input_directory)
     FileSystem.get_valid_dir("OUTPUT_DIR", args.output_directory)
     FileSystem.get_input_paths(recursive=True)

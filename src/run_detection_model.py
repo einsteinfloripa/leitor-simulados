@@ -43,14 +43,14 @@ def main():
     args = parser.parse_args()
 
     # Set variables
-    FileSystem.set_valid_dir("OUTPUT_DIR", args.output_directory)
-    FileSystem.set_valid_dir("INPUT_DIR", args.input_directory)
+    FileSystem.get_valid_dir("OUTPUT_DIR", args.output_directory)
+    FileSystem.get_valid_dir("INPUT_DIR", args.input_directory)
     if args.crop_objects:
-        FileSystem.set_valid_dir("CROPPED_OUTPUT_DIR", f"{args.output_directory}_cropped")
+        FileSystem.get_valid_dir("CROPPED_OUTPUT_DIR", f"{args.output_directory}_cropped")
     FileSystem.get_input_paths()
     
     # FileSystem.set_path("MODELS_PATH", "/workspace/models")
-    FileSystem.set_path("MODELS_PATH", "./models")
+    FileSystem.set_path("MODELS_PATH", "./models") # FOR DEBUGGING
 
     Detection.label_map = args.label_map
 

@@ -1,4 +1,3 @@
-import os
 import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
@@ -9,7 +8,7 @@ from filesystem import FileSystem
 class Model:
     def __init__(self, model_name):
         self.interpreter = tflite.Interpreter(
-            os.path.join(FileSystem.MODELS_PATH, model_name, "saved_model", "model.tflite")
+            str(FileSystem.MODELS_PATH / model_name / "saved_model" / "model.tflite")
         )
         self.interpreter.allocate_tensors()
         input_details = self.interpreter.get_input_details()[0]["shape"]
@@ -19,21 +18,34 @@ class Model:
 
 class Detection:
 
-    def __init__(self, bounding_box, class_id, score, width, height):
+    label_map = []
+
+    def __init__(self, bounding_box, class_id, score, img_width, img_height):
         self.bounding_box : list[float, float, float, float] = bounding_box
         self.class_id : int = int(class_id)
+        self.class_name : str = self.label_map[self.class_id]
         self.score : float = float(score)
-        self.width : int =  width
-        self.height : int = height
+        self.img_width : int =  img_width
+        self.img_height : int = img_height
     
+                            #       ( x, y )
+        self.middle_point : tuple[float, float] = (
+            (bounding_box[1] + bounding_box[3]) / 2, 
+            (bounding_box[0] + bounding_box[2]) / 2,
+        )
+
+    @classmethod
+    def set_label_map(cls, label_map):
+        cls.label_map = label_map
+
     def to_pixels(self) -> tuple[int, int, int, int]:
         ymin, xmin, ymax, xmax = self.bounding_box
         # print(self.bounding_box, self.width, self.height)
 
-        xmin = int(xmin * self.width)
-        xmax = int(xmax * self.width)
-        ymin = int(ymin * self.height)
-        ymax = int(ymax * self.height)
+        xmin = int(xmin * self.img_width)
+        xmax = int(xmax * self.img_width)
+        ymin = int(ymin * self.img_height)
+        ymax = int(ymax * self.img_height)
 
         return (ymin, xmin, ymax, xmax)
 
