@@ -13,7 +13,7 @@ def run_detection_model(
     score_threshold,
     crop_objects,
 ):
-    img = Image(input_path)
+    img = Image.from_path(input_path)
 
     # THIS IS THE OBJECT CONTAINING ALL DETECTIONS
     img.make_detections_with_model(detection_model, score_threshold)
