@@ -3,8 +3,9 @@ import numpy as np
 import tflite_runtime.interpreter as tflite
 
 from filesystem import FileSystem
+from data_classes import FloatBoundingBox, FloatPoint
 
-
+# CLASSES
 class Model:
     def __init__(self, model_name):
         self.interpreter = tflite.Interpreter(
@@ -21,7 +22,7 @@ class Detection:
     label_map = []
 
     def __init__(self, bounding_box, class_id, score, img_width, img_height):
-        self.bounding_box : list[float, float, float, float] = bounding_box
+        self.bounding_box : FloatBoundingBox = bounding_box
         self.class_id : int = int(class_id)
         self.class_name : str = self.label_map[self.class_id]
         self.score : float = float(score)
@@ -29,38 +30,42 @@ class Detection:
         self.img_height : int = img_height
     
                             #       ( x, y )
-        self.middle_point : tuple[float, float] = (
-            (bounding_box[1] + bounding_box[3]) / 2, 
-            (bounding_box[0] + bounding_box[2]) / 2,
+        self.middle_point : FloatPoint = FloatPoint(
+            x = (self.bounding_box.ponto_min.x + self.bounding_box.ponto_max.x) / 2, 
+            y = (self.bounding_box.ponto_min.y + self.bounding_box.ponto_max.y) / 2,
         )
 
+    # Public Setters
     @classmethod
     def set_label_map(cls, label_map):
         cls.label_map = label_map
 
-    def to_pixels(self) -> tuple[int, int, int, int]:
-        ymin, xmin, ymax, xmax = self.bounding_box
-        # print(self.bounding_box, self.width, self.height)
+    # Public functions
+    def to_pixels(self) -> tuple[int]:
+        xmin, ymin, xmax, ymax = self.bounding_box
 
         xmin = int(xmin * self.img_width)
         xmax = int(xmax * self.img_width)
         ymin = int(ymin * self.img_height)
         ymax = int(ymax * self.img_height)
 
-        return (ymin, xmin, ymax, xmax)
+        return xmin, ymin, xmax, ymax
 
     def to_json(self) -> dict:
-        ymin, xmin, ymax, xmax = self.bounding_box
+        xmin, ymin, xmax, ymax = self.bounding_box
         return {
             "class_id": self.label_map[self.class_id],
             "score": self.score,
-            "bounding_box": self.bounding_box,
+            "bounding_box": [*self.bounding_box],
         }
         
-
+        
     # to draw the bounding boxes in the correct order
     def __lt__(self, other):
-        self.class_id < other.class_id
+        return self.class_id < other.class_id
+    
+    def __repr__(self) -> str:
+        return "{}_{}.{}.{}.{}".format(self.class_name, *[str(p) for p in self.to_pixels()])
 
 
 
@@ -74,6 +79,7 @@ def normalize_image(img_raw, detection_model_input_height, detection_model_input
     return img_np
 
 
+# FUNCTIONS
 def set_input_tensor(interpreter, image):
     tensor_index = interpreter.get_input_details()[0]["index"]
     input_tensor = interpreter.tensor(tensor_index)()[0]
@@ -98,21 +104,23 @@ def detect_objects(interpreter, normalized_image, raw_image):
     detections = []
     for i in range(count):
         try:
+            ymin, xmin, ymax, xmax = boxes[i].tolist()
+            box = FloatBoundingBox.from_floats(xmin, ymin, xmax, ymax)
             detections.append(
                 Detection(
-                    boxes[i].tolist(),
+                    box,
                     classes[i],
                     scores[i],
                     raw_image.shape[1],
                     raw_image.shape[0],
                 )
             )
-        except:
-            pass
+        except Exception as e:
+            print(e)
     return detections
 
 
-def detect_objects_on_img_file(detection_model, img_raw) -> list[Detection]:
+def detect_objects_on_Image_object(detection_model, img_raw) -> list[Detection]:
     normalized_img = normalize_image(
         img_raw, detection_model.input_height, detection_model.input_width
     )

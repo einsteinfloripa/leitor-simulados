@@ -48,8 +48,9 @@ class FileSystem:
     @classmethod
     def save_json(cls, detections, image_name):
         json_data = []
-        for detection in detections:
-            json_data.append(detection.to_json())
+        if detections:
+            for detection in detections:
+                json_data.append(detection.to_json())
         with open(cls.OUTPUT_DIR / f"{image_name[:-4]}.json", "w") as f:
             json.dump(json_data, f, indent=4)
     

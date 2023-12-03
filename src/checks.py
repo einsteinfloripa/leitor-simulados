@@ -1,11 +1,7 @@
 from math import sqrt
 
 from object_detection import Detection
-
-
-def dispatch_detections(detections : list[Detection], stage : int = 1) -> None:
-        MAP_STAGE_1 = {'cpf_block':CpfBlockChecker, 'questions_block':QuestionsBlockChecker}
-        MAP_STAGE_2 = {
+from data_classes import FloatPoint, FloatBoundingBox
             'cpf_column':CpfColumnChecker, 'question_line':QuestionLineChecker,
             'selected_ball':SelectedBallChecker, 'unselected_ball':UnselectedBallChecker,
             'question_number':QuestionNumberChecker
@@ -55,77 +51,92 @@ class Checker(metaclass=Meta):
         for detection in cls.detections:
             if detection.class_name == detections_type:
                 count += 1
-        return { 'result': count == expected_value }
+        if count != expected_value:
+            return f'FAIL: Expected {expected_value} {detections_type} detections, got {count}'
+        return "PASSED" 
 
     @classmethod
     def center_is_near_of(
-            cls, detection : Detection, point : tuple[float, float], radius : float=0.05
+            cls, detection : Detection, point : FloatPoint, radius : float=0.05
         ) -> bool:
         distance = cls._get_distance_between_points(detection.middle_point, point)
-        result = distance <= radius
-        return {'result':result, 'distance':distance, 'center':detection.middle_point, 'point':point, 'radius':radius}
+        if distance > radius:
+            return f'FAIL: Expected {detection.class_name} center to be near of {point}, got {detection.middle_point}'
+        return "PASSED"
 
     @classmethod
     def horizontally_alling(cls, detections : list[Detection], tolerance = 0.05) -> bool:
-        points = [detection.middle_point for detection in detections]
-        average_y = sum([point[1] for point in points]) / len(points)
+        points : list[FloatPoint] = [detection.middle_point for detection in detections]
+        average_y : float = sum([point.y for point in points]) / len(points)
         result = None
         for point in points:
-            if abs(point[1] - average_y) > tolerance:
-                result = False
-        result = True
-        return {'result':result, 'average point':average_y, 'points':points, 'tolerance':tolerance }
+            if abs(point.y - average_y) > tolerance:
+                return f'FAIL: Expected {detections[0].class_name} to be horizontally alligned, got points: {points}'
+        return "PASSED"
 
     @classmethod
     def vertically_alling(cls, detections : list[Detection], tolerance = 0.05) -> bool:
-        points = [detection.middle_point for detection in detections]
-        average_x = sum([point[0] for point in points]) / len(points)
+        points : list[FloatPoint] = [detection.middle_point for detection in detections]
+        average_x = sum([point.x for point in points]) / len(points)
         result = None
         for point in points:
-            if abs(point[0] - average_x) > tolerance:
-                result = False
-        result = True
-        return {'result':result, 'average point':average_x, 'points':points, 'tolerance':tolerance }
+            if abs(point.x - average_x) > tolerance:
+                return f'FAIL: Expected {detections[0].class_name} to be vertically alligned, got points: {points}'
+        return "PASSED"
 
     @classmethod
-    def inside(bigger : Detection, smaller : Detection):
-        middle = smaller.middle_point
+    def contains(bigger : Detection, smaller : Detection):
+        middle : FloatPoint = smaller.middle_point
         ymin, xmin, ymax, xmax = bigger.bounding_box
-        result = ymin <= middle[1] <= ymax and xmin <= middle[0] <= xmax
-        return {'result':result, 'middle':middle, 'bounding_box':bigger.bounding_box}
+        result = ymin <= middle.y <= ymax and xmin <= middle.x <= xmax
+        if not result:
+            return f'FAIL: Expected {smaller.class_name} to be inside {bigger.class_name}, got {smaller.middle_point}'
+        return "PASSED"
 
 
     @classmethod
     def aspect_ratio(cls, detection : Detection, expected_ratio : float, tolerance : float = 0.1) -> bool:
         aspect_ratio = detection.width / detection.height
-        result = abs(aspect_ratio - expected_ratio) <= tolerance
-        return {'result':result, 'aspect_ratio':aspect_ratio, 'expected_ratio':expected_ratio, 'tolerance':tolerance}
+        if not abs(aspect_ratio - expected_ratio) <= tolerance:
+            return f'FAIL: Expected {detection.class_name} aspect ratio to be {expected_ratio}, got {aspect_ratio}'
+        return "PASSED"
 
-    # Below methods cannot be used as checks
+
+    @classmethod
+    def inside_box(cls, detection : Detection, bound_box : FloatBoundingBox) -> bool:
+        point = detection.middle_point
+        result = (bound_box.ponto_min.x <= point.x <= bound_box.ponto_max.x 
+                  and bound_box.ponto_min.y <= point.y <= bound_box.ponto_max.y)
+        if not result:
+            return f'FAIL: Expected {detection.class_name} to be inside {bound_box}, got {detection.middle_point}'
+        return "PASSED"
+
+
+    # Below methods are tools and cannot be used as checks
 
     @classmethod
     def _get_distance_between_points(
             cls,
-            point1 : tuple[float, float], point2 : tuple[float, float]
+            point1 : FloatPoint, point2 : FloatPoint
         ) -> float:
         return sqrt(
-            (point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2
+            (point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2
         )
     
     @classmethod
     def _sort_vertically(cls, detections : list[Detection]) -> list[Detection]:
-        return sorted(detections, key=lambda detection: detection.middle_point[1])
+        return sorted(detections, key=lambda detection: detection.middle_point.y)
 
     @classmethod
     def _sort_horizontally(cls, detections : list[Detection]) -> list[Detection]:
-        return sorted(detections, key=lambda detection: detection.middle_point[0])
+        return sorted(detections, key=lambda detection: detection.middle_point.x)
 
 
 # First stage
 class CpfBlockChecker(Checker):
-    EXPECTED_COUNT =   1
+    EXPECTED_COUNT =         1
     EXPECTED_COLUMN_COUNT = 11
-    EXPECTED_AVERAGE_MIDDLE_POINT = (0.34431372549019607843137254901961, 0.30139720558882235528942115768463)
+    EXPECTED_AVERAGE_MIDDLE_POINT : FloatPoint = FloatPoint(0.3443, 0.3013)
 
     @classmethod
     def perform_checks(cls):
@@ -142,9 +153,10 @@ class CpfBlockChecker(Checker):
 
 class QuestionsBlockChecker(Checker):
     EXPECTED_QUESTIONS_BLOCK_COUNT = 6
-    EXPECTED_AVERAGE_MEDDLE_POINTS = [
-        (.6, .2), (.6, .4), (.6, .6), (.6, .8), ( .6, 1), (.6, 1.2)
-    ] #TODO: get real values here
+    EXPECTED_AVERAGE_MIDDLE_POINTS = [
+        FloatPoint(0.2101, 0.5249), FloatPoint(0.5, 0.5249), FloatPoint(0.7713, 0.5249),
+        FloatPoint(0.2101, 0.7245), FloatPoint(0.5, 0.7245), FloatPoint(0.7713, 0.7245)
+    ]
     UPPER_TREE_BLOCKS : list[Detection] = []
     LOWER_TREE_BLOCKS : list[Detection] = []
 
