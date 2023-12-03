@@ -4,54 +4,10 @@ import uuid
 
 import cv2
 
-from object_detection import Model, Detection, detect_objects_on_img_file
+from object_detection import Model, Detection
 from filesystem import FileSystem
+from image import Image
 import checks
-
-def run_model(
-    img,
-    detection_model,
-    score_threshold,
-)-> list[Detection]:
-    detections = detect_objects_on_img_file(detection_model, img)
-
-    filtered_detections = []
-    for detection in detections:
-        if detection.score >= score_threshold:
-            filtered_detections.append(detection)
-    
-    return filtered_detections
-
-
-def approved_1st_stage_detections(detections_1st_stage : list[Detection]):
-
-    checks.dispatch_detections(detections_1st_stage, stage=1)
-    report = checks.get_report()
-
-    #print just for debugging
-    for class_name, checks_ in report.items():
-            print(class_name.upper().center(80, '-'))
-            for check_type in checks_:
-                line = f'{list(check_type.keys())[0]}: |'.rjust(40)
-                for results in check_type.values():
-                    for result_type, result in results.items():
-                        line += f'{result_type}={str(result):.10}|'.ljust(10)
-                print(line)
-    exit()
-            
-    #     if detection.class_id == 2: # questions_block
-    #         questions_block_count += 1
-    #         # TODO: Check if all questions_block have similar width and height
-    #         # TODO: Check if all questions_block are placed in the expected grid (e.g 2 lines and 3 columns)
-
-    # # if (
-    # #     cpf_block_count != EXPECTED_CPF_BLOCK_COUNT
-    # #     or questions_block_count != EXPECTED_QUESTIONS_BLOCK_COUNT
-    # # ):
-    # #   return False
-
-    # return True
-
 
 def approved_2nd_stage_detections(detections_2nd_stage):
     for detection in detections_2nd_stage:
@@ -85,46 +41,51 @@ def scan_exam(
     detection_model_1st_stage = Model(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
 
-    Detection.label_map = label_map_1st_stage
     for img_path in FileSystem.INPUT_PATHS:
-        img = cv2.imread(img_path)
-        detections_1st_stage = run_model(
-            img,
-            detection_model_1st_stage,
-            score_threshold_1st_stage,
+        Detection.set_label_map(label_map_1st_stage)
+        img = Image.from_path(img_path)
+        img.make_detections_with_model(
+            detection_model_1st_stage, score_threshold_1st_stage
         )
-        if not approved_1st_stage_detections(detections_1st_stage):
-            print(
-                img_path
-            )  # TODO save these img path to a TXT file containing names of images that should be manually reviewed
-        else:
-            print("1st stage OK!")
-        Detection.label_map = label_map_2nd_stage
-        for detection in detections_1st_stage:
-            ymin, xmin, ymax, xmax = get_bounding_box_pixels(
-                img, detection["bounding_box"]
-            )
-            cropped_img = img[ymin:ymax, xmin:xmax]
-            detections_2nd_stage = run_model(
-                cropped_img,
-                detection_model_2nd_stage,
-                label_map_2nd_stage,
-                score_threshold_2nd_stage,
-            )
-            if not approved_2nd_stage_detections(detections_2nd_stage):
-                print(
-                    img_path
-                )  # TODO save these img path to a TXT file containing names of images that should be manually reviewed
-            else:
-                print("2nd stage OK!")
+        report = checks.perform(img)
 
-        print("")
+        for label, tests in report.items():
+            print(label)
+            for test in tests:
+                for k, v in test.items():
+                    print(f'\t{k} : {v}')
+
+        print("1st stage OK!")
+        
+        
+
+        Detection.set_label_map(label_map_2nd_stage)
+        cropped_imgs : list[Image] = img.get_cropped()
+
+        # exit()
+        for crop_img in cropped_imgs:
+            crop_img.make_detections_with_model(
+                detection_model_2nd_stage, score_threshold_2nd_stage
+            )
+            report = checks.perform(crop_img)
+            crop_img.draw_bounding_boxes()
+            crop_img.save()
+
+
+            for label, tests in report.items():
+                print(label)
+                for test in tests:
+                    for k, v in test.items():
+                        print(f'{k:60} : {v}')
+            # exit()
+
+        print("2nd stage OK!")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name_1st_stage", type=str, default="1st_stage_v0_0_0")
-    parser.add_argument("--model_name_2nd_stage", type=str, default="2nd_stage_v0_0_0")
+    parser.add_argument("--model_name_2nd_stage", type=str, default="2nd_stage_v0_0_1")
     parser.add_argument(
         "--label_map_1st_stage",
         type=str,
