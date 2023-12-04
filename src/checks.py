@@ -1,37 +1,76 @@
 from math import sqrt
-
 from object_detection import Detection
+from image import Image
 from data_classes import FloatPoint, FloatBoundingBox
+
+__all__ = ['perform']
+
+
+
+def perform(img : Image):
+    clear_checks()
+    Checker.IMG_INSTANCE = img
+    dispatch_detections(img.detections)
+    return get_report()
+    
+def clear_checks():
+    CHECKERS_MAP = {'cpf_block':CpfBlockChecker, 'questions_block':QuestionsBlockChecker,
             'cpf_column':CpfColumnChecker, 'question_line':QuestionLineChecker,
             'selected_ball':SelectedBallChecker, 'unselected_ball':UnselectedBallChecker,
             'question_number':QuestionNumberChecker
         }
+    for check_class in CHECKERS_MAP.values():
+        check_class.detections.clear()
+        check_class.checks.clear()
+
+def dispatch_detections(detections : list[Detection]) -> None:
         
-        if stage == 1:
-            for detection in detections:
-                handler_class = MAP_STAGE_1[detection.class_name]
-                handler_class.detections.append(detection)
-                
-                # print(f'{handler_class.__name__} detection: {detection.class_name}')
+        CHECKERS_MAP = {'cpf_block':CpfBlockChecker, 'questions_block':QuestionsBlockChecker,
+            'cpf_column':CpfColumnChecker, 'question_line':QuestionLineChecker,
+            'selected_ball':SelectedBallChecker, 'unselected_ball':UnselectedBallChecker,
+            'question_number':QuestionNumberChecker
+        }
+
+        for detection in detections:
+            handler_class = CHECKERS_MAP[detection.class_name]
+            handler_class.detections.append(detection)
         
-        elif stage == 2:
-            for detection in detections:
-                handler_class = MAP_STAGE_2[detection.class_name]
-                handler_class.detections.append(detection)
-                
-                # print(f'{handler_class.__name__} detection: {detection.class_name}')
 
 def get_report():
-    report = {
+    
+
+    report =  {
+        "selected_ball" : SelectedBallChecker.perform_checks(),
+        "unselected_ball" : UnselectedBallChecker.perform_checks(),
+        "cpf_column" : CpfColumnChecker.perform_checks(),
         "cpf_block" : CpfBlockChecker.perform_checks(),
-        "question_block" : QuestionsBlockChecker.perform_checks()
+        "question_block" : QuestionsBlockChecker.perform_checks(),
+        "question_line" : QuestionLineChecker.perform_checks(),
+        "question_number" : QuestionNumberChecker.perform_checks()
+
     }
-    return report    
+    return report
+
+
+#AUX CLASSES
+def Group():
+    
+    def __init__(self, detections : list[Detection]) -> None:
+        self.detections = detections
+        self.middle_point = self._get_middle_point()
+
+    def add(self, detection : list[Detection]) -> None:
+        self.detections.append(detection)
+        self.middle_point = self._get_middle_point()
+
+    def _get_middle_point(self) -> tuple[float, float]:
+        x = sum([detection.middle_point[0] for detection in self.detections]) / len(self.detections)
+        y = sum([detection.middle_point[1] for detection in self.detections]) / len(self.detections)
+        return (x, y)
 
 
 '''
 Sorry for this meta mess i didant find a cleaner way to do this 
-(I didant wanted to instanciate any objects)
 The metaclass below is to ensure every Check child class gets
 his own copy of the detections list and checks list
 '''
@@ -42,6 +81,8 @@ class Meta(type):
         super().__init__(name, bases, attrs)
 
 class Checker(metaclass=Meta):
+
+    IMG_INSTANCE : Image = None
 
     # checks
 
@@ -131,6 +172,30 @@ class Checker(metaclass=Meta):
     def _sort_horizontally(cls, detections : list[Detection]) -> list[Detection]:
         return sorted(detections, key=lambda detection: detection.middle_point.x)
 
+    @classmethod
+    def _group_by(cls, detections : list[Detection], axis=None, spacing=0.03) -> list[list[Detection]]:
+        if axis == 'x':
+            sorted_detections = cls._sort_horizontally(detections)
+            p_index = 0
+        elif axis == 'y':
+            sorted_detections = cls._sort_vertically(detections)
+            p_index = 1
+        else:
+            raise ValueError("axis must be 'x' or 'y'")
+        
+        groups = []
+        for n, elem in enumerate(sorted_detections):
+            if n == 0:
+                group = Group([elem])
+                continue
+            if abs(elem.middle_point[p_index] - group[-1].middle_point[p_index]) <= spacing:
+                group.append(elem)
+            else:
+                groups.append(group)
+                group = Group([elem])
+        
+        return groups
+
 
 # First stage
 class CpfBlockChecker(Checker):
@@ -147,7 +212,6 @@ class CpfBlockChecker(Checker):
         cpf_block_detection = cls.detections[0]
         cls.checks.append( {"cpf_column_count":cls.count(cls.EXPECTED_COLUMN_COUNT, 'cpf_column')} )
         cls.checks.append( {"cpf_block_center_is_near_of":cls.center_is_near_of(cpf_block_detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT)} )
-        # cls.checks.append( {"colums_horizontaly_aligned":cls.horizontally_alling('cpf_column')} )
 
         return cls.checks
 
@@ -159,20 +223,23 @@ class QuestionsBlockChecker(Checker):
     ]
     UPPER_TREE_BLOCKS : list[Detection] = []
     LOWER_TREE_BLOCKS : list[Detection] = []
+    NAMES = ['upper_left', 'upper_middle', 'upper_right', 'lower_left', 'lower_middle', 'lower_right']
 
     @classmethod
     def perform_checks(cls):
         if len(cls.detections) == 0:
             return []
-
+        
         cls._sort_top_left_to_bottom_right(cls.detections)
-
+        sorted_detections = cls.UPPER_TREE_BLOCKS + cls.LOWER_TREE_BLOCKS
         cls.checks.append( {"question_block_count":cls.count(cls.EXPECTED_QUESTIONS_BLOCK_COUNT, 'questions_block')} )
         cls.checks.append( {"upper_tree_blocks_aling_horizontally":cls.horizontally_alling(cls.UPPER_TREE_BLOCKS, tolerance=0.01)} )
         cls.checks.append( {"lower_tree_blocks_aling_horizontally":cls.horizontally_alling(cls.LOWER_TREE_BLOCKS, tolerance=0.01)} )
         cls.checks.append( {"left_most_blocks_aling_vertically":cls.vertically_alling([cls.UPPER_TREE_BLOCKS[0], cls.LOWER_TREE_BLOCKS[0]], tolerance=0.01)} )
         cls.checks.append( {"midle_blocks_aling_vertically":cls.vertically_alling([cls.UPPER_TREE_BLOCKS[1], cls.LOWER_TREE_BLOCKS[1]], tolerance=0.01)} )
         cls.checks.append( {"right_most_blocks_align_vertically":cls.vertically_alling([cls.UPPER_TREE_BLOCKS[2], cls.LOWER_TREE_BLOCKS[2]], tolerance=0.01)} )
+        for point, detection, name in zip(cls.EXPECTED_AVERAGE_MIDDLE_POINTS, sorted_detections, cls.NAMES):
+            cls.checks.append( {f"{name}_question_block_center_is_near_of":cls.center_is_near_of(detection, point)} )
 
         return cls.checks
                 
@@ -187,19 +254,137 @@ class QuestionsBlockChecker(Checker):
 
 # Second stage
 class CpfColumnChecker(Checker):
-    pass
+    
+    def perform_checks():
+        return []
+        if len(cls.detections) == 0:
+            return None
+        return cls.checks
 
 class QuestionLineChecker(Checker):
-    EXPECTED_QUESTION_LINE_COUNT =          10
-    EXPECTED_QUESTION_SELECTED_BALL_COUNT =  1
-    pass
+    EXPECTED_QUESTION_LINE_COUNT = 10
+    EXPECTED_INTERVAL = FloatBoundingBox.from_floats(
+        x_min=0.4, y_min=0.17, x_max=0.6, y_max=0.96
+    )
+
+    @classmethod
+    def perform_checks(cls):
+        if len(cls.detections) == 0:
+            return []
+        
+        to_remove = []
+        for detection in cls.detections:
+            result = cls.inside_box(detection, cls.EXPECTED_INTERVAL)
+            if "FAIL" in result:
+                result = "DELETING DETECTION FROM LIST\n ->" + result
+                to_remove.append(detection)
+            cls.checks.append( {f"{detection}_inside_expected_interval":result })
+
+        cls.checks.append( {"question_line_count":cls.count(cls.EXPECTED_QUESTION_LINE_COUNT, 'question_line')} )
+        cls.checks.append( {"question_line_vertically_aling":cls.vertically_alling(cls.detections, tolerance=0.05)} )
+
+        for detection in to_remove:
+            cls.IMG_INSTANCE.detections.remove(detection)
+
+        return cls.checks
+
+
+    @classmethod
+    def get_vertically_sorted(cls) -> list[Detection]:
+        return cls._sort_vertically(cls.detections)
+
 
 class QuestionNumberChecker(Checker):
-    EXPECTED_QUESTION_NUMBER_COUNT =        10
-    pass
+
+    EXPECTED_INTERVAL = FloatBoundingBox.from_floats(
+        x_min=0.09, y_min=0.17, x_max=0.15, y_max=0.96
+    )
+    EXPECTED_QUESTION_NUMBER_COUNT = 10
+
+    @classmethod
+    def perform_checks(cls):
+        if len(cls.detections) == 0:
+            return []
+        
+        to_remove = []
+        for detection in cls.detections:
+            result = cls.inside_box(detection, cls.EXPECTED_INTERVAL)
+            if "FAIL" in result:
+                result = "DELETING DETECTION FROM LIST\n ->" + result
+                to_remove.append(detection)
+            cls.checks.append( {f"{detection}_inside_expected_interval":result })
+        for element in to_remove:
+            cls.IMG_INSTANCE.detections.remove(element)
+
+        cls.checks.append( {"question_number_count":cls.count(cls.EXPECTED_QUESTION_NUMBER_COUNT, 'question_number')} )
+        cls.checks.append( {"question_number_vertically_aling":cls.vertically_alling(cls.detections, tolerance=0.05)} )
+
+        return cls.checks
+
 
 class SelectedBallChecker(Checker):
-    pass
+    EXPECTED_INTERVAL = FloatBoundingBox.from_floats(
+        x_min=0.138, y_min=0.17, x_max=0.96, y_max=0.96
+)
+    EXPECTED_SELECTED_BALL_COUNT = 10
+    
+    @classmethod
+    def perform_checks(cls):
+        if len(cls.detections) == 0:
+            return []
+        
+        to_remove = []
+        for detection in cls.detections:
+            result = cls.inside_box(detection, cls.EXPECTED_INTERVAL)
+            if "FAIL" in result:
+                result = "DELETING DETECTION FROM LIST\n ->" + result
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            cls.checks.append( {f"{detection}_inside_expected_interval":result })
+        for element in to_remove:
+            cls.IMG_INSTANCE.detections.remove(element)
+
+        cls.checks.append( {"selected_ball_count":cls.count(cls.EXPECTED_SELECTED_BALL_COUNT, 'selected_ball')} )
+        
+        return cls.checks
 
 class UnselectedBallChecker(Checker):
-    pass
+    EXPECTED_INTERVAL = FloatBoundingBox.from_floats(
+        x_min=0.138, y_min=0.17, x_max=0.96, y_max=0.96
+    )
+    EXPECTED_UNSELECTED_BALL_COUNT = 40
+    
+    @classmethod
+    def perform_checks(cls):
+        if len(cls.detections) == 0:
+            return []
+
+        to_remove = []
+        for detection in cls.detections:
+            result = cls.inside_box(detection, cls.EXPECTED_INTERVAL)
+            if "FAIL" in result:
+                result = "DELETING DETECTION FROM LIST\n ->" + result
+                to_remove.append(detection) 
+            cls.checks.append( {f"{detection}_inside_expected_interval":result })
+        for element in to_remove:
+            cls.IMG_INSTANCE.detections.remove(element)
+
+        cls.checks.append( {"unselected_ball_count":cls.count(cls.EXPECTED_UNSELECTED_BALL_COUNT, 'unselected_ball')} )
+        
+        return cls.checks
+    
+    @classmethod
+    def get_y_grouped(cls):
+        return cls._group_by(cls.detections, axis='y', spacing=0.05)
+
+
+class QuestionLineClusterChecker(Checker):
+    EXPECTED_SELECTED_BALL_COUNT =  1
+    EXPECTED_UNSELECTED_BALL_COUNT =  4
+    EXPECTED_QUESTION_NUMBER_COUNT = 1
+    
+    question_line_vsorted = QuestionLineChecker.get_vertically_sorted()
+    selected_balls_grouped = UnselectedBallChecker.get_y_grouped()
+
+
+
