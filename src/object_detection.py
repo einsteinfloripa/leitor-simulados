@@ -65,7 +65,7 @@ class Detection:
         return self.class_id < other.class_id
     
     def __repr__(self) -> str:
-        return "{}_{}.{}.{}.{}".format(self.class_name, *[str(p) for p in self.to_pixels()])
+        return "{}_{:.2f}-{:.2f}-{:.2f}-{:.2f}".format(self.class_name, *[x for x in self.bounding_box])
 
 
 
