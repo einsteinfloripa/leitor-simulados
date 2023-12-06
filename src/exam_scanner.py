@@ -32,7 +32,6 @@ def scan_exam(
         report = checks.perform(
             img, filter_detections=filter_detections, logfile=logfile
         )
-        print(report)
         print("1st stage OK!")
         
 

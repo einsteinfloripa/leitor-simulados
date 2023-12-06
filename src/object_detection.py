@@ -34,6 +34,10 @@ class Detection:
             x = (self.bounding_box.ponto_min.x + self.bounding_box.ponto_max.x) / 2, 
             y = (self.bounding_box.ponto_min.y + self.bounding_box.ponto_max.y) / 2,
         )
+        self.aspect_ratio : float = (
+            (self.bounding_box.ponto_max.y - self.bounding_box.ponto_min.y) /
+            (self.bounding_box.ponto_max.x - self.bounding_box.ponto_min.x)  
+        ) * (img_height / img_width)
 
     # Public Setters
     @classmethod

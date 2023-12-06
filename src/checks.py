@@ -113,7 +113,7 @@ class Checker(metaclass=Meta):
             if not result:
                 logger.warning(f'[{kwargs["name"]}] : FALIED')
                 logger.warning(f'{cls.__name__}.{func.__name__} called with args {args} and kwargs {kwargs}')
-            else:
+            elif result:
                 logger.debug(f'[{kwargs["name"]}] : PASSED')
                 logger.debug(f'{cls.__name__}.{func.__name__} called with args {args} and kwargs {kwargs}')
             return result        
@@ -134,6 +134,8 @@ class Checker(metaclass=Meta):
     def center_is_near_of(
             cls, detection : Detection, point : FloatPoint, radius : float=0.05, **kwargs
         ) -> bool:
+        # O raio é sempre em porcentagem da medida da altura da imagem
+        radius = radius * cls.IMG_INSTANCE.height
         distance = cls._get_distance_between_points(detection.middle_point, point)
         return not distance > radius
 
@@ -172,9 +174,7 @@ class Checker(metaclass=Meta):
     def aspect_ratio(
         cls, detection : Detection, expected_ratio : float, tolerance : float = 0.1, **kwargs
         ) -> bool:
-        width, height = cls._get_width_and_height(detection)
-        aspect_ratio = width / height
-        return abs(aspect_ratio - expected_ratio) <= tolerance
+        return abs(detection.aspect_ratio - expected_ratio) <= tolerance
 
     @classmethod
     @log_result
@@ -192,9 +192,14 @@ class Checker(metaclass=Meta):
             cls,
             point1 : FloatPoint, point2 : FloatPoint
         ) -> float:
+        point1, point2 = cls._transform([point1, point2])
         return sqrt(
             (point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2
         )
+    # recupera o dominio inicial
+    @classmethod
+    def _transform(cls, points) -> list[FloatPoint]:
+        return [FloatPoint(x * cls.IMG_INSTANCE.width , y * cls.IMG_INSTANCE.height) for x, y in points]
     
     @classmethod
     def _sort_vertically(cls, detections : list[Detection]) -> list[Detection]:
@@ -338,7 +343,7 @@ class QuestionsBlockChecker(Checker):
         for point, detection, name in zip(cls.EXPECTED_AVERAGE_MIDDLE_POINTS, cls.sorted_detections, cls.NAMES):
             checks.append(cls.center_is_near_of(detection, point, name=f"{name}_question_block_center_is_near_of"))
         for detection in cls.detections:
-            checks.append(cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=0.1, name="question_block_aspect_ratio"))
+            checks.append(cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=0.15, name="question_block_aspect_ratio"))
         
         return False in checks
 
