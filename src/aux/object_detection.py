@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
 
-from filesystem import FileSystem
-from data_classes import FloatBoundingBox, FloatPoint
+from aux.filesystem import FileSystem
+from aux.data_classes import FloatBoundingBox, FloatPoint
 
 # CLASSES
 class Model:

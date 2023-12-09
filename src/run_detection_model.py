@@ -1,9 +1,9 @@
 import argparse
 
-from image import Image
-from filesystem import FileSystem
+from aux.image import Image
+from aux.filesystem import FileSystem
 
-from object_detection import Model, Detection
+from aux.object_detection import Model, Detection
 
 
 def run_detection_model(

@@ -29,8 +29,9 @@ class FileSystem:
 
     @classmethod
     def get_input_paths(cls, recursive=False):
-        if not hasattr(cls, "INPUT_DIR"):
-            raise Exception("Input paths not set!")
+        if str(cls.INPUT_DIR.resolve()).endswith(cls.ACCEPTED_IMAGE_EXTENTIONS):
+            cls.INPUT_PATHS = [str(cls.INPUT_DIR.resolve())]
+            return
         try:
             cls.INPUT_PATHS = [] 
             for extention in cls.ACCEPTED_IMAGE_EXTENTIONS:

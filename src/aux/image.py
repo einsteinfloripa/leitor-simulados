@@ -6,8 +6,8 @@ import uuid
 import cv2
 import numpy as np
 
-from object_detection import Detection, detect_objects_on_Image_object
-from filesystem import FileSystem
+from aux.object_detection import Detection, detect_objects_on_Image_object
+from aux.filesystem import FileSystem
 
 class Image():
 
@@ -48,7 +48,7 @@ class Image():
             cv2.imwrite( 
                 str(
                     FileSystem.CROPPED_OUTPUT_DIR / 
-                    f"{self.name}_{str(uuid.uuid4())[:4]}_{detection.class_id}.jpg"
+                    f"{self.name}_{str(uuid.uuid4()[:4])}_{detection.class_id}.jpg"
                 ),
                 self.raw[ymin:ymax, xmin:xmax] 
             )
@@ -60,7 +60,7 @@ class Image():
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cropped.append(
                 Image(
-                    f"{self.name[:4]}_{str(uuid.uuid4())[:4]}_{detection.class_id}.jpg",
+                    f"{self.name[:-4]}_{str(uuid.uuid4())[:4]}_{detection.class_id}.jpg",
                     self.raw[ymin:ymax, xmin:xmax],
                     None
                 )

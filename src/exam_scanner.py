@@ -2,11 +2,12 @@ import argparse
 import json
 import uuid
 import cv2
-
-from object_detection import Model, Detection
-from filesystem import FileSystem
-from image import Image
 import checks
+
+from aux.object_detection import Model, Detection
+from aux.filesystem import FileSystem
+from aux.image import Image
+from aux import log
 
 
 def scan_exam(
@@ -16,8 +17,6 @@ def scan_exam(
     label_map_2nd_stage,
     score_threshold_1st_stage,
     score_threshold_2nd_stage,
-    logfile,
-    filter_detections,
 ):
     detection_model_1st_stage = Model(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
@@ -29,13 +28,19 @@ def scan_exam(
         img.make_detections_with_model(
             detection_model_1st_stage, score_threshold_1st_stage
         )
-        report = checks.perform(
-            img, filter_detections=filter_detections, logfile=logfile
-        )
+        try:
+            checks.perform(img, stage=1)
+        except AssertionError as e:
+            print(e)
+            continue
+        except Exception as e:
+            print('[CRITICAL]', e)
+    
         print("1st stage OK!")
         
 
-        exit()
+        cropped_imgs : list[Image] = [img]
+
         Detection.set_label_map(label_map_2nd_stage)
         cropped_imgs : list[Image] = img.get_cropped()
 
@@ -43,7 +48,12 @@ def scan_exam(
             crop_img.make_detections_with_model(
                 detection_model_2nd_stage, score_threshold_2nd_stage
             )
-            report = checks.perform(crop_img)
+            try:
+                checks.perform(crop_img, stage=2)
+            except AssertionError as e:
+                print(e)
+                continue
+            
             crop_img.draw_bounding_boxes()
             crop_img.save()
 
@@ -81,13 +91,26 @@ def main():
     parser.add_argument("--output_directory", type=str, default="detection_output")
     parser.add_argument("--logfile", action="store_true")
     parser.add_argument("--filter_detections", action="store_true")
+    parser.add_argument("--filter_only", action="store_true")
+    parser.add_argument(
+        "--prova",
+        type=str,
+        default="ENEM",
+        required=True,
+        nargs=1
+    )
     args = parser.parse_args()
 
+    # Set globals
     FileSystem.set_path( "MODELS_PATH", './models' ) # FOR DEBUGGING
     # FileSystem.set_path("MODELS_PATH", "/workspace/models")
     FileSystem.get_valid_dir("INPUT_DIR", args.input_directory)
     FileSystem.get_valid_dir("OUTPUT_DIR", args.output_directory)
     FileSystem.get_input_paths(recursive=True)
+    checks.FILTER_DETECTIONS = args.filter_detections
+    checks.FILTER_ONLY = args.filter_only
+    checks.load_checker(args.prova[0])
+    if not args.logfile: log.remove_filehandler()
 
     scan_exam(
         args.model_name_1st_stage,
@@ -96,8 +119,6 @@ def main():
         args.label_map_2nd_stage,
         args.score_threshold_1st_stage,
         args.score_threshold_2nd_stage,
-        args.logfile,
-        args.filter_detections,
     )
 
 
