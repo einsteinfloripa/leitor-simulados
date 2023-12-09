@@ -6,9 +6,9 @@ import glob
 
 class FileSystem:
 
-    INPUT_DIR = None
-    OUTPUT_DIR = None
-    CROPPED_OUTPUT_DIR = None
+    INPUT_DIR : Path = None
+    OUTPUT_DIR : Path= None
+    CROPPED_OUTPUT_DIR : Path = None
 
     INPUT_PATHS = None
     ACCEPTED_IMAGE_EXTENTIONS = (".jpg", ".jpeg", ".png")
@@ -17,31 +17,41 @@ class FileSystem:
 
 
     @classmethod
-    def set_path(cls, attrib, value):
-        setattr(cls, attrib, Path(value))
+    def set_path_if_exists(cls, attrib, value):
+        path = Path(value)
+        if path.exists():
+            setattr(cls, attrib, path)
+        else:
+            raise ValueError(f"Path {attrib} : {value} is not valid")
 
     @classmethod    
-    def get_valid_dir(cls, path_varname, path):
-        path = Path(path)
-        if not path.exists():
-            path.mkdir()
-        setattr(cls, path_varname, path)
+    def assure_valid_dir(cls, path_varname, path):
+        try:
+            path = Path(path)
+            if not path.exists():
+                path.mkdir()
+            setattr(cls, path_varname, path)
+        except Exception as e:
+            raise e
 
     @classmethod
     def get_input_paths(cls, recursive=False):
-        if str(cls.INPUT_DIR.resolve()).endswith(cls.ACCEPTED_IMAGE_EXTENTIONS):
-            cls.INPUT_PATHS = [str(cls.INPUT_DIR.resolve())]
-            return
         try:
+            if not cls.INPUT_DIR.is_dir():
+                path = str(cls.INPUT_DIR.resolve())
+                if path.endswith(cls.ACCEPTED_IMAGE_EXTENTIONS):
+                    cls.INPUT_PATHS = [path]
+                return
+            
             cls.INPUT_PATHS = [] 
             for extention in cls.ACCEPTED_IMAGE_EXTENTIONS:
                 if recursive:
                     cls.INPUT_PATHS.extend(
-                        sorted(glob.glob(f"{cls.INPUT_DIR}/**/*{extention}", recursive=True))
-                    )
+                        [str(p) for p in cls.INPUT_DIR.rglob(f"*{extention}")]
+                )
                 else:
                     cls.INPUT_PATHS.extend(
-                        sorted(glob.glob(f"{cls.INPUT_DIR}/*{extention}"))
+                        [str(p) for p in cls.INPUT_DIR.glob(f"*{extention}")]
                     )          
         except Exception as e:
             raise e

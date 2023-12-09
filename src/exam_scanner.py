@@ -38,11 +38,11 @@ def scan_exam(
     
         print("1st stage OK!")
         
-
-        cropped_imgs : list[Image] = [img]
-
+        
         Detection.set_label_map(label_map_2nd_stage)
         cropped_imgs : list[Image] = img.get_cropped()
+
+        cropped_imgs = [img]
 
         for crop_img in cropped_imgs:
             crop_img.make_detections_with_model(
@@ -51,7 +51,7 @@ def scan_exam(
             try:
                 checks.perform(crop_img, stage=2)
             except AssertionError as e:
-                print(e)
+                log.logging.exception(e)
                 continue
             
             crop_img.draw_bounding_boxes()
@@ -99,18 +99,21 @@ def main():
         required=True,
         nargs=1
     )
+    parser.add_argument("--recursive", action="store_true", default=True)
+
     args = parser.parse_args()
 
     # Set globals
-    FileSystem.set_path( "MODELS_PATH", './models' ) # FOR DEBUGGING
+    FileSystem.set_path_if_exists( "MODELS_PATH", './models' ) # FOR DEBUGGING
     # FileSystem.set_path("MODELS_PATH", "/workspace/models")
-    FileSystem.get_valid_dir("INPUT_DIR", args.input_directory)
-    FileSystem.get_valid_dir("OUTPUT_DIR", args.output_directory)
-    FileSystem.get_input_paths(recursive=True)
+    FileSystem.set_path_if_exists("INPUT_DIR", args.input_directory)
+    FileSystem.assure_valid_dir("OUTPUT_DIR", args.output_directory)
+    FileSystem.get_input_paths(recursive=args.recursive)
     checks.FILTER_DETECTIONS = args.filter_detections
     checks.FILTER_ONLY = args.filter_only
     checks.load_checker(args.prova[0])
     if not args.logfile: log.remove_filehandler()
+
 
     scan_exam(
         args.model_name_1st_stage,
