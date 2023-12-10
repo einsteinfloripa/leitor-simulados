@@ -17,6 +17,7 @@ def scan_exam(
     label_map_2nd_stage,
     score_threshold_1st_stage,
     score_threshold_2nd_stage,
+    save_detections
 ):
     detection_model_1st_stage = Model(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
@@ -49,13 +50,15 @@ def scan_exam(
             except Exception as e:
                 log.logging.exception(e)
                 exit(1)
-            
-            
-            crop_img.draw_bounding_boxes()
-            crop_img.save()
-
-
+        
         print("2nd stage OK!")
+
+        if save_detections:
+            img.draw_bounding_boxes()
+            img.save()
+            for crop_img in cropped_imgs:
+                crop_img.draw_bounding_boxes()
+                crop_img.save()
 
 
 def main():
@@ -86,13 +89,18 @@ def main():
         "--input_directory", type=str, default=None, required=True
     )  # TODO: change Default value
     parser.add_argument("--output_directory", type=str, default="detection_output")
+    # make a log file
+    # the arg must be one of the levels of the log 
+    # ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
     parser.add_argument(
         "--logfile",
         nargs="*",
         type=str,
         default=None,
         )
+    # remove the detections that do not pass the checks before performing the checks
     parser.add_argument("--filter_detections", action="store_true")
+    #only filter the detections, do not perform the checks
     parser.add_argument("--filter_only", action="store_true")
     parser.add_argument(
         "--prova",
@@ -101,7 +109,10 @@ def main():
         required=True,
         nargs=1
     )
+    # for recursive search in the files
     parser.add_argument("--recursive", action="store_true", default=True)
+    # save the image with detections drawn and the detections json file
+    parser.add_argument("--save_detections", action="store_true", default=True)
 
     args = parser.parse_args()
 
@@ -124,6 +135,7 @@ def main():
         args.label_map_2nd_stage,
         args.score_threshold_1st_stage,
         args.score_threshold_2nd_stage,
+        args.save_detections,
     )
 
 
