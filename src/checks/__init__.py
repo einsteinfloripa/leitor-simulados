@@ -45,22 +45,6 @@ def perform(img : Image, stage : int):
 #AUX CLASSES
 
 
-def Group():
-    
-    def __init__(self, detections : list[Detection]) -> None:
-        self.detections = detections
-        self.middle_point = self._get_middle_point()
-
-    def add(self, detection : list[Detection]) -> None:
-        self.detections.append(detection)
-        self.middle_point = self._get_middle_point()
-
-    def _get_middle_point(self) -> tuple[float, float]:
-        x = sum([detection.middle_point[0] for detection in self.detections]) / len(self.detections)
-        y = sum([detection.middle_point[1] for detection in self.detections]) / len(self.detections)
-        return (x, y)
-
-
 '''
 Sorry for this meta mess i didant find a cleaner way to do this 
 The metaclass below is to ensure every Check child class gets
@@ -79,10 +63,17 @@ class Checker(metaclass=Meta):
     
     IMG_INSTANCE : Image = None
 
+
+    #public methods
+    @classmethod
+    def get_detections(cls) -> list[Detection]:
+        return cls.detections
+        
+    # wrapper functions
     def has_detections(func) -> Callable:
         def wrapper(cls, *args, **kwargs):
             if len(cls.detections) == 0:
-                cls.logger.info(f'No detections found for [{cls.__name__}]')
+                cls.logger.info(f'No detections found!')
                 return []
             else:
                 return func(cls, *args, **kwargs)
@@ -111,6 +102,7 @@ class Checker(metaclass=Meta):
         for detection in cls.detections:
             if detection.class_name == detections_type:
                 count += 1
+        cls.logger.debug(f'count : {count} == {expected_value}')
         return count == expected_value
 
     @classmethod
@@ -192,33 +184,25 @@ class Checker(metaclass=Meta):
     @classmethod
     def _sort_horizontally(cls, detections : list[Detection]) -> list[Detection]:
         return sorted(detections, key=lambda detection: detection.middle_point.x)
-    
-    @classmethod
-    def _get_width_and_height(cls, detection : Detection) -> tuple[float, float]:
-        xmin, ymin, xmax, ymax = detection.to_pixels()
-        return (xmax - xmin, ymax - ymin)
 
     @classmethod
-    def _group_by(cls, detections : list[Detection], axis=None, spacing=0.03) -> list[list[Detection]]:
+    def _group_by_axis(cls, detections : list[Detection], size, axis=None) -> list[list[Detection]]:
         if axis == 'x':
             sorted_detections = cls._sort_horizontally(detections)
-            p_index = 0
         elif axis == 'y':
             sorted_detections = cls._sort_vertically(detections)
-            p_index = 1
         else:
             raise ValueError("axis must be 'x' or 'y'")
         
         groups = []
-        for n, elem in enumerate(sorted_detections):
-            if n == 0:
-                group = Group([elem])
-                continue
-            if abs(elem.middle_point[p_index] - group[-1].middle_point[p_index]) <= spacing:
-                group.append(elem)
-            else:
-                groups.append(group)
-                group = Group([elem])
-        
+        while len(sorted_detections) > 0:
+            group = []
+            for _ in range(size):
+                try:
+                    group.append(sorted_detections.pop(0))
+                except IndexError:
+                    break
+            groups.append(group)
+    
         return groups
     

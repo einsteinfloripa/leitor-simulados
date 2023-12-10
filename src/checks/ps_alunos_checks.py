@@ -46,6 +46,7 @@ def perform_checks(stage : int) -> None:
         SelectedBallChecker.perform_checks()
         UnselectedBallChecker.perform_checks()
         QuestionNumberChecker.perform_checks()
+        QuestionLineClusterChecker.perform_checks()
 
 
 
@@ -377,14 +378,35 @@ class UnselectedBallChecker(Checker):
 
         cls.logger.warning(f'[ PASSED ]')
 
-# class QuestionLineClusterChecker(Checker):
-#     EXPECTED_SELECTED_BALL_COUNT =  1
-#     EXPECTED_UNSELECTED_BALL_COUNT =  4
-#     EXPECTED_QUESTION_NUMBER_COUNT = 1
+
+class QuestionLineClusterChecker(Checker):
+    EXPECTED_SELECTED_BALL_COUNT =  1
+    EXPECTED_UNSELECTED_BALL_COUNT =  4
+    EXPECTED_QUESTION_NUMBER_COUNT = 1
     
-#     question_line_vsorted = QuestionLineChecker.get_vertically_sorted()
-#     selected_balls_grouped = UnselectedBallChecker.get_y_grouped()
+    @classmethod
+    def perform_checks(cls):
+        cls._build_clusters()
+        for cluster in cls.clusters:
+            question_line = cluster['parent']
+            for detection in cluster['children']:
+                cls.contains(question_line, detection)
 
+        cls.logger.warning(f'[ PASSED ]')
 
+    @classmethod
+    def _build_clusters(cls):
+        selected_ball = cls._group_by_axis(SelectedBallChecker.get_detections(), axis='y', size=1)
+        unselected_ball = cls._group_by_axis(UnselectedBallChecker.get_detections(), axis='y', size=4)
+        question_number = cls._group_by_axis(QuestionNumberChecker.get_detections(), axis='y', size=1)
+        question_line = QuestionLineChecker.get_detections()
+
+        assert len(selected_ball) == len(unselected_ball) == len(question_number) == len(question_line)
+        
+        cls.clusters = []
+        for i in range(len(selected_ball)):
+            cluster = {'parent':None, 'children':[]}
+            cluster['parent'] = question_line[i]
+            cluster['childrem'] = selected_ball[i] + unselected_ball[i] + question_number[i]
 
 

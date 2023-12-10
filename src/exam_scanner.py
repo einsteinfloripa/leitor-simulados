@@ -42,7 +42,6 @@ def scan_exam(
         Detection.set_label_map(label_map_2nd_stage)
         cropped_imgs : list[Image] = img.get_cropped()
 
-        cropped_imgs = [img]
 
         for crop_img in cropped_imgs:
             crop_img.make_detections_with_model(
