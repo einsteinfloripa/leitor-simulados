@@ -30,12 +30,9 @@ def scan_exam(
         )
         try:
             checks.perform(img, stage=1)
-        except AssertionError as e:
-            print(e)
-            continue
         except Exception as e:
-            print('[CRITICAL]', e)
-    
+            log.logging.exception(e)
+            exit(1)
         print("1st stage OK!")
         
         
@@ -49,9 +46,10 @@ def scan_exam(
             )
             try:
                 checks.perform(crop_img, stage=2)
-            except AssertionError as e:
+            except Exception as e:
                 log.logging.exception(e)
-                continue
+                exit(1)
+            
             
             crop_img.draw_bounding_boxes()
             crop_img.save()
@@ -88,7 +86,12 @@ def main():
         "--input_directory", type=str, default=None, required=True
     )  # TODO: change Default value
     parser.add_argument("--output_directory", type=str, default="detection_output")
-    parser.add_argument("--logfile", action="store_true")
+    parser.add_argument(
+        "--logfile",
+        nargs="*",
+        type=str,
+        default=None,
+        )
     parser.add_argument("--filter_detections", action="store_true")
     parser.add_argument("--filter_only", action="store_true")
     parser.add_argument(
@@ -111,8 +114,8 @@ def main():
     checks.FILTER_DETECTIONS = args.filter_detections
     checks.FILTER_ONLY = args.filter_only
     checks.load_checker(args.prova[0])
-    if not args.logfile: log.remove_filehandler()
-
+    if args.logfile is None: log.remove_filehandler()
+    if args.logfile: log.set_log_level(args.logfile)
 
     scan_exam(
         args.model_name_1st_stage,

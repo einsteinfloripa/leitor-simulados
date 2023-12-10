@@ -8,7 +8,7 @@ console = logging.StreamHandler()
 
 file_handler = logging.FileHandler(filename="checks_log.txt", delay=True)
 #config
-console.setLevel(logging.INFO)
+console.setLevel(logging.WARNING)
 console.setFormatter(simple_formatter)
 
 file_handler.setLevel(logging.DEBUG)
@@ -31,8 +31,12 @@ def remove_filehandler():
 
 def set_log_level(level):
     for logger in logging.Logger.manager.loggerDict.values():
-        logger.handlers[1].setLevel(level)
-
+        if len(logger.handlers) < 2: continue
+        try:
+            var = eval(f'logging.{level[0]}')
+            eval("logger.handlers[1].setLevel(var)")
+        except:
+            raise ValueError(f'Invalid log level: {level}')
 
 def get_new_logger(name):
     global LOGFILE

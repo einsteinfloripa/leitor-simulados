@@ -62,18 +62,18 @@ class CpfBlockChecker(Checker):
     @classmethod
     @Checker.has_detections
     def clean_detections(cls):
-        cls.logger.warning(f'Cleaning detections...')
+        cls.logger.info(f'Cleaning detections...')
         to_remove = []
         for detection in cls.detections:
             # Position
             if not cls.center_is_near_of(detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT, radius=cls.MIDDLE_POINT_RADIUS, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting out of bound detection : {detection}')
+                cls.logger.info(f'Deleting out of bound detection : {detection}')
 
             # Aspect Ratio
             elif not cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting bad aspect ratio detection : {detection}')
+                cls.logger.info(f'Deleting bad aspect ratio detection : {detection}')
 
 
         for detection in to_remove:
@@ -131,12 +131,12 @@ class QuestionsBlockChecker(Checker):
             # Position
             if not cls.center_is_near_of(cls.sorted_detections[i], cls.EXPECTED_AVERAGE_MIDDLE_POINTS[i], radius=cls.MIDDLE_POINTS_RADIUS, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting out of bound detection :  {detection}')
+                cls.logger.info(f'Deleting out of bound detection :  {detection}')
 
             # Aspect Ratio
             elif not cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting bad aspect ratio detection : {detection}')
+                cls.logger.info(f'Deleting bad aspect ratio detection : {detection}')
 
 
         for detection in to_remove:
@@ -184,12 +184,12 @@ class CpfColumnChecker(Checker):
             # Position
             if not cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting out of bound detection :  {detection}')
+                cls.logger.info(f'Deleting out of bound detection :  {detection}')
 
             # Aspect Ratio
             elif not cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting bad aspect ratio detection : {detection}')
+                cls.logger.info(f'Deleting bad aspect ratio detection : {detection}')
 
 
         for detection in to_remove:
@@ -205,7 +205,7 @@ class CpfColumnChecker(Checker):
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE)
 
-        cls.logger.warning(f'[ PASSED ]')
+        cls.logger.info(f'[ PASSED ]')
 
 
 class QuestionLineChecker(Checker):
@@ -230,11 +230,11 @@ class QuestionLineChecker(Checker):
             # Position
             if not cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting out of bound detection :  {detection}')
+                cls.logger.info(f'Deleting out of bound detection :  {detection}')
             # Aspect Ratio
             elif not cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting bad aspect ratio detection : {detection}')
+                cls.logger.info(f'Deleting bad aspect ratio detection : {detection}')
 
         for detection in to_remove:
             cls.IMG_INSTANCE.detections.remove(detection)
@@ -274,11 +274,11 @@ class QuestionNumberChecker(Checker):
             # Position
             if not cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting out of bound detection :  {detection}')
+                cls.logger.info(f'Deleting out of bound detection :  {detection}')
             # Aspect Ratio
             elif not cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting bad aspect ratio detection : {detection}')
+                cls.logger.info(f'Deleting bad aspect ratio detection : {detection}')
 
         for detection in to_remove:
             cls.IMG_INSTANCE.detections.remove(detection)
@@ -318,11 +318,11 @@ class SelectedBallChecker(Checker):
             # Position
             if not cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting out of bound detection :  {detection}')
+                cls.logger.info(f'Deleting out of bound detection :  {detection}')
             # Aspect Ratio
             elif not cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting bad aspect ratio detection : {detection}')
+                cls.logger.info(f'Deleting bad aspect ratio detection : {detection}')
 
         for detection in to_remove:
             cls.IMG_INSTANCE.detections.remove(detection)
@@ -358,11 +358,11 @@ class UnselectedBallChecker(Checker):
             # Position
             if not cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting out of bound detection :  {detection}')
+                cls.logger.info(f'Deleting out of bound detection :  {detection}')
             # Aspect Ratio
             elif not cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True):
                 to_remove.append(detection)
-                cls.logger.warning(f'Deleting bad aspect ratio detection : {detection}')
+                cls.logger.info(f'Deleting bad aspect ratio detection : {detection}')
 
         for detection in to_remove:
             cls.IMG_INSTANCE.detections.remove(detection)

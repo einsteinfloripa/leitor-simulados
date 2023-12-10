@@ -31,18 +31,20 @@ def load_checker(flag_prova : str):
 def perform(img : Image, stage : int):
 
 
-    logger.warning(f' ---- Performing checks on {img.name} ---- ')
+    logger.error(f' ---- Performing checks on {img.name} ---- ')
 
     Checker.IMG_INSTANCE = img
     if FILTER_ONLY:
         _checker.setup_detections(img.detections, True, stage)
     else:
-        _checker.setup_detections(img.detections, FILTER_DETECTIONS, stage)
-        _checker.perform_checks(stage)
+        try:
+            _checker.setup_detections(img.detections, FILTER_DETECTIONS, stage)
+            _checker.perform_checks(stage)
+        except AssertionError:
+            logger.error(f' --------- {img.name} FAILED --------- ')
+            return
 
-    logger.warning(f' --------- {img.name} PASSED --------- ')
-
-#AUX CLASSES
+    logger.error(f' --------- {img.name} PASSED --------- ')
 
 
 '''
@@ -63,12 +65,11 @@ class Checker(metaclass=Meta):
     
     IMG_INSTANCE : Image = None
 
-
-    #public methods
+    #public getters
     @classmethod
     def get_detections(cls) -> list[Detection]:
         return cls.detections
-        
+    
     # wrapper functions
     def has_detections(func) -> Callable:
         def wrapper(cls, *args, **kwargs):
@@ -81,15 +82,12 @@ class Checker(metaclass=Meta):
     
     def execute(func) -> Callable:
         def wrapper(cls, *args, **kwargs):
-            try:
-                result = func(cls, *args, **kwargs)
-            except Exception as e:
-                cls.logger.error(f'{"[ ERROR ]":10} {func.__name__} called with args {args} and kwargs {kwargs}')
-                raise e
+            result = func(cls, *args, **kwargs)
             if not result and not kwargs.get('filter', False):
-                cls.logger.warning(f'{"[ FAIL ]":10} {func.__name__} called with args {args} and kwargs {kwargs}')
-                raise AssertionError(f'{func.__name__} : FALIED', f'{cls.__name__}.{func.__name__} called with args {args} and kwargs {kwargs}')
-            elif result:
+                cls.logger.info(f'{"[ FAIL ]":10} {func.__name__} called with args {args} and kwargs {kwargs}')
+                cls.logger.warning(f'[ FALIED ]')
+                raise AssertionError
+            elif result and not kwargs.get('filter', False):
                 cls.logger.debug(f'[ PASSED ] {func.__name__} called with args {args} and kwargs {kwargs}')
             return result        
         return wrapper
