@@ -12,6 +12,7 @@ __all__ = ['perform']
 
 FILTER_DETECTIONS = None
 FILTER_ONLY = None
+CONTINUE_ON_FAIL = None
 
 logger = log.checks_logger
 
@@ -42,7 +43,7 @@ def perform(img : Image, stage : int):
             _checker.perform_checks(stage)
         except AssertionError:
             logger.error(f' --------- {img.name} FAILED --------- ')
-            return
+            raise AssertionError
 
     logger.error(f' --------- {img.name} PASSED --------- ')
 
@@ -82,14 +83,22 @@ class Checker(metaclass=Meta):
     
     def execute(func) -> Callable:
         def wrapper(cls, *args, **kwargs):
-            result = func(cls, *args, **kwargs)
-            if not result and not kwargs.get('filter', False):
-                cls.logger.info(f'{"[ FAIL ]":10} {func.__name__} called with args {args} and kwargs {kwargs}')
-                cls.logger.warning(f'[ FALIED ]')
-                raise AssertionError
-            elif result and not kwargs.get('filter', False):
-                cls.logger.debug(f'[ PASSED ] {func.__name__} called with args {args} and kwargs {kwargs}')
-            return result        
+            try:
+                func(cls, *args, **kwargs)
+                cls.logger.debug(f'[ PASSED ] {func.__name__} {args} {kwargs}')
+            except AssertionError as e:
+                if kwargs.get('filter', False):
+                    cls.logger.info(f'[ FALIED ] {func.__name__}: {e}')
+                    cls.logger.info(f'Delecting detections: {e.args[1]}')
+                    cls.to_remove.extend(e.args[1])
+                else:
+                    cls.logger.warning(f'[ FALIED ] {func.__name__}: {e}')
+                    if not CONTINUE_ON_FAIL:
+                        raise e
+
+            except Exception as e:
+                raise e
+
         return wrapper
 
     # checks
@@ -100,8 +109,12 @@ class Checker(metaclass=Meta):
         for detection in cls.detections:
             if detection.class_name == detections_type:
                 count += 1
-        cls.logger.debug(f'count : {count} == {expected_value}')
-        return count == expected_value
+        
+        if not count == expected_value:
+            raise AssertionError( 
+                f'count == {expected_value}  ::  {count} == {expected_value}', 
+                cls.detections
+            )
 
     @classmethod
     @execute
@@ -111,29 +124,43 @@ class Checker(metaclass=Meta):
         # O raio é sempre em porcentagem da medida da altura da imagem
         radius = radius * cls.IMG_INSTANCE.height
         distance = cls._get_distance_between_points(detection.middle_point, point)
-        return not distance > radius
-
+        if not distance <= radius:
+            raise AssertionError(
+                f'distance <= radius  ::  {distance} <= {radius}',
+                [detection]
+            )
+        
     @classmethod
     @execute
     def horizontally_alling(cls, detections : list[Detection], tolerance = None, **kwargs) -> bool:
-        points : list[FloatPoint] = [detection.middle_point for detection in detections]
-        average_y : float = sum([point.y for point in points]) / len(points)
+        average_y : float = sum([detection.middle_point.y for detection in detections]) / len(detections)
         result = None
-        for point in points:
-            if abs(point.y - average_y) > tolerance:
-                return False
-        return True
+        bad_detections = []
+        for detection in detections:
+            if abs(detection.middle_point.y - average_y) > tolerance:
+                bad_detections.append(detection)
+        if bad_detections:
+            string = ' '.join([f'{abs(detection.middle_point.y - average_y)} <= {tolerance}' for detection in bad_detections])
+            raise AssertionError(
+                f'abs(detection.middle_point.y - average_y) <= tolerance  ::  {string}',
+                bad_detections
+            )
 
     @classmethod
     @execute
     def vertically_alling(cls, detections : list[Detection], tolerance = None, **kwargs) -> bool:
-        points : list[FloatPoint] = [detection.middle_point for detection in detections]
-        average_x = sum([point.x for point in points]) / len(points)
+        average_x : float = sum([detection.middle_point.x for detection in detections]) / len(detections)
         result = None
-        for point in points:
-            if abs(point.x - average_x) > tolerance:
-                return False
-        return True
+        bad_detections = []
+        for detection in detections:
+            if abs(detection.middle_point.x - average_x) > tolerance:
+                bad_detections.append(detection)
+        if bad_detections:
+            string = ' '.join([f'{abs(detection.middle_point.x - average_x)} <= {tolerance}' for detection in bad_detections])
+            raise AssertionError(
+                f'abs(detection.middle_point.x - average_x) <= tolerance  ::  {string}',
+                bad_detections
+            )
 
     @classmethod
     @execute
@@ -141,14 +168,22 @@ class Checker(metaclass=Meta):
         middle : FloatPoint = smaller.middle_point
         ymin, xmin, ymax, xmax = bigger.bounding_box
         result = ymin <= middle.y <= ymax and xmin <= middle.x <= xmax
-        return result
+        if not result:
+            raise AssertionError(
+                f'b.ymin <= s.y <= b.ymax and b.xmin <= s.x <= b.xmax  ::  {ymin} <= {middle.y} <= {ymax} and {xmin} <= {middle.x} <= {xmax}',
+                [bigger, smaller]
+            )
 
     @classmethod
     @execute
     def aspect_ratio(
         cls, detection : Detection, expected_ratio : float, tolerance : float = None, **kwargs
         ) -> bool:
-        return abs(detection.aspect_ratio - expected_ratio) <= tolerance
+        if not abs(detection.aspect_ratio - expected_ratio) <= tolerance:
+            raise AssertionError(
+                f'abs(detection.aspect_ratio - expected_ratio) <= tolerance  ::  {abs(detection.aspect_ratio - expected_ratio)} <= {tolerance}',
+                [detection]
+            )
 
     @classmethod
     @execute
@@ -156,7 +191,11 @@ class Checker(metaclass=Meta):
         point = detection.middle_point
         result = (bound_box.ponto_min.x <= point.x <= bound_box.ponto_max.x 
                   and bound_box.ponto_min.y <= point.y <= bound_box.ponto_max.y)
-        return result
+        if not result:
+            raise AssertionError(
+                f'min.x <= detection.x <= max.x and min.y <= detection.y <= max.y  ::  {bound_box.ponto_min.x} <= {point.x} <= {bound_box.ponto_max.x} and {bound_box.ponto_min.y} <= {point.y} <= {bound_box.ponto_max.y}',
+                [detection]
+            )
 
 
     # Below methods are tools and cannot be used as checks

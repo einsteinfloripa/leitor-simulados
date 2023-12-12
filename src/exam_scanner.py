@@ -1,7 +1,4 @@
 import argparse
-import json
-import uuid
-import cv2
 import checks
 
 from aux.object_detection import Model, Detection
@@ -31,6 +28,8 @@ def scan_exam(
         )
         try:
             checks.perform(img, stage=1)
+        except AssertionError :
+            continue
         except Exception as e:
             log.logging.exception(e)
             exit(1)
@@ -110,11 +109,14 @@ def main():
         nargs=1
     )
     # for recursive search in the files
-    parser.add_argument("--recursive", action="store_true", default=True)
+    parser.add_argument("--recursive", action="store_false", default=True)
     # save the image with detections drawn and the detections json file
-    parser.add_argument("--save_detections", action="store_true", default=True)
+    parser.add_argument("--save_detections", action="store_false", default=True)
+    # continue the execution even if a check fails
+    parser.add_argument("--continue_on_fail", action="store_true", default=False)
 
     args = parser.parse_args()
+
 
     # Set globals
     FileSystem.set_path_if_exists( "MODELS_PATH", './models' ) # FOR DEBUGGING
@@ -122,9 +124,12 @@ def main():
     FileSystem.set_path_if_exists("INPUT_DIR", args.input_directory)
     FileSystem.assure_valid_dir("OUTPUT_DIR", args.output_directory)
     FileSystem.get_input_paths(recursive=args.recursive)
+
     checks.FILTER_DETECTIONS = args.filter_detections
     checks.FILTER_ONLY = args.filter_only
     checks.load_checker(args.prova[0])
+    checks.CONTINUE_ON_FAIL = args.continue_on_fail
+
     if args.logfile is None: log.remove_filehandler()
     if args.logfile: log.set_log_level(args.logfile)
 
