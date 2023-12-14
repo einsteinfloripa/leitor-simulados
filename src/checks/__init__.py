@@ -43,7 +43,7 @@ def perform(img : Image, stage : int):
             _checker.perform_checks(stage)
         except AssertionError:
             logger.error(f' --------- {img.name} FAILED --------- ')
-            raise AssertionError
+            raise
 
     logger.error(f' --------- {img.name} PASSED --------- ')
 

@@ -31,7 +31,7 @@ def scan_exam(
         except AssertionError :
             continue
         except Exception as e:
-            log.logging.exception(e)
+            log.logging.root.exception(e)
             exit(1)
         print("1st stage OK!")
         
@@ -47,7 +47,7 @@ def scan_exam(
             try:
                 checks.perform(crop_img, stage=2)
             except Exception as e:
-                log.logging.exception(e)
+                log.logging.root.exception(e)
                 exit(1)
         
         print("2nd stage OK!")
@@ -62,15 +62,17 @@ def scan_exam(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name_1st_stage", type=str, default="1st_stage_v0_0_0")
-    parser.add_argument("--model_name_2nd_stage", type=str, default="2nd_stage_v0_0_1")
+    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="1st_stage_v0_0_0")
+    parser.add_argument("-ms", "--model_name_2nd_stage", type=str, default="2nd_stage_v0_0_1")
     parser.add_argument(
+        "-lf",
         "--label_map_1st_stage",
         type=str,
         nargs="+",
         default=["cpf_block", "questions_block"],
     )
     parser.add_argument(
+        "-ls",
         "--label_map_2nd_stage",
         type=str,
         nargs="+",
@@ -82,12 +84,12 @@ def main():
             "question_number",
         ],
     )
-    parser.add_argument("--score_threshold_1st_stage", type=float, default=0.5)
-    parser.add_argument("--score_threshold_2nd_stage", type=float, default=0.5)
+    parser.add_argument("-sf", "--score_threshold_1st_stage", type=float, default=0.5)
+    parser.add_argument("-ss", "--score_threshold_2nd_stage", type=float, default=0.5)
     parser.add_argument(
-        "--input_directory", type=str, default=None, required=True
+        "-i", "--input_directory", type=str, default=None, required=True
     )  # TODO: change Default value
-    parser.add_argument("--output_directory", type=str, default="detection_output")
+    parser.add_argument("-o", "--output_directory", type=str, default="detection_output")
     # make a log file
     # the arg must be one of the levels of the log 
     # ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -98,10 +100,11 @@ def main():
         default=None,
         )
     # remove the detections that do not pass the checks before performing the checks
-    parser.add_argument("--filter_detections", action="store_true")
+    parser.add_argument("-fd", "--filter_detections", action="store_true")
     #only filter the detections, do not perform the checks
-    parser.add_argument("--filter_only", action="store_true")
+    parser.add_argument("-fo", "--filter_only", action="store_true")
     parser.add_argument(
+        "-p",
         "--prova",
         type=str,
         default="ENEM",
@@ -111,7 +114,7 @@ def main():
     # for recursive search in the files
     parser.add_argument("--recursive", action="store_false", default=True)
     # save the image with detections drawn and the detections json file
-    parser.add_argument("--save_detections", action="store_false", default=True)
+    parser.add_argument("--save_detections", action="store_true", default=False)
     # continue the execution even if a check fails
     parser.add_argument("--continue_on_fail", action="store_true", default=False)
 
