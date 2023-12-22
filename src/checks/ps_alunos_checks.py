@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from aux.log import checks_logger as logger
 
 from aux.object_detection import Detection
@@ -14,10 +16,10 @@ def setup_detections(detections : list[Detection], filter_detections : bool, sta
             'question_number':QuestionNumberChecker
         }
         logger.debug(f'Setup for detections')
-        # clear old detections and checks values
+        # clear old detections and reset fail flag
         for check_class in CHECKERS_MAP.values():
             check_class.detections.clear()
-            check_class.checks.clear()
+            check_class.fail = False
 
         # dispatch detections to their respective checkers
         if detections:
@@ -35,6 +37,7 @@ def setup_detections(detections : list[Detection], filter_detections : bool, sta
             for cls in CHECKERS_MAP.values():
                 if hasattr(cls, 'clean_detections'):
                     cls.clean_detections()
+
 
 def perform_checks(stage : int) -> None:
     if stage == 1:
@@ -57,7 +60,7 @@ class CpfBlockChecker(Checker):
     ASPECT_RATIO_TOLERANCE = 0.1
 
     EXPECTED_AVERAGE_MIDDLE_POINT : FloatPoint = FloatPoint(0.3443, 0.3013)
-    MIDDLE_POINT_RADIUS = 0.05 # 5% of the image height
+    MIDDLE_POINT_RADIUS_TOLERANCE = 0.05 # 5% of the image height
 
     @classmethod
     @Checker.has_detections
@@ -66,13 +69,16 @@ class CpfBlockChecker(Checker):
         cls.to_remove = []
         for detection in cls.detections:
             # Position
-            cls.center_is_near_of(detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT, radius=cls.MIDDLE_POINT_RADIUS, filter=True)
+            cls.center_is_near_of(detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT, radius=cls.MIDDLE_POINT_RADIUS_TOLERANCE, filter=True)
             # Aspect Ratio
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
 
         for detection in cls.to_remove:
-            cls.IMG_INSTANCE.detections.remove(detection)
-            cls.detections.remove(detection)
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                continue
 
     @classmethod
     @Checker.has_detections
@@ -80,11 +86,11 @@ class CpfBlockChecker(Checker):
 
         cls.count(cls.EXPECTED_COUNT, 'cpf_block')
         for detection in cls.detections:
-            cls.center_is_near_of(detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT, radius=cls.MIDDLE_POINT_RADIUS)
+            cls.center_is_near_of(detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT, radius=cls.MIDDLE_POINT_RADIUS_TOLERANCE)
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=0.1)
 
-        cls.logger.warning(f'[ PASSED ]')
+        if not cls.fail: cls.logger.warning(f'[ PASSED ]')
 
 
 class QuestionsBlockChecker(Checker):
@@ -102,7 +108,6 @@ class QuestionsBlockChecker(Checker):
     #aux
     UPPER_TREE_BLOCKS : list[Detection] = []
     LOWER_TREE_BLOCKS : list[Detection] = []
-    NAMES = ['upper_left', 'upper_middle', 'upper_right', 'lower_left', 'lower_middle', 'lower_right']
 
     
     @classmethod
@@ -127,8 +132,11 @@ class QuestionsBlockChecker(Checker):
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
 
         for detection in cls.to_remove:
-            cls.IMG_INSTANCE.detections.remove(detection)        
-            cls.detections.remove(detection)
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                continue
 
     @classmethod
     @Checker.has_detections
@@ -140,12 +148,12 @@ class QuestionsBlockChecker(Checker):
         cls.vertically_alling([cls.UPPER_TREE_BLOCKS[0], cls.LOWER_TREE_BLOCKS[0]], tolerance=0.01),
         cls.vertically_alling([cls.UPPER_TREE_BLOCKS[1], cls.LOWER_TREE_BLOCKS[1]], tolerance=0.01),
         cls.vertically_alling([cls.UPPER_TREE_BLOCKS[2], cls.LOWER_TREE_BLOCKS[2]], tolerance=0.01),
-        for point, detection, name in zip(cls.EXPECTED_AVERAGE_MIDDLE_POINTS, cls.sorted_detections, cls.NAMES):
+        for point, detection in zip(cls.EXPECTED_AVERAGE_MIDDLE_POINTS, cls.sorted_detections):
             cls.center_is_near_of(detection, point, radius=cls.MIDDLE_POINTS_RADIUS)
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE)
 
-        cls.logger.warning(f'[ PASSED ]')
+        if not cls.fail: cls.logger.warning(f'[ PASSED ]')
 
 ################# SECOND STAGE CHECKS #####################
 class CpfColumnChecker(Checker):
@@ -158,8 +166,8 @@ class CpfColumnChecker(Checker):
     #allignment
     ALLIGNMENT_TOLERANCE = 0.15 # 15% of the image height 
     #aspect ratio
-    EXPECTED_ASPECT_RATIO =  9.218
-    ASPECT_RATIO_TOLERANCE = 0.15
+    EXPECTED_ASPECT_RATIO =  9.5
+    ASPECT_RATIO_TOLERANCE = 0.2
 
     
     @classmethod
@@ -174,8 +182,11 @@ class CpfColumnChecker(Checker):
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
 
         for detection in cls.to_remove:
-            cls.IMG_INSTANCE.detections.remove(detection)
-            cls.detections.remove(detection)
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                continue
 
     @classmethod
     @Checker.has_detections
@@ -199,8 +210,8 @@ class QuestionLineChecker(Checker):
     #allignment
     ALLIGNMENT_TOLERANCE = 0.10 # 10% of the image height
     #aspect ratio
-    EXPECTED_ASPECT_RATIO =  0.1081
-    ASPECT_RATIO_TOLERANCE = 0.15 
+    EXPECTED_ASPECT_RATIO =  0.09
+    ASPECT_RATIO_TOLERANCE = 0.8 
 
     @classmethod
     @Checker.has_detections
@@ -214,8 +225,11 @@ class QuestionLineChecker(Checker):
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
 
         for detection in cls.to_remove:
-            cls.IMG_INSTANCE.detections.remove(detection)
-            cls.detections.remove(detection)
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                continue
 
     @classmethod
     @Checker.has_detections
@@ -226,7 +240,7 @@ class QuestionLineChecker(Checker):
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE)
 
-        cls.logger.warning(f'[ PASSED ]')
+        if not cls.fail: cls.logger.warning(f'[ PASSED ]')
 
 
 class QuestionNumberChecker(Checker):
@@ -240,7 +254,7 @@ class QuestionNumberChecker(Checker):
     ALLIGNMENT_TOLERANCE = 0.10 # 10% of the image height
     #aspect ratio
     EXPECTED_ASPECT_RATIO =  0.574
-    ASPECT_RATIO_TOLERANCE = 0.15 
+    ASPECT_RATIO_TOLERANCE = 0.8
 
     @classmethod
     @Checker.has_detections
@@ -254,10 +268,11 @@ class QuestionNumberChecker(Checker):
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
 
         for detection in cls.to_remove:
-            cls.IMG_INSTANCE.detections.remove(detection)
-            cls.detections.remove(detection)
-
-
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                continue
 
     @classmethod
     @Checker.has_detections
@@ -268,19 +283,31 @@ class QuestionNumberChecker(Checker):
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE)
 
-        cls.logger.warning(f'[ PASSED ]')
+        if not cls.fail: cls.logger.warning(f'[ PASSED ]')
 
 
 class SelectedBallChecker(Checker):
-#count
-    EXPECTED_COUNT = 10
-    #position
-    EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
-        x_min=0.138, y_min=0.17, x_max=0.96, y_max=0.96
-    )   
     #aspect ratio
     EXPECTED_ASPECT_RATIO =  1
-    ASPECT_RATIO_TOLERANCE = 0.2
+    ASPECT_RATIO_TOLERANCE = 0.3
+
+    @classmethod
+    def _precheck_setup(cls):
+        if cls.IMG_INSTANCE.cropped_by == 'cpf_block':
+            #count
+            cls.EXPECTED_COUNT = 11
+            #position
+            cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
+                x_min=0.135, y_min=0.08, x_max=0.96, y_max=0.96
+            )
+        elif cls.IMG_INSTANCE.cropped_by == 'questions_block':
+            #count
+            cls.EXPECTED_COUNT = 10
+            #position
+            cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
+                    x_min=0.138, y_min=0.17, x_max=0.96, y_max=0.96
+            )
+
 
     @classmethod
     @Checker.has_detections
@@ -294,8 +321,11 @@ class SelectedBallChecker(Checker):
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
 
         for detection in cls.to_remove:
-            cls.IMG_INSTANCE.detections.remove(detection)
-            cls.detections.remove(detection)
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                continue
 
     @classmethod
     @Checker.has_detections
@@ -305,18 +335,31 @@ class SelectedBallChecker(Checker):
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE)
 
-        cls.logger.warning(f'[ PASSED ]')
+        if not cls.fail: cls.logger.warning(f'[ PASSED ]')
+
 
 class UnselectedBallChecker(Checker):
-    #count
-    EXPECTED_COUNT = 40
-    #position
-    EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
-        x_min=0.138, y_min=0.17, x_max=0.96, y_max=0.96
-    )
+
     #aspect ratio
     EXPECTED_ASPECT_RATIO =  1
-    ASPECT_RATIO_TOLERANCE = 0.15 
+    ASPECT_RATIO_TOLERANCE = 0.3
+
+    @classmethod
+    def _precheck_setup(cls):
+        if cls.IMG_INSTANCE.cropped_by == 'cpf_block':
+            #count
+            cls.EXPECTED_COUNT = 100
+            #position
+            cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
+                x_min=0.135, y_min=0.08, x_max=0.96, y_max=0.96
+            )
+        elif cls.IMG_INSTANCE.cropped_by == 'questions_block':
+            #count
+            cls.EXPECTED_COUNT = 40
+            #position
+            cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
+                    x_min=0.138, y_min=0.17, x_max=0.96, y_max=0.96
+            )
 
     @classmethod
     @Checker.has_detections
@@ -329,6 +372,13 @@ class UnselectedBallChecker(Checker):
             # Aspect Ratio
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
 
+        for detection in cls.to_remove:
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                continue
+
     @classmethod
     @Checker.has_detections
     def perform_checks(cls):
@@ -337,7 +387,7 @@ class UnselectedBallChecker(Checker):
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE)
 
-        cls.logger.warning(f'[ PASSED ]')
+        if not cls.fail: cls.logger.warning(f'[ PASSED ]')
 
 
 class QuestionLineClusterChecker(Checker):
@@ -353,7 +403,7 @@ class QuestionLineClusterChecker(Checker):
             for detection in cluster['children']:
                 cls.contains(question_line, detection)
 
-        cls.logger.warning(f'[ PASSED ]')
+        if not cls.fail: cls.logger.warning(f'[ PASSED ]')
 
     @classmethod
     def _build_clusters(cls):

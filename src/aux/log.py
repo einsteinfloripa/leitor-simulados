@@ -27,7 +27,7 @@ checks_logger.addHandler(file_handler)
 def remove_filehandler():
     for logger in logging.Logger.manager.loggerDict.values():
         logger.removeHandler(file_handler)
-    # checks_logger.removeHandler(file_handler)
+
 
 def set_log_level(level):
     for logger in logging.Logger.manager.loggerDict.values():

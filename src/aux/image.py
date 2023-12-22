@@ -1,8 +1,6 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
 
-import uuid
-
 import cv2
 import numpy as np
 
@@ -20,12 +18,14 @@ class Image():
 
     colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (0,255,255), (255,0,255), (0,0,0)]
 
-    def __init__(self, name, raw, detections) -> None:
+    def __init__(self, name, raw, detections, cropped_by = None) -> None:
         self.raw : np.ndarray = raw
         self.name : str = name
         self.detections : list[Detection] = detections
         self.height : int = raw.shape[0]
         self.width : int = raw.shape[1]
+        self.cropped_by : str | None = cropped_by
+        self.BOUNDING_BOXES_DRAWN = False
 
     
     def _has_detections(func):
@@ -40,41 +40,47 @@ class Image():
     def make_detections_with_model(self, model, score_threshold) -> None:
         detections = detect_objects_on_Image_object(model, self.raw)
         self.detections = [d for d in detections if d.score > score_threshold]
-
-    @_has_detections
-    def save_cropped(self):
-        for detection in self.detections:
-            ymin, xmin, ymax, xmax = detection.to_pixels()
-            cv2.imwrite( 
-                str(
-                    FileSystem.CROPPED_OUTPUT_DIR / 
-                    f"{self.name}_{str(uuid.uuid4()[:4])}_{detection.class_id}.jpg"
-                ),
-                self.raw[ymin:ymax, xmin:xmax] 
-            )
+        # sort and mark detections from top left to bottom right    
+        self.detections.sort()
+        for i, detection in enumerate(self.detections):
+            detection.order = i
+        self.BOUNDING_BOXES_DRAWN = False
     
     @_has_detections
     def get_cropped(self) -> list[Image]:
         cropped = []
-        for n, detection in enumerate(self.detections):
+        # the detections are sorted by top left to bottom right
+        cont = 0
+        current_class = self.detections[0].class_id
+        for detection in self.detections:
+            if detection.class_id != current_class:
+                cont = 0
+                current_class = detection.class_id
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cropped.append(
                 Image(
-                    f"{self.name[:-4]}_{str(uuid.uuid4())[:4]}_{detection.class_id}.jpg",
+                    f"{self.name[:-4]}_{detection.class_name}_{cont:02}.jpg",
                     self.raw[ymin:ymax, xmin:xmax],
-                    None
+                    None,
+                    cropped_by=detection.class_name
                 )
             )
+            cont += 1
         return cropped
             
-
     @_has_detections
     def draw_bounding_boxes(self) -> None:
-        for detection in sorted(self.detections):
+        if self.BOUNDING_BOXES_DRAWN: return
+        for detection in self.detections:
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cv2.rectangle(self.raw, (xmin, ymin), (xmax, ymax), self.colors[detection.class_id], 3)
 
-    def save(self) -> None:
-        FileSystem.save_json(self.detections, self.name)
-        cv2.imwrite(str(FileSystem.OUTPUT_DIR / self.name), self.raw)
-
+    def save(self, path : str) -> None:      
+        cv2.imwrite(path, self.raw)
+    
+    def to_json(self) -> list:
+        json_data = []
+        if self.detections:
+            for detection in self.detections:
+                json_data.append(detection.to_json())
+        return json_data

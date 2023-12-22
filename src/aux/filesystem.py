@@ -1,13 +1,14 @@
-from pathlib import Path
 import json
 
-import glob
+from aux import log
+from pathlib import Path
 
+class FileSystem():
 
-class FileSystem:
+    logger = log.get_new_logger("FileSystem")
 
     INPUT_DIR : Path = None
-    OUTPUT_DIR : Path= None
+    OUTPUT_DIR : Path = None
     CROPPED_OUTPUT_DIR : Path = None
 
     INPUT_PATHS = None
@@ -15,9 +16,11 @@ class FileSystem:
 
     MODELS_PATH = None
 
+    SAVE_IMAGES = False
+
 
     @classmethod
-    def set_path_if_exists(cls, attrib, value):
+    def set_path(cls, attrib, value):
         path = Path(value)
         if path.exists():
             setattr(cls, attrib, path)
@@ -25,7 +28,7 @@ class FileSystem:
             raise ValueError(f"Path {attrib} : {value} is not valid")
 
     @classmethod    
-    def assure_valid_dir(cls, path_varname, path):
+    def make_and_set_dir(cls, path_varname, path):
         try:
             path = Path(path)
             if not path.exists():
@@ -40,28 +43,51 @@ class FileSystem:
             if not cls.INPUT_DIR.is_dir():
                 path = str(cls.INPUT_DIR.resolve())
                 if path.endswith(cls.ACCEPTED_IMAGE_EXTENTIONS):
+                    cls.logger.debug(f"Adding path: {path}")
                     cls.INPUT_PATHS = [path]
                 return
             
             cls.INPUT_PATHS = [] 
             for extention in cls.ACCEPTED_IMAGE_EXTENTIONS:
                 if recursive:
-                    cls.INPUT_PATHS.extend(
-                        [str(p) for p in cls.INPUT_DIR.rglob(f"*{extention}")]
-                )
+                    for p in cls.INPUT_DIR.rglob(f"*{extention}"):
+                        cls.logger.debug(f"Adding path: {p}")
+                        cls.INPUT_PATHS.append(str(p))
                 else:
-                    cls.INPUT_PATHS.extend(
-                        [str(p) for p in cls.INPUT_DIR.glob(f"*{extention}")]
-                    )          
+                    for p in cls.INPUT_DIR.glob(f"*{extention}"):
+                        cls.logger.debug(f"Adding path: {p}")
+                        cls.INPUT_PATHS.append(str(p))          
         except Exception as e:
             raise e
         
     @classmethod
-    def save_json(cls, detections, image_name):
-        json_data = []
-        if detections:
-            for detection in detections:
-                json_data.append(detection.to_json())
-        with open(cls.OUTPUT_DIR / f"{image_name[:-4]}.json", "w") as f:
-            json.dump(json_data, f, indent=4)
+    def txt_out(cls, text, filename):
+        with open(cls.OUTPUT_DIR / filename, "w") as f:
+            f.write(text)
     
+    @classmethod
+    def save(cls, main_img=None, cropped_imgs=None):
+        
+        if not main_img or not cropped_imgs:
+            raise Exception(f"main_img and cropped_imgs must be set, not: {main_img}, {cropped_imgs}")
+
+        out_path = cls.OUTPUT_DIR / main_img.name[:-4]
+        out_path.mkdir(parents=True, exist_ok=True)
+        cls.logger.info(f"saving {main_img.name} : {out_path}")
+
+        detection_data = {}
+        for crop_img in cropped_imgs:
+            detection_data.update({crop_img.name: crop_img.to_json()})
+        with open(str(out_path) + f'/{main_img.name[:-4]}.json', 'w') as f:
+            json.dump(detection_data, f, indent=4)
+
+        if cls.SAVE_IMAGES:
+            main_img.draw_bounding_boxes()
+            main_img.save(str(out_path / main_img.name))
+
+            for crop_img in cropped_imgs:
+                crop_img.draw_bounding_boxes()
+                crop_img.save(str(out_path / crop_img.name))
+
+
+

@@ -1,10 +1,12 @@
 import argparse
 import checks
 
-from aux.object_detection import Model, Detection
 from aux.filesystem import FileSystem
+from aux.object_detection import Model, Detection
 from aux.image import Image
 from aux import log
+
+logger = log.get_new_logger('exam scanner')
 
 
 def scan_exam(
@@ -14,51 +16,51 @@ def scan_exam(
     label_map_2nd_stage,
     score_threshold_1st_stage,
     score_threshold_2nd_stage,
-    save_detections
 ):
+    falied_imgs = ''
+    success_imgs = ''
     detection_model_1st_stage = Model(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
 
+
     for img_path in FileSystem.INPUT_PATHS:
-        Detection.set_label_map(label_map_1st_stage)
-        img = Image.from_path(img_path)
-
-        img.make_detections_with_model(
-            detection_model_1st_stage, score_threshold_1st_stage
-        )
         try:
-            checks.perform(img, stage=1)
-        except AssertionError :
-            continue
-        except Exception as e:
-            log.logging.root.exception(e)
-            exit(1)
-        print("1st stage OK!")
-        
-        
-        Detection.set_label_map(label_map_2nd_stage)
-        cropped_imgs : list[Image] = img.get_cropped()
+            Detection.set_label_map(label_map_1st_stage)
+            img = Image.from_path(img_path)
 
-
-        for crop_img in cropped_imgs:
-            crop_img.make_detections_with_model(
-                detection_model_2nd_stage, score_threshold_2nd_stage
+            img.make_detections_with_model(
+                detection_model_1st_stage, score_threshold_1st_stage
             )
-            try:
-                checks.perform(crop_img, stage=2)
-            except Exception as e:
-                log.logging.root.exception(e)
-                exit(1)
-        
-        print("2nd stage OK!")
+            checks.perform(img, stage=1)
+            
+            
+            Detection.set_label_map(label_map_2nd_stage)
+            cropped_imgs : list[Image] = img.get_cropped()
 
-        if save_detections:
-            img.draw_bounding_boxes()
-            img.save()
             for crop_img in cropped_imgs:
-                crop_img.draw_bounding_boxes()
-                crop_img.save()
+                crop_img.make_detections_with_model(
+                    detection_model_2nd_stage, score_threshold_2nd_stage
+                )
+                checks.perform(crop_img, stage=2)
+        
+            success_imgs += f'{img.name[:-4]}\n'
+        except AssertionError:
+            falied_imgs += f'{img.name[:-4]}\n'
+            if not checks.CONTINUE_ON_FAIL:
+                logger.error(f' --------- {img.name} FAILED --------- ')
+                raise
+            else: 
+                logger.error(f' --------- {img.name} FAILED --------- ')
+                continue
+        except Exception as e:
+            logger.exception(e)
+            exit(1)
+        
+        FileSystem.save(main_img=img, cropped_imgs=cropped_imgs)
 
+    report = f'success:\n{success_imgs}\n\nfalied:\n{falied_imgs}'
+    logger.info(report)
+    FileSystem.txt_out(report, 'report.txt')
 
 def main():
     parser = argparse.ArgumentParser()
@@ -89,7 +91,7 @@ def main():
     parser.add_argument(
         "-i", "--input_directory", type=str, default=None, required=True
     )  # TODO: change Default value
-    parser.add_argument("-o", "--output_directory", type=str, default="detection_output")
+    parser.add_argument("-o", "--output_directory", type=str, default="scanner_output")
     # make a log file
     # the arg must be one of the levels of the log 
     # ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -101,8 +103,6 @@ def main():
         )
     # remove the detections that do not pass the checks before performing the checks
     parser.add_argument("-fd", "--filter_detections", action="store_true")
-    #only filter the detections, do not perform the checks
-    parser.add_argument("-fo", "--filter_only", action="store_true")
     parser.add_argument(
         "-p",
         "--prova",
@@ -114,27 +114,30 @@ def main():
     # for recursive search in the files
     parser.add_argument("--recursive", action="store_false", default=True)
     # save the image with detections drawn and the detections json file
-    parser.add_argument("--save_detections", action="store_true", default=False)
+    parser.add_argument("--save_imgs", action="store_true", default=False)
     # continue the execution even if a check fails
     parser.add_argument("--continue_on_fail", action="store_true", default=False)
 
+
     args = parser.parse_args()
+    
 
-
-    # Set globals
-    FileSystem.set_path_if_exists( "MODELS_PATH", './models' ) # FOR DEBUGGING
-    # FileSystem.set_path("MODELS_PATH", "/workspace/models")
-    FileSystem.set_path_if_exists("INPUT_DIR", args.input_directory)
-    FileSystem.assure_valid_dir("OUTPUT_DIR", args.output_directory)
-    FileSystem.get_input_paths(recursive=args.recursive)
-
+    # SETTING GLOBALS
     checks.FILTER_DETECTIONS = args.filter_detections
-    checks.FILTER_ONLY = args.filter_only
-    checks.load_checker(args.prova[0])
     checks.CONTINUE_ON_FAIL = args.continue_on_fail
+    checks.load_checker(args.prova[0])
 
-    if args.logfile is None: log.remove_filehandler()
     if args.logfile: log.set_log_level(args.logfile)
+    else: log.remove_filehandler()
+
+
+    FileSystem.set_path( "MODELS_PATH", './models' ) # FOR DEBUGGING
+    FileSystem.set_path("INPUT_DIR", args.input_directory)
+    FileSystem.make_and_set_dir("OUTPUT_DIR", args.output_directory)
+    FileSystem.get_input_paths(recursive=args.recursive)
+    FileSystem.SAVE_IMAGES = args.save_imgs
+
+
 
     scan_exam(
         args.model_name_1st_stage,
@@ -143,7 +146,6 @@ def main():
         args.label_map_2nd_stage,
         args.score_threshold_1st_stage,
         args.score_threshold_2nd_stage,
-        args.save_detections,
     )
 
 

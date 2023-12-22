@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import aux.log as log
 
 from aux.object_detection import Detection
@@ -35,15 +37,15 @@ def perform(img : Image, stage : int):
     logger.error(f' ---- Performing checks on {img.name} ---- ')
 
     Checker.IMG_INSTANCE = img
-    if FILTER_ONLY:
-        _checker.setup_detections(img.detections, True, stage)
-    else:
-        try:
-            _checker.setup_detections(img.detections, FILTER_DETECTIONS, stage)
-            _checker.perform_checks(stage)
-        except AssertionError:
-            logger.error(f' --------- {img.name} FAILED --------- ')
+    
+    try:
+        _checker.setup_detections(img.detections, FILTER_DETECTIONS, stage)
+        _checker.perform_checks(stage)
+    except AssertionError:
+        logger.error(f' --------- {img.name} FAILED --------- ')
+        if not CONTINUE_ON_FAIL:
             raise
+        return
 
     logger.error(f' --------- {img.name} PASSED --------- ')
 
@@ -57,8 +59,8 @@ his own copy of the detections list and checks list
 class Meta(type):
     def __init__(cls, name, bases, attrs):
         cls.detections = []
-        cls.checks = {}
         cls.logger = log.get_new_logger(cls.__name__)
+        cls.fail = False
         super().__init__(name, bases, attrs)
     
 
@@ -93,6 +95,7 @@ class Checker(metaclass=Meta):
                     cls.to_remove.extend(e.args[1])
                 else:
                     cls.logger.warning(f'[ FALIED ] {func.__name__}: {e}')
+                    cls.fail = True
                     if not CONTINUE_ON_FAIL:
                         raise e
 
@@ -112,8 +115,7 @@ class Checker(metaclass=Meta):
         
         if not count == expected_value:
             raise AssertionError( 
-                f'count == {expected_value}  ::  {count} == {expected_value}', 
-                cls.detections
+                f'count == {expected_value}  ::  {count} == {expected_value}'
             )
 
     @classmethod
@@ -179,9 +181,9 @@ class Checker(metaclass=Meta):
     def aspect_ratio(
         cls, detection : Detection, expected_ratio : float, tolerance : float = None, **kwargs
         ) -> bool:
-        if not abs(detection.aspect_ratio - expected_ratio) <= tolerance:
+        if not abs(detection.aspect_ratio - expected_ratio)/expected_ratio <= tolerance:
             raise AssertionError(
-                f'abs(detection.aspect_ratio - expected_ratio) <= tolerance  ::  {abs(detection.aspect_ratio - expected_ratio)} <= {tolerance}',
+                f'abs(detection.aspect_ratio - expected_ratio) <= tolerance  ::  {abs(detection.aspect_ratio - expected_ratio)/expected_ratio} <= {tolerance}',
                 [detection]
             )
 
