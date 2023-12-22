@@ -412,8 +412,10 @@ class QuestionLineClusterChecker(Checker):
         question_number = cls._group_by_axis(QuestionNumberChecker.get_detections(), axis='y', size=1)
         question_line = QuestionLineChecker.get_detections()
 
-        assert len(selected_ball) == len(unselected_ball) == len(question_number) == len(question_line)
-        
+        if not len(selected_ball) == len(unselected_ball) == len(question_number) == len(question_line):
+            cls.logger.warning(f'[ FALIED ] _build_clusters : wrong number of detections')
+            raise AssertionError(f'wrong number of detections')
+
         cls.clusters = []
         for i in range(len(selected_ball)):
             cluster = {'parent':None, 'children':[]}
