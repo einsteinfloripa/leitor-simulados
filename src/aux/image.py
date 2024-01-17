@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from aux.object_detection import Detection, detect_objects_on_Image_object
-from aux.filesystem import FileSystem
+
 
 class Image():
 
@@ -78,9 +78,16 @@ class Image():
     def save(self, path : str) -> None:      
         cv2.imwrite(path, self.raw)
     
-    def to_json(self) -> list:
-        json_data = []
-        if self.detections:
+    def to_json(self, only_ball_detections=True) -> list:
+        if only_ball_detections:
+            json_data = []
             for detection in self.detections:
-                json_data.append(detection.to_json())
-        return json_data
+                if 'ball' in detection.class_name:
+                    json_data.append(detection.to_json())
+            return json_data
+        else:
+            json_data = []
+            if self.detections:
+                for detection in self.detections:
+                    json_data.append(detection.to_json())
+            return json_data

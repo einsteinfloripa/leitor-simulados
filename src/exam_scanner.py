@@ -22,8 +22,9 @@ def scan_exam(
     detection_model_1st_stage = Model(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
 
-
+    
     for img_path in FileSystem.INPUT_PATHS:
+        status = 'success'
         try:
             Detection.set_label_map(label_map_1st_stage)
             img = Image.from_path(img_path)
@@ -31,7 +32,10 @@ def scan_exam(
             img.make_detections_with_model(
                 detection_model_1st_stage, score_threshold_1st_stage
             )
-            checks.perform(img, stage=1)
+            if checks.perform(img, stage=1) == 'failed':
+                falied_imgs += f'{img.name[:-4]}\n'
+                status = 'failed'
+                continue
             
             
             Detection.set_label_map(label_map_2nd_stage)
@@ -41,17 +45,14 @@ def scan_exam(
                 crop_img.make_detections_with_model(
                     detection_model_2nd_stage, score_threshold_2nd_stage
                 )
-                checks.perform(crop_img, stage=2)
-        
-            success_imgs += f'{img.name[:-4]}\n'
-        except AssertionError:
-            falied_imgs += f'{img.name[:-4]}\n'
-            if not checks.CONTINUE_ON_FAIL:
-                logger.error(f' --------- {img.name} FAILED --------- ')
-                raise
-            else: 
-                logger.error(f' --------- {img.name} FAILED --------- ')
-                continue
+                if checks.perform(crop_img, stage=2) == 'failed' and status == 'success':
+                    falied_imgs += f'{img.name[:-4]}\n'
+                    status = 'failed'
+                    continue
+
+
+            if status == 'success':
+                success_imgs += f'{img.name[:-4]}\n'
         except Exception as e:
             logger.exception(e)
             exit(1)
@@ -61,6 +62,7 @@ def scan_exam(
     report = f'success:\n{success_imgs}\n\nfalied:\n{falied_imgs}'
     logger.info(report)
     FileSystem.txt_out(report, 'report.txt')
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -131,7 +133,7 @@ def main():
     else: log.remove_filehandler()
 
 
-    FileSystem.set_path( "MODELS_PATH", './models' ) # FOR DEBUGGING
+    FileSystem.set_path( "MODELS_PATH", './models' )
     FileSystem.set_path("INPUT_DIR", args.input_directory)
     FileSystem.make_and_set_dir("OUTPUT_DIR", args.output_directory)
     FileSystem.get_input_paths(recursive=args.recursive)

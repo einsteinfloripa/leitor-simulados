@@ -62,7 +62,7 @@ class Detection:
         return {
             "class_id": self.label_map[self.class_id],
             "score": self.score,
-            "bounding_box": [*self.bounding_box],
+            "bounding_box": [xmin, ymin, xmax, ymax],
         }
         
         

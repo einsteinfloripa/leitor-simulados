@@ -10,8 +10,6 @@ from typing import Callable
 
 
 #File configs
-__all__ = ['perform']
-
 FILTER_DETECTIONS = None
 FILTER_ONLY = None
 CONTINUE_ON_FAIL = None
@@ -33,7 +31,6 @@ def load_checker(flag_prova : str):
 # MAIN FUNCTION
 def perform(img : Image, stage : int):
 
-
     logger.error(f' ---- Performing checks on {img.name} ---- ')
 
     Checker.IMG_INSTANCE = img
@@ -45,9 +42,10 @@ def perform(img : Image, stage : int):
         logger.error(f' --------- {img.name} FAILED --------- ')
         if not CONTINUE_ON_FAIL:
             raise
-        return
+        return 'failed'
 
     logger.error(f' --------- {img.name} PASSED --------- ')
+    return 'success'
 
 
 '''
@@ -77,6 +75,7 @@ class Checker(metaclass=Meta):
     def has_detections(func) -> Callable:
         def wrapper(cls, *args, **kwargs):
             if len(cls.detections) == 0:
+                # TODO:nao ta printando quando deveria
                 cls.logger.info(f'No detections found!')
                 return []
             else:
@@ -234,14 +233,15 @@ class Checker(metaclass=Meta):
             raise ValueError("axis must be 'x' or 'y'")
         
         groups = []
-        while len(sorted_detections) > 0:
+        while len(sorted_detections) > size:
             group = []
             for _ in range(size):
-                try:
-                    group.append(sorted_detections.pop(0))
-                except IndexError:
-                    break
+                group.append(sorted_detections.pop(0))
+
             groups.append(group)
-    
+            
+        if sorted_detections:
+            groups.append(sorted_detections)
+
         return groups
     
