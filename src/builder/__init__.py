@@ -31,9 +31,15 @@ def build(path, status='success') -> dict:
 
     context = BuilderContext()
 
-    with open(path) as f:
-        data : dict = json.load(f)
-    
+    try:
+        with open(path) as f:
+            data : dict = json.load(f)
+    except FileNotFoundError as e:
+        logger.error(f'File not found! : {path.resolve()}')
+        return 'FILE NOT FOUND'
+        if not CONTINUE_ON_FAIL:
+            raise e
+
     logger.info('getting cpf block...')
     for name in data:
         if 'cpf' in name.lower():
@@ -66,7 +72,7 @@ class Builder():
         cont = 0
         while cont < 11:
             try:
-                answer_index = cls.get_selected_ball_position('columns', 11, ball_columns[cont])
+                answer_index = cls.get_selected_ball_position('columns', 10, ball_columns[cont])
             except IndexError:
                 break
             if answer_index is not None:
