@@ -1,7 +1,7 @@
 import argparse
 import checks
 
-from aux.filesystem import FileSystem
+from aux.filehandler import FileHandler
 from aux.object_detection import Model, Detection
 from aux.image import Image
 from aux import log
@@ -23,7 +23,7 @@ def scan_exam(
     detection_model_2nd_stage = Model(model_name_2nd_stage)
 
     
-    for img_path in FileSystem.INPUT_PATHS:
+    for img_path in FileHandler.INPUT_PATHS:
         status = 'success'
         try:
             Detection.set_label_map(label_map_1st_stage)
@@ -57,11 +57,11 @@ def scan_exam(
             logger.exception(e)
             exit(1)
         
-        FileSystem.save(main_img=img, cropped_imgs=cropped_imgs)
+        FileHandler.save(main_img=img, cropped_imgs=cropped_imgs)
 
     report = f'success:\n{success_imgs}\n\nfalied:\n{falied_imgs}'
     logger.info(report)
-    FileSystem.txt_out(report, 'report.txt')
+    FileHandler.txt_out(report, 'report.txt')
 
 
 def main():
@@ -91,8 +91,8 @@ def main():
     parser.add_argument("-sf", "--score_threshold_1st_stage", type=float, default=0.5)
     parser.add_argument("-ss", "--score_threshold_2nd_stage", type=float, default=0.5)
     parser.add_argument(
-        "-i", "--input_directory", type=str, default=None, required=True
-    )  # TODO: change Default value
+        "-i", "--input_directory", type=str, default='input_images', required=True
+    )
     parser.add_argument("-o", "--output_directory", type=str, default="scanner_output")
     # make a log file
     # the arg must be one of the levels of the log 
@@ -133,11 +133,11 @@ def main():
     else: log.remove_filehandler()
 
 
-    FileSystem.set_path( "MODELS_PATH", './models' )
-    FileSystem.set_path("INPUT_DIR", args.input_directory)
-    FileSystem.make_and_set_dir("OUTPUT_DIR", args.output_directory)
-    FileSystem.get_input_paths(recursive=args.recursive)
-    FileSystem.SAVE_IMAGES = args.save_imgs
+    FileHandler.set_path( "MODELS_PATH", './models' )
+    FileHandler.set_path("INPUT_DIR", args.input_directory)
+    FileHandler.make_and_set_dir("OUTPUT_DIR", args.output_directory)
+    FileHandler.get_input_paths_checker(recursive=args.recursive)
+    FileHandler.SAVE_IMAGES = args.save_imgs
 
 
 

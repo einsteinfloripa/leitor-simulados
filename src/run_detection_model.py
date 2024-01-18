@@ -1,7 +1,7 @@
 import argparse
 
 from aux.image import Image
-from aux.filesystem import FileSystem
+from aux.filehandler import FileHandler
 
 from aux.object_detection import Model, Detection
 
@@ -43,20 +43,20 @@ def main():
     args = parser.parse_args()
 
     # Set variables
-    FileSystem.get_valid_dir("OUTPUT_DIR", args.output_directory)
-    FileSystem.get_valid_dir("INPUT_DIR", args.input_directory)
+    FileHandler.get_valid_dir("OUTPUT_DIR", args.output_directory)
+    FileHandler.get_valid_dir("INPUT_DIR", args.input_directory)
     if args.crop_objects:
-        FileSystem.get_valid_dir("CROPPED_OUTPUT_DIR", f"{args.output_directory}_cropped")
-    FileSystem.get_input_paths()
+        FileHandler.get_valid_dir("CROPPED_OUTPUT_DIR", f"{args.output_directory}_cropped")
+    FileHandler.get_input_paths()
     
-    # FileSystem.set_path("MODELS_PATH", "/workspace/models")
-    FileSystem.set_path("MODELS_PATH", "./models") # FOR DEBUGGING
+    # FileHandler.set_path("MODELS_PATH", "/workspace/models")
+    FileHandler.set_path("MODELS_PATH", "./models") # FOR DEBUGGING
 
     Detection.label_map = args.label_map
 
     detection_model = Model(args.model_name)
 
-    for input_path in FileSystem.INPUT_PATHS:
+    for input_path in FileHandler.INPUT_PATHS:
         run_detection_model(
             input_path,
             detection_model,

@@ -1,12 +1,18 @@
 import logging
+import __main__
 
+
+LOGFILE = True
 
 #formatters
 simple_formatter = logging.Formatter("%(name)-25s - %(message)s")
 #handlers
 console = logging.StreamHandler()
 
-file_handler = logging.FileHandler(filename="checks_log.txt", delay=True)
+if 'exam' in __main__.__file__:
+    file_handler = logging.FileHandler(filename="checks_log.txt", delay=True)
+else:
+    file_handler = logging.FileHandler(filename="build_log.txt", delay=True)
 #config
 console.setLevel(logging.WARNING)
 console.setFormatter(simple_formatter)
@@ -25,9 +31,10 @@ checks_logger.addHandler(file_handler)
 
 
 def remove_filehandler():
+    global LOGFILE
     for logger in logging.Logger.manager.loggerDict.values():
         logger.removeHandler(file_handler)
-
+    LOGFILE = False
 
 def set_log_level(level):
     for logger in logging.Logger.manager.loggerDict.values():
@@ -43,6 +50,7 @@ def get_new_logger(name):
     global file_handler
     logger = logging.getLogger(name)
     logger.addHandler(console)
-    logger.addHandler(file_handler)
+    if LOGFILE:
+        logger.addHandler(file_handler)
     logger.setLevel(logging.DEBUG)
     return logger

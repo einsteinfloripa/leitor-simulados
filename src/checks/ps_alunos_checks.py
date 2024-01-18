@@ -145,9 +145,12 @@ class QuestionsBlockChecker(Checker):
         cls.count(cls.EXPECTED_COUNT, 'questions_block'),
         cls.horizontally_alling(cls.UPPER_TREE_BLOCKS, tolerance=0.01),
         cls.horizontally_alling(cls.LOWER_TREE_BLOCKS, tolerance=0.01),
-        cls.vertically_alling([cls.UPPER_TREE_BLOCKS[0], cls.LOWER_TREE_BLOCKS[0]], tolerance=0.01),
-        cls.vertically_alling([cls.UPPER_TREE_BLOCKS[1], cls.LOWER_TREE_BLOCKS[1]], tolerance=0.01),
-        cls.vertically_alling([cls.UPPER_TREE_BLOCKS[2], cls.LOWER_TREE_BLOCKS[2]], tolerance=0.01),
+        try:
+            cls.vertically_alling([cls.UPPER_TREE_BLOCKS[0], cls.LOWER_TREE_BLOCKS[0]], tolerance=0.01),
+            cls.vertically_alling([cls.UPPER_TREE_BLOCKS[1], cls.LOWER_TREE_BLOCKS[1]], tolerance=0.01),
+            cls.vertically_alling([cls.UPPER_TREE_BLOCKS[2], cls.LOWER_TREE_BLOCKS[2]], tolerance=0.01),
+        except IndexError:
+            pass
         for point, detection in zip(cls.EXPECTED_AVERAGE_MIDDLE_POINTS, cls.sorted_detections):
             cls.center_is_near_of(detection, point, radius=cls.MIDDLE_POINTS_RADIUS)
         for detection in cls.detections:

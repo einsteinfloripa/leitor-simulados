@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import json
 
 from aux import log
 from pathlib import Path
 
-class FileSystem():
+class FileHandler():
 
-    logger = log.get_new_logger("FileSystem")
+    logger = log.get_new_logger("FileHandler")
 
     INPUT_DIR : Path = None
     OUTPUT_DIR : Path = None
@@ -38,7 +40,7 @@ class FileSystem():
             raise e
 
     @classmethod
-    def get_input_paths(cls, recursive=False):
+    def get_input_paths_checker(cls, recursive=False):
         try:
             if not cls.INPUT_DIR.is_dir():
                 path = str(cls.INPUT_DIR.resolve())
@@ -59,11 +61,31 @@ class FileSystem():
                         cls.INPUT_PATHS.append(str(p))          
         except Exception as e:
             raise e
+    
+    @classmethod
+    def get_input_paths_builder(cls) -> list[Path]:
+        status = FileHandler.text_in(FileHandler.INPUT_DIR  / 'report.txt').strip('\n')
+        success, falied = [text.split('\n')[1:] for text in status.split('\n\n\n')]
         
+        success_paths = [FileHandler.INPUT_DIR / f'{name}' / f'{name}.json' for name in success] 
+        falied_paths = [FileHandler.INPUT_DIR / f'{name}' / f'{name}.json' for name in falied]
+
+        for path in success_paths:
+            cls.logger.info(f"Adding path: {path.resolve()}")
+        for path in falied_paths:
+            cls.logger.info(f"Adding path: {path.resolve()}")
+        
+        return {'success': success_paths, 'falied': falied_paths}
+
     @classmethod
     def txt_out(cls, text, filename):
         with open(cls.OUTPUT_DIR / filename, "w") as f:
             f.write(text)
+    
+    @classmethod
+    def text_in(cls, filepath):
+        with open(filepath, 'r') as f:
+            return f.read()
     
     @classmethod
     def save(cls, main_img=None, cropped_imgs=None):
@@ -88,6 +110,12 @@ class FileSystem():
             for crop_img in cropped_imgs:
                 crop_img.draw_bounding_boxes()
                 crop_img.save(str(out_path / crop_img.name))
+    
+    @classmethod
+    def save_report(cls, report):
+        cls.logger.info(f"saving report: {(cls.OUTPUT_DIR / 'final_report.json').resolve()}	")
+        with open(cls.OUTPUT_DIR / 'final_report.json', 'w') as f:
+            json.dump(report, f)
 
 
 

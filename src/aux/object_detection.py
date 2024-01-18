@@ -4,14 +4,14 @@ import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
 
-from aux.filesystem import FileSystem
+from aux.filehandler import FileHandler
 from aux.data_classes import FloatBoundingBox, FloatPoint
 
 # CLASSES
 class Model:
     def __init__(self, model_name):
         self.interpreter = tflite.Interpreter(
-            str(FileSystem.MODELS_PATH / model_name / "saved_model" / "model.tflite")
+            str(FileHandler.MODELS_PATH / model_name / "saved_model" / "model.tflite")
         )
         self.interpreter.allocate_tensors()
         input_details = self.interpreter.get_input_details()[0]["shape"]
