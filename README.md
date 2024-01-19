@@ -13,7 +13,7 @@ O script pode ser executado da seguinte forma (a partir de `/workspace` dentro d
 - `python3 ./src/exam_scanner.py --prova <TIPO_DE_PROVA> --input_directory <INPUT_DIR_PATH>` para executar inferências nas imagens presentes em `<INPUT_DIR_PATH>`;
 - Outros parâmetros também podem ser ajustados ao executar esse script e podem ser vistos a partir do seguinte comando: `python3 ./src/exam_scanner.py -h`;
 
-## Execução do script que constroi o relatório final a partir das informações presentes no json gerado pelo código anterior.
+## Execução do script que constrói o relatório final a partir das informações presentes no json gerado pelo código anterior.
 Já dentro do container docker o script pode ser executado da seguinte maneira:
 - `python3 ./src/build_report.py --input_directory <INPUT_DIR>`;
 - `INPUT_DIR` deve ser a pasta gerado pelo script anterior que contem o arquivo de texto `report.txt`
