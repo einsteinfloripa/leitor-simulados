@@ -45,7 +45,7 @@ class FileHandler():
             if not cls.INPUT_DIR.is_dir():
                 path = str(cls.INPUT_DIR.resolve())
                 if path.endswith(cls.ACCEPTED_IMAGE_EXTENTIONS):
-                    cls.logger.debug(f"Adding path: {path}")
+                    cls.logger.info(f"Adding path: {path}")
                     cls.INPUT_PATHS = [path]
                 return
             
@@ -53,11 +53,11 @@ class FileHandler():
             for extention in cls.ACCEPTED_IMAGE_EXTENTIONS:
                 if recursive:
                     for p in cls.INPUT_DIR.rglob(f"*{extention}"):
-                        cls.logger.debug(f"Adding path: {p}")
+                        cls.logger.info(f"Adding path: {p}")
                         cls.INPUT_PATHS.append(str(p))
                 else:
                     for p in cls.INPUT_DIR.glob(f"*{extention}"):
-                        cls.logger.debug(f"Adding path: {p}")
+                        cls.logger.info(f"Adding path: {p}")
                         cls.INPUT_PATHS.append(str(p))          
         except Exception as e:
             raise e
@@ -95,7 +95,7 @@ class FileHandler():
 
         out_path = cls.OUTPUT_DIR / main_img.name[:-4]
         out_path.mkdir(parents=True, exist_ok=True)
-        cls.logger.info(f"saving {main_img.name} : {out_path}")
+        cls.logger.info(f"saving {main_img.name} json data : {out_path}")
 
         detection_data = {}
         for crop_img in cropped_imgs:
@@ -104,10 +104,12 @@ class FileHandler():
             json.dump(detection_data, f, indent=4)
 
         if cls.SAVE_IMAGES:
+            cls.logger.info(f"saving {main_img.name} images : {out_path}")
             main_img.draw_bounding_boxes()
             main_img.save(str(out_path / main_img.name))
 
             for crop_img in cropped_imgs:
+                cls.logger.debug(f"saving {crop_img.name} : {out_path}")
                 crop_img.draw_bounding_boxes()
                 crop_img.save(str(out_path / crop_img.name))
     

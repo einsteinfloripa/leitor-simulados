@@ -75,8 +75,7 @@ class Checker(metaclass=Meta):
     def has_detections(func) -> Callable:
         def wrapper(cls, *args, **kwargs):
             if len(cls.detections) == 0:
-                # TODO:nao ta printando quando deveria
-                cls.logger.info(f'No detections found!')
+                cls.logger.warning(f'No detections found!')
                 return []
             else:
                 return func(cls, *args, **kwargs)
@@ -89,11 +88,11 @@ class Checker(metaclass=Meta):
                 cls.logger.debug(f'[ PASSED ] {func.__name__} {args} {kwargs}')
             except AssertionError as e:
                 if kwargs.get('filter', False):
-                    cls.logger.info(f'[ FALIED ] {func.__name__}: {e}')
-                    cls.logger.info(f'Delecting detections: {e.args[1]}')
+                    cls.logger.info(f'[ REMOVED DETECTION ] {func.__name__}: {e}')
+                    cls.logger.debug(f'Delecting detections: {e.args[1]}')
                     cls.to_remove.extend(e.args[1])
                 else:
-                    cls.logger.warning(f'[ FALIED ] {func.__name__}: {e}')
+                    cls.logger.error(f'[ FALIED ] {func.__name__}: {e}')
                     cls.fail = True
                     if not CONTINUE_ON_FAIL:
                         raise e

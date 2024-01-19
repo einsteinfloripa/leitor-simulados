@@ -15,7 +15,7 @@ def setup_detections(detections : list[Detection], filter_detections : bool, sta
             'selected_ball':SelectedBallChecker, 'unselected_ball':UnselectedBallChecker,
             'question_number':QuestionNumberChecker
         }
-        logger.debug(f'Setup for detections')
+        logger.debug(f'Setup for detections...')
         # clear old detections and reset fail flag
         for check_class in CHECKERS_MAP.values():
             check_class.detections.clear()
@@ -65,7 +65,7 @@ class CpfBlockChecker(Checker):
     @classmethod
     @Checker.has_detections
     def clean_detections(cls):
-        cls.logger.info(f'Cleaning detections...')
+        cls.logger.debug(f'Cleaning detections...')
         cls.to_remove = []
         for detection in cls.detections:
             # Position

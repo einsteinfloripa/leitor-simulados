@@ -14,7 +14,7 @@ if 'exam' in __main__.__file__:
 else:
     file_handler = logging.FileHandler(filename="build_log.txt", delay=True)
 #config
-console.setLevel(logging.WARNING)
+console.setLevel(logging.ERROR)
 console.setFormatter(simple_formatter)
 
 file_handler.setLevel(logging.DEBUG)

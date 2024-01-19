@@ -88,8 +88,8 @@ def main():
             "question_number",
         ],
     )
-    parser.add_argument("-sf", "--score_threshold_1st_stage", type=float, default=0.5)
-    parser.add_argument("-ss", "--score_threshold_2nd_stage", type=float, default=0.5)
+    parser.add_argument("-stf", "--score_threshold_1st_stage", type=float, default=0.5)
+    parser.add_argument("-sts", "--score_threshold_2nd_stage", type=float, default=0.5)
     parser.add_argument(
         "-i", "--input_directory", type=str, default='input_images', required=True
     )
@@ -102,23 +102,38 @@ def main():
         nargs="*",
         type=str,
         default=None,
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        help="make a log file with the specified level defined",
         )
     # remove the detections that do not pass the checks before performing the checks
-    parser.add_argument("-fd", "--filter_detections", action="store_true")
+    parser.add_argument(
+        "-fd", "--filter_detections", action="store_true",
+        help="remove invalid/out of place detections before performing the checks",
+    )
     parser.add_argument(
         "-p",
         "--prova",
         type=str,
-        default="ENEM",
+        default="SIMUENEM",
         required=True,
-        nargs=1
+        nargs=1,
+        choices=['PS', 'SIMUENEM', 'SIMUFSC']
     )
     # for recursive search in the files
-    parser.add_argument("--recursive", action="store_false", default=True)
+    parser.add_argument(
+        "--recursive", action="store_false", default=True,
+        help="search for images in all folders inside the input directory",
+    )
     # save the image with detections drawn and the detections json file
-    parser.add_argument("--save_imgs", action="store_true", default=False)
+    parser.add_argument(
+        "--save_images", action="store_true", default=False,
+        help="save the image with detections drawn",
+        )
     # continue the execution even if a check fails
-    parser.add_argument("--continue_on_fail", action="store_true", default=False)
+    parser.add_argument(
+        "--continue_on_fail", action="store_true", default=False,
+        help="continue the execution even if a check fails",
+    )
 
 
     args = parser.parse_args()
