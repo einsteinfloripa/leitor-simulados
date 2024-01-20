@@ -25,54 +25,57 @@ def load_builder():
 
 
 # main function
-def build(path, status='success') -> dict:
-
-    logger.info(f'building report for {path.name}...')
+def build(path, status, ec) -> dict:
 
     context = BuilderContext()
-
+    #loading file
     try:
         with open(path) as f:
             data : dict = json.load(f)
     except FileNotFoundError as e:
         logger.error(f'File not found! : {path.resolve()}')
-        return 'FILE NOT FOUND'
         if not CONTINUE_ON_FAIL:
             raise e
-
+        return 'FILE NOT FOUND'
+    #getting cpf block in the context
     logger.info('getting cpf block...')
     for name in data:
         if 'cpf' in name.lower():
             cpf_nome = name
             cpf_detections = data.pop(cpf_nome)
             context.cpf_block = Block(name=cpf_nome, detections=cpf_detections)
-            logger.info(f'cpf block found: {cpf_nome}')
+            logger.debug(f'cpf block found: {cpf_nome}')
             break
     else:
         logger.error(f'cpf block not found for {path.name}')
         if not CONTINUE_ON_FAIL:
             raise Exception(f'cpf block not found for {path.name}')
-    
+    #getting questions blocks in the context
     logger.info('getting questions blocks...')
-    for i, n in enumerate(data):
-        logger.info(f'adding block to context: {n}')
-        context.questions_block.append(Block(name=n, order=i, detections=data[n]))
+    for i, block in enumerate(data):
+        logger.debug(f'adding block to context: {block}')
+        context.questions_block.append(Block(name=block, order=i, detections=data[block]))
 
-    return _builder.build(context, status=status)
+    return _builder.build(context, status=status, ec=ec)
 
 # tools class to make the report
 class Builder():
 
     @classmethod
-    def get_cpf(cls, cpf_block : Block) -> str:
-        logger.debug(f'getting cpf: {cpf_block.name}')
+    def set_cpf_ec_pipeline(cls, context):
+        cls.build_cpf = cls.build_cpf_ec
+
+
+    @classmethod
+    def build_cpf(cls, cpf_block : Block) -> str:
+        logger.debug(f'build_cpf : {cpf_block.name}')
         cpf = ''
         ball_columns = cls.get_ball_columns(0.02, cpf_block.detections)
 
         cont = 0
         while cont < 11:
             try:
-                answer_index = cls.get_selected_ball_position('columns', 10, ball_columns[cont])
+                answer_index = cls._get_selected_ball_position('columns', 10, ball_columns[cont])
             except IndexError:
                 break
             if answer_index is not None:
@@ -92,26 +95,33 @@ class Builder():
     def get_ball_columns(cls, distance_threshold, detections : list[dict]):
         return cls._get_balls('x', distance_threshold, detections)
 
+
     @classmethod
-    def get_selected_ball_position(cls, type, num_elements, detections : list[dict]) -> list[dict]:
-        logger.debug(f'getting selected ball position in {type}...')
-        logger.debug(f'detections: {detections}')
-        if len(detections) != num_elements:
-            return None
-        axis = 'y' if type == 'columns' else 'x'
-        sorted_detections = cls._sort_axis(axis, detections)
-        cont = 0
-        while True:
-            try:
-                if sorted_detections[cont]['class_id'] == 'selected_ball':
+    def build_cpf_ec(cls, cpf_block : Block):
+        logger.debug(f'build_cpf_ec : {cpf_block.name}')
+        max_values = cls._get_cpf_lines_max_y_value(cpf_block)
+        if max_values is None:
+            return "XXXXXXXXXXX"
+        columns = cls.get_ball_columns(0.02, cpf_block.detections)
+        if len(columns) != 11:
+            return "XXXXXXXXXXX"
+        cpf = ''
+
+        for i, column in enumerate(columns):
+            selected_ball = cls._have_unique_selected_ball(column)
+            if selected_ball is None:
+                cpf += 'X'
+                continue
+
+            for i, val in enumerate(max_values):
+                if selected_ball['bounding_box'][3] <= val:
+                    cpf += str(i)
                     break
-            except IndexError:
-                return None
-            else:
-                cont += 1
-        return cont
+        
+        return cpf
+        
 
-
+    # aux functions
     @classmethod
     def _get_balls(cls, axis, distance_threshold, detections : list[dict]) -> list[list[dict]]:
         sorted_detections = cls._sort_axis(axis, detections)
@@ -137,6 +147,44 @@ class Builder():
                 return sorted(data, key=lambda d: d['bounding_box'][3])
             elif axis.lower() == 'x':
                 return sorted(data, key=lambda d: d['bounding_box'][2])
-        
-
     
+    @classmethod
+    def _get_selected_ball_position(cls, type, num_elements, detections : list[dict]) -> list[dict]:
+        logger.debug(f'getting selected ball position in {type}...')
+        logger.debug(f'detections: {detections}')
+        if len(detections) != num_elements:
+            return None
+        axis = 'y' if type == 'columns' else 'x'
+        sorted_detections = cls._sort_axis(axis, detections)
+        cont = 0
+        while True:
+            try:
+                if sorted_detections[cont]['class_id'] == 'selected_ball':
+                    break
+            except IndexError:
+                return None
+            else:
+                cont += 1
+        return cont
+    
+    @classmethod
+    def _get_cpf_lines_max_y_value(cls, cpf_block : Block) -> list[tuple[float, float]]:
+        max = []
+        lines = cls.get_ball_lines(0.05, cpf_block.detections)
+        if len(lines) != 10:
+            return None        
+        for line in lines:
+            max.append(line[-1]['bounding_box'][3])
+        return max
+
+    @classmethod
+    def _have_unique_selected_ball(cls, detections : list[dict]) -> dict:
+        cont = 0
+        detection = None
+        for d in detections:
+            if d['class_id'] == 'selected_ball':
+                cont += 1
+                detection = d
+        if cont == 1:
+            return detection
+        return None

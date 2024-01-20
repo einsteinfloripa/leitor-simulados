@@ -101,7 +101,6 @@ def main():
         "--logfile",
         nargs="*",
         type=str,
-        default=None,
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
         help="make a log file with the specified level defined",
         )
@@ -117,7 +116,8 @@ def main():
         default="SIMUENEM",
         required=True,
         nargs=1,
-        choices=['PS', 'SIMUENEM', 'SIMUFSC']
+        choices=['PS', 'SIMUENEM', 'SIMUFSC'],
+        help="choose the exam type",
     )
     # for recursive search in the files
     parser.add_argument(
@@ -144,7 +144,11 @@ def main():
     checks.CONTINUE_ON_FAIL = args.continue_on_fail
     checks.load_checker(args.prova[0])
 
-    if args.logfile: log.set_log_level(args.logfile)
+    if args.logfile is not None:
+        try:
+            log.set_log_level(args.logfile)
+        except ValueError:
+            log.set_log_level(['INFO'])
     else: log.remove_filehandler()
 
 
@@ -152,7 +156,7 @@ def main():
     FileHandler.set_path("INPUT_DIR", args.input_directory)
     FileHandler.make_and_set_dir("OUTPUT_DIR", args.output_directory)
     FileHandler.get_input_paths_checker(recursive=args.recursive)
-    FileHandler.SAVE_IMAGES = args.save_imgs
+    FileHandler.SAVE_IMAGES = args.save_images
 
 
 

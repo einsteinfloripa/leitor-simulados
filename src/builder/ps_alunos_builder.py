@@ -7,16 +7,18 @@ from aux import log
 logger = log.get_new_logger('ps_alunos_builder')
 
 
-def build(context : BuilderContext, status='success') -> None:
+def build(context : BuilderContext, status, ec) -> None:
 
     logger.debug('building report...')    
 
     report = {}
-    Builder = PSAlunosBuilder()
+
+
+    if 'cpf' in ec: PSAlunosBuilder.set_cpf_ec_pipeline(context)
 
     if context.cpf_block is not None:
         logger.debug('building cpf from cpf_block...')
-        report['cpf'] = PSAlunosBuilder.get_cpf(context.cpf_block)
+        report['cpf'] = PSAlunosBuilder.build_cpf(context.cpf_block)
 
     logger.debug('building questions from questions_blocks...')
     for block in context.questions_block:
@@ -29,7 +31,6 @@ class PSAlunosBuilder(Builder):
 
     LETTER_MAP = ['A', 'B', 'C', 'D', 'E']
 
-
     @classmethod
     def build_questions_block(cls, block : Block):
         logger.debug(f'building block: {block.name}')
@@ -41,7 +42,7 @@ class PSAlunosBuilder(Builder):
         cont = 0
         while cont < 10:
             try:
-                answer_index = cls.get_selected_ball_position('x', 5, line_balls[cont])
+                answer_index = cls._get_selected_ball_position('x', 5, line_balls[cont])
             except IndexError:
                 for i in range(cont, 10):
                     block_report[block_number + i] = 'NAO DETECTADO'
