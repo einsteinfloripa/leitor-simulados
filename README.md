@@ -18,3 +18,6 @@ Já dentro do container docker o script pode ser executado da seguinte maneira:
 - `python3 ./src/build_report.py --input_directory <INPUT_DIR>`;
 - `INPUT_DIR` deve ser a pasta gerado pelo script anterior que contem o arquivo de texto `report.txt`
 - Outros parâmetros também podem ser ajustados ao executar esse script e podem ser vistos a partir do seguinte comando: `python3 ./src/exam_scanner.py -h`;
+
+### Dica.
+- O comando `--continue_on_fail` faz com que o código nao encerre em cada erro que encontra em uma detecção.
