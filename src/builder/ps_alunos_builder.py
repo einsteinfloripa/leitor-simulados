@@ -19,6 +19,8 @@ def build(context : BuilderContext, status, ec) -> None:
     if context.cpf_block is not None:
         logger.debug('building cpf from cpf_block...')
         report['cpf'] = PSAlunosBuilder.build_cpf(context.cpf_block)
+    else:
+        report['cpf'] = 'XXXXXXXXXXX'
 
     logger.debug('building questions from questions_blocks...')
     for block in context.questions_block:
