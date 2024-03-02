@@ -1,36 +1,9 @@
-import os
 import argparse
-import json
-import glob
-import uuid
 
-import cv2
-import numpy as np
-import tflite_runtime.interpreter as tflite
+from aux.image import Image
+from aux.filehandler import FileHandler
 
-from object_detection import Model, detect_objects_on_img_file, get_bounding_box_pixels
-
-
-def crop_objects_on_image(img, detection, output_directory, output_img_file_name):
-    ymin, xmin, ymax, xmax = get_bounding_box_pixels(img, detection["bounding_box"])
-
-    class_id = detection["class_id"]
-    try:
-        cv2.imwrite(
-            os.path.join(
-                f"{output_directory}_cropped",
-                f"{class_id}_{str(uuid.uuid4())[:4]}_{output_img_file_name}",
-            ),
-            img[ymin:ymax, xmin:xmax],
-        )
-    except:
-        pass
-
-
-def draw_bounding_box_on_image(img, detection):
-    ymin, xmin, ymax, xmax = get_bounding_box_pixels(img, detection["bounding_box"])
-    bounding_box_color = (255, 0, 0)
-    cv2.rectangle(img, (xmin, ymin), (xmax, ymax), bounding_box_color, 3)
+from aux.object_detection import Model, Detection
 
 
 def run_detection_model(
@@ -38,40 +11,18 @@ def run_detection_model(
     detection_model,
     label_map,
     score_threshold,
-    output_directory,
     crop_objects,
 ):
-    img = cv2.imread(input_path)
+    img = Image.from_path(input_path)
 
     # THIS IS THE OBJECT CONTAINING ALL DETECTIONS
-    detections = detect_objects_on_img_file(detection_model, img)
+    img.make_detections_with_model(detection_model, score_threshold)
 
-    # FROM THIS POINT FORWARD THE CODE IS JUST AN EXAMPLE OF HOW TO POST-PROCESS THE DETECTIONS
-    output_img_file_name = input_path.split("/")[-1]
+    if crop_objects:
+        img.save_cropped()
 
-    filtered_detections = []
-    for detection in detections:
-        if detection["score"] >= score_threshold:
-            detection["bounding_box"] = detection["bounding_box"]
-            classes_index = int(detection["class_id"])
-            detection["class_id"] = label_map[classes_index]
-            detection["score"] = float(detection["score"])
-            filtered_detections.append(detection)
-
-            if crop_objects:
-                crop_objects_on_image(
-                    img, detection, output_directory, output_img_file_name
-                )
-
-            draw_bounding_box_on_image(img, detection)
-
-    cv2.imwrite(f"{output_directory}/{output_img_file_name}", img)
-
-    json.dump(
-        filtered_detections,
-        open(os.path.join(output_directory, f"{output_img_file_name[:-4]}.json"), "w"),
-        indent=4,
-    )
+    img.draw_bounding_boxes()
+    img.save()
 
 
 def main():
@@ -91,30 +42,26 @@ def main():
     parser.add_argument("--crop_objects", action="store_true")
     args = parser.parse_args()
 
-    global MODELS_PATH
-    MODELS_PATH = "/workspace/models"
+    # Set variables
+    FileHandler.get_valid_dir("OUTPUT_DIR", args.output_directory)
+    FileHandler.get_valid_dir("INPUT_DIR", args.input_directory)
+    if args.crop_objects:
+        FileHandler.get_valid_dir("CROPPED_OUTPUT_DIR", f"{args.output_directory}_cropped")
+    FileHandler.get_input_paths()
+    
+    # FileHandler.set_path("MODELS_PATH", "/workspace/models")
+    FileHandler.set_path("MODELS_PATH", "./models") # FOR DEBUGGING
+
+    Detection.label_map = args.label_map
 
     detection_model = Model(args.model_name)
 
-    input_paths = (
-        sorted(glob.glob(f"{args.input_directory}/*.jpg"))
-        + sorted(glob.glob(f"{args.input_directory}/*.jpeg"))
-        + sorted(glob.glob(f"{args.input_directory}/*.png"))
-    )
-
-    if not os.path.exists(args.output_directory):
-        os.makedirs(args.output_directory)
-
-    if args.crop_objects and not os.path.exists(f"{args.output_directory}_cropped"):
-        os.makedirs(f"{args.output_directory}_cropped")
-
-    for input_path in input_paths:
+    for input_path in FileHandler.INPUT_PATHS:
         run_detection_model(
             input_path,
             detection_model,
             args.label_map,
             args.score_threshold,
-            args.output_directory,
             args.crop_objects,
         )
 
