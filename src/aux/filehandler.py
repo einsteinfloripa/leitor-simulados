@@ -70,12 +70,23 @@ class FileHandler():
         success_paths = [FileHandler.INPUT_DIR / f'{name}' / f'{name}.json' for name in success] 
         falied_paths = [FileHandler.INPUT_DIR / f'{name}' / f'{name}.json' for name in falied]
 
+        return_success = []
+        return_falied = []
         for path in success_paths:
-            cls.logger.info(f"Adding path: {path.resolve()}")
+            if path.exists():
+                cls.logger.info(f"Adding path: {path.resolve()}")
+                return_success.append(path)
+            else:
+                cls.logger.error(f"Path: {path.resolve()} does not exist")
+                
         for path in falied_paths:
-            cls.logger.info(f"Adding path: {path.resolve()}")
+            if path.exists():
+                cls.logger.info(f"Adding path: {path.resolve()}")
+                return_falied.append(path)
+            else:
+                cls.logger.error(f"Path: {path.resolve()} does not exist")
         
-        return {'success': success_paths, 'falied': falied_paths}
+        return {'success': return_success, 'falied': return_falied}
 
     @classmethod
     def txt_out(cls, text, filename):
