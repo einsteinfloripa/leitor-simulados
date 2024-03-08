@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import argparse
 import builder
 
@@ -14,6 +16,12 @@ def build_report(falied, ec):
     dir_paths : dict[str, list[Path]] = FileHandler.get_input_paths_builder()
     
     report = {}
+    report['config'] = {
+        'prova' : builder.PROVA,
+        'continue_on_fail' : builder.CONTINUE_ON_FAIL,
+        'error_correction' : ec,
+        'datetime' : datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
+    }
     
     logger.debug('building success reports...')
     for path in dir_paths['success']:
@@ -28,8 +36,6 @@ def build_report(falied, ec):
             logger.error(f'buiding report for {path.name}')
             name = path.name.split('.')[0]
             report.update({name : builder.build(path, status='falied', ec=ec)})
-            if ec:
-                report[name]['ec'] = ec
             logger.warning(f'{path.name} added to report')
 
 
