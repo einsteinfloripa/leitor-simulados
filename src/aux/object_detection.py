@@ -57,14 +57,22 @@ class Detection:
 
         return xmin, ymin, xmax, ymax
 
-    def to_json(self) -> dict:
+    def to_json(self, for_annotation=False) -> dict:
         xmin, ymin, xmax, ymax = self.bounding_box
-        return {
-            "class_id": self.label_map[self.class_id],
-            "score": self.score,
-            "bounding_box": [xmin, ymin, xmax, ymax],
-        }
-        
+        if not for_annotation:
+            return {
+                "class_id": self.label_map[self.class_id],
+                "score": self.score,
+                "bounding_box": [xmin, ymin, xmax, ymax],
+            }
+        else:
+            xmid, ymid = self.middle_point
+            width, height = xmax - xmin, ymax - ymin
+            return {
+                "class_id": self.class_id,
+                "score": self.score,
+                "bbox": [xmid, ymid, width, height],
+            }
         
     # sorted from top right to bottom left
     def __lt__(self, other):
@@ -156,5 +164,26 @@ def detect_objects_on_Image_object(detection_model, img_raw) -> list[Detection]:
     )
     detections = detect_objects(detection_model.interpreter, normalized_img, img_raw)
 
+    return detections
+
+######################## YOLO
+
+def detect_yolo(model, img_raw):
+    result = model.predict(img_raw)[0]
+    detections = []
+    boxes = result.boxes.xyxyn.tolist()
+    classes = result.boxes.cls.tolist()
+    confs = result.boxes.conf.tolist()
+    for box, class_id, conf in zip(boxes, classes, confs):
+        box = FloatBoundingBox.from_floats(*box)
+        detections.append(
+            Detection(
+                box,
+                int(class_id),
+                float(conf),
+                img_raw.shape[1],
+                img_raw.shape[0],
+            )
+        )
     return detections
 

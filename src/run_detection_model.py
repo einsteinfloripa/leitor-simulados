@@ -22,19 +22,28 @@ def run_detection_model(
         img.save_cropped()
 
     img.draw_bounding_boxes()
-    img.save()
+    img.save(str(FileHandler.OUTPUT_DIR / img.name))
+    detecctions = img.to_json(only_ball_detections=True, for_annotation=True)
+    lines = []
+    for detection in detecctions:
+        id = detection["class_id"]
+        if detection['score'] > 0.7 and id == 3:
+            x, y, w, h = detection["bbox"]
+            lines.append(f"{id} {x} {y} {w} {h}")
+    with open(str(FileHandler.OUTPUT_DIR / f"{img.name[:-4]}.txt"), "w") as f:
+        f.write("\n".join(lines))
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model_name", type=str, default="1st_stage_v0_0_0"
+        "--model_name", type=str, default="2nd_stage_v0_0_1"
     )
     parser.add_argument(
         "--label_map",
         type=str,
         nargs="+",
-        default=["cpf_block", "questions_block"],
+        default=["cpf_column", "question_line", "selected_ball", "unselected_ball", "question_number", "question_column"],
     )
     parser.add_argument("--input_directory", type=str, default=None, required=True)
     parser.add_argument("--output_directory", type=str, default="detection_output")
@@ -43,11 +52,11 @@ def main():
     args = parser.parse_args()
 
     # Set variables
-    FileHandler.get_valid_dir("OUTPUT_DIR", args.output_directory)
-    FileHandler.get_valid_dir("INPUT_DIR", args.input_directory)
+    FileHandler.make_and_set_dir("OUTPUT_DIR", args.output_directory)
+    FileHandler.set_path("INPUT_DIR", args.input_directory)
     if args.crop_objects:
-        FileHandler.get_valid_dir("CROPPED_OUTPUT_DIR", f"{args.output_directory}_cropped")
-    FileHandler.get_input_paths()
+        FileHandler.make_and_set_dir("CROPPED_OUTPUT_DIR", f"{args.output_directory}_cropped")
+    FileHandler.get_input_paths_checker()
     
     # FileHandler.set_path("MODELS_PATH", "/workspace/models")
     FileHandler.set_path("MODELS_PATH", "./models") # FOR DEBUGGING

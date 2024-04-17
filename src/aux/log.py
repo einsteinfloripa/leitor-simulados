@@ -33,17 +33,23 @@ checks_logger.addHandler(file_handler)
 def remove_filehandler():
     global LOGFILE
     for logger in logging.Logger.manager.loggerDict.values():
-        logger.removeHandler(file_handler)
+        try:
+            logger.removeHandler(file_handler)
+        except:
+            pass
     LOGFILE = False
 
 def set_log_level(level):
     for logger in logging.Logger.manager.loggerDict.values():
-        if len(logger.handlers) < 2: continue
         try:
-            var = eval(f'logging.{level[0]}')
-            eval("logger.handlers[1].setLevel(var)")
+            if len(logger.handlers) < 2: continue
+            try:
+                var = eval(f'logging.{level[0]}')
+                eval("logger.handlers[1].setLevel(var)")
+            except:
+                raise ValueError(f'Invalid log level: {level}')
         except:
-            raise ValueError(f'Invalid log level: {level}')
+            pass
 
 def get_new_logger(name):
     global LOGFILE

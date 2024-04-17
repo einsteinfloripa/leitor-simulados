@@ -1,6 +1,8 @@
 import argparse
 import checks
 
+from ultralytics import YOLO
+
 from aux.filehandler import FileHandler
 from aux.object_detection import Model, Detection
 from aux.image import Image
@@ -19,7 +21,7 @@ def scan_exam(
 ):
     falied_imgs = ''
     success_imgs = ''
-    detection_model_1st_stage = Model(model_name_1st_stage)
+    detection_model_1st_stage = YOLO(model_name_1st_stage)
     detection_model_2nd_stage = Model(model_name_2nd_stage)
 
     
@@ -39,7 +41,11 @@ def scan_exam(
             
             
             Detection.set_label_map(label_map_2nd_stage)
-            cropped_imgs : list[Image] = img.get_cropped()
+            try:
+                cropped_imgs : list[Image] = img.get_cropped()
+            except IndexError:
+                logger.exception(f'Could not crop {img.name}')
+                continue
 
             for crop_img in cropped_imgs:
                 crop_img.make_detections_with_model(
@@ -66,7 +72,7 @@ def scan_exam(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="1st_stage_v0_0_0")
+    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="./models/ps_first_stage.pt")
     parser.add_argument("-ms", "--model_name_2nd_stage", type=str, default="2nd_stage_v0_0_1")
     parser.add_argument(
         "-lf",

@@ -4,7 +4,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from aux.object_detection import Detection, detect_objects_on_Image_object
+from aux.object_detection import Detection, detect_objects_on_Image_object, detect_yolo
 
 
 class Image():
@@ -38,10 +38,16 @@ class Image():
     
     
     def make_detections_with_model(self, model, score_threshold) -> None:
-        detections = detect_objects_on_Image_object(model, self.raw)
-        self.detections = [d for d in detections if d.score > score_threshold]
+        if model.__class__.__name__ == 'YOLO':
+            result = detect_yolo(model, self.raw)
+            self.detections = [r for r in result]
+
+        else:
+            detections = detect_objects_on_Image_object(model, self.raw)
+            self.detections = [d for d in detections if d.score > score_threshold]
         # sort and mark detections from top left to bottom right    
         self.detections.sort()
+
         for i, detection in enumerate(self.detections):
             detection.order = i
         self.BOUNDING_BOXES_DRAWN = False
@@ -78,16 +84,16 @@ class Image():
     def save(self, path : str) -> None:      
         cv2.imwrite(path, self.raw)
     
-    def to_json(self, only_ball_detections=True) -> list:
+    def to_json(self, only_ball_detections=True, for_annotation = False) -> list:
         if only_ball_detections:
             json_data = []
             for detection in self.detections:
                 if 'ball' in detection.class_name:
-                    json_data.append(detection.to_json())
+                    json_data.append(detection.to_json(for_annotation=for_annotation))
             return json_data
         else:
             json_data = []
             if self.detections:
                 for detection in self.detections:
-                    json_data.append(detection.to_json())
+                    json_data.append(detection.to_json(for_annotation=for_annotation))
             return json_data
