@@ -41,6 +41,12 @@ class PSAlunosBuilder(Builder):
         block_report = {}
 
         line_balls = cls.get_ball_lines(0.05, block.detections)
+        
+        # Soluçao fraca, se tiver tempo implementar uma melhor
+        # remove a primeira linha no caso de uma letra ser confundida com um número
+        if len( line_balls[0] ) < 3:
+            line_balls.pop(0)
+
         cont = 0
         while cont < 10:
             try:
