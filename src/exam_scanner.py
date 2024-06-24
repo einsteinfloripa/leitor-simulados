@@ -1,12 +1,11 @@
 import argparse
 import checks
 
-from ultralytics import YOLO
-
-from aux.filehandler import FileHandler
-from aux.object_detection import Model, Detection
-from aux.image import Image
-from aux import log
+from core.object_detection import Detection
+from core.image import Image
+from core.models import load_model
+from utils.filehandler import FileHandler
+from utils import log
 
 logger = log.get_new_logger('exam scanner')
 
@@ -21,10 +20,10 @@ def scan_exam(
 ):
     falied_imgs = ''
     success_imgs = ''
-    detection_model_1st_stage = YOLO(model_name_1st_stage)
-    detection_model_2nd_stage = Model(model_name_2nd_stage)
+    detection_model_1st_stage = load_model(model_name_1st_stage)
+    detection_model_2nd_stage = load_model(model_name_2nd_stage)
 
-    
+
     for img_path in FileHandler.INPUT_PATHS:
         status = 'success'
         try:
@@ -34,6 +33,7 @@ def scan_exam(
             img.make_detections_with_model(
                 detection_model_1st_stage, score_threshold_1st_stage
             )
+            
             if checks.perform(img, stage=1) == 'failed':
                 falied_imgs += f'{img.name[:-4]}\n'
                 status = 'failed'
@@ -51,6 +51,7 @@ def scan_exam(
                 crop_img.make_detections_with_model(
                     detection_model_2nd_stage, score_threshold_2nd_stage
                 )
+
                 if checks.perform(crop_img, stage=2) == 'failed' and status == 'success':
                     falied_imgs += f'{img.name[:-4]}\n'
                     status = 'failed'
@@ -72,7 +73,7 @@ def scan_exam(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="./models/ps_first_stage.pt")
+    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="ps_first_stage.pt")
     parser.add_argument("-ms", "--model_name_2nd_stage", type=str, default="2nd_stage_v0_0_1")
     parser.add_argument(
         "-lf",
@@ -97,7 +98,7 @@ def main():
     parser.add_argument("-stf", "--score_threshold_1st_stage", type=float, default=0.5)
     parser.add_argument("-sts", "--score_threshold_2nd_stage", type=float, default=0.5)
     parser.add_argument(
-        "-i", "--input_directory", type=str, default='input_images', required=True
+        "-i", "--input_directory", type=str, default='input_images'
     )
     parser.add_argument("-o", "--output_directory", type=str, default="scanner_output")
     # make a log file
@@ -127,17 +128,17 @@ def main():
     )
     # for recursive search in the files
     parser.add_argument(
-        "--recursive", action="store_false", default=True,
+        "-r", "--recursive", action="store_false", default=True,
         help="search for images in all folders inside the input directory",
     )
     # save the image with detections drawn and the detections json file
     parser.add_argument(
-        "--save_images", action="store_true", default=False,
+        "si","--save_images", action="store_true", default=False,
         help="save the image with detections drawn",
         )
     # continue the execution even if a check fails
     parser.add_argument(
-        "--continue_on_fail", action="store_true", default=False,
+        "-cf", "--continue_on_fail", action="store_true", default=False,
         help="continue the execution even if a check fails",
     )
 
@@ -149,7 +150,7 @@ def main():
     checks.FILTER_DETECTIONS = args.filter_detections
     checks.CONTINUE_ON_FAIL = args.continue_on_fail
     checks.load_checker(args.prova[0])
-
+    # LOGGING
     if args.logfile is not None:
         try:
             log.set_log_level(args.logfile)
@@ -157,7 +158,7 @@ def main():
             log.set_log_level(['INFO'])
     else: log.remove_filehandler()
 
-
+    # FILE HANDLER
     FileHandler.set_path( "MODELS_PATH", './models' )
     FileHandler.set_path("INPUT_DIR", args.input_directory)
     FileHandler.make_and_set_dir("OUTPUT_DIR", args.output_directory)

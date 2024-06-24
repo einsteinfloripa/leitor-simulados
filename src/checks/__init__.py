@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import aux.log as log
+import utils.log as log
 
-from aux.object_detection import Detection
+from core.object_detection import Detection
 from math import sqrt
-from aux.image import Image
-from aux.data_classes import FloatPoint, FloatBoundingBox
+from core.image import Image
+from utils.data_classes import FloatPoint, FloatBoundingBox
 from typing import Callable
 
 

@@ -3,10 +3,10 @@ from datetime import datetime
 import argparse
 import builder
 
-from aux.filehandler import FileHandler
+from utils.filehandler import FileHandler
 from pathlib import Path
 
-from aux import log
+from utils import log
 
 logger = log.get_new_logger('build report')
 
@@ -44,7 +44,7 @@ def build_report(falied, ec):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_directory', default='scanner_output', required=True)
+    parser.add_argument('-i', '--input_directory', default='scanner_output')
     parser.add_argument('-o', '--output_directory', default='')
     parser.add_argument('-p', '--prova', default='PS', choices=['PS', 'SIMUENEM', 'SIMUFSC'])
     parser.add_argument(
@@ -52,18 +52,18 @@ def main():
         help='run script in falied scans too'
     )
     parser.add_argument(
-        '--continue_on_fail', action='store_true', default=False,
-        help='dont stop if it finds a falied scan'
+        "cf", "--continue_on_fail", action="store_true", default=False,
+        help="dont stop if it finds a falied scan"
     )
     parser.add_argument(
-        '--error_correction',
+        "-ec", "--error_correction",
         nargs='+',
         type=str,
         choices=['cpf', 'questions'],
         help='try to correct the errors/missing detections in falied scans'
     )
     parser.add_argument(
-    "--logfile",
+    "-l", "--logfile",
     nargs="*",
     type=str,
     choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
@@ -71,13 +71,13 @@ def main():
     )
 
     args = parser.parse_args()
-
+    # ERROR CORRECTION
     if args.error_correction is None:
         args.error_correction = []
     elif 'questions' in args.error_correction:
         raise NotImplementedError('question blocks error correction is not implemented yet')
 
-
+    # LOG FILE
     if args.logfile is not None:
         try:
             log.set_log_level(args.logfile)
@@ -85,10 +85,11 @@ def main():
             log.set_log_level(['INFO'])
     else: log.remove_filehandler()
     
+    # FILE HANDLER
     FileHandler.set_path('INPUT_DIR', args.input_directory)
     FileHandler.make_and_set_dir('OUTPUT_DIR', args.output_directory)
 
-
+    # SETTING GLOBALS
     builder.PROVA = args.prova
     builder.CONTINUE_ON_FAIL = args.continue_on_fail
     builder.load_builder()

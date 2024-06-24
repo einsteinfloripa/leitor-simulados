@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from aux.log import checks_logger as logger
+from utils.log import checks_logger as logger
 
-from aux.object_detection import Detection
-from aux.data_classes import FloatBoundingBox, FloatPoint
+from core.object_detection import Detection
+from utils.data_classes import FloatBoundingBox, FloatPoint
 from checks import Checker, logger
 
 

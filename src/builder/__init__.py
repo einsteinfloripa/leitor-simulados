@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from builder.dataclasses import Block, BuilderContext
-from aux import log
+from utils import log
 
 
 #config vars

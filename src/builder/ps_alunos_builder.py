@@ -2,7 +2,7 @@
 from builder.dataclasses import BuilderContext, Block
 from builder import Builder
 
-from aux import log
+from utils import log
 
 logger = log.get_new_logger('ps_alunos_builder')
 

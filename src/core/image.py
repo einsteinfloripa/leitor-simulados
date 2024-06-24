@@ -3,8 +3,13 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
+import tflite_runtime.interpreter as tflite
 
-from aux.object_detection import Detection, detect_objects_on_Image_object, detect_yolo
+from core.object_detection import Detection
+
+# from utils.filehandler import FileHandler
+# from utils.data_classes import FloatBoundingBox, FloatPoint
+
 
 
 class Image():
@@ -36,15 +41,10 @@ class Image():
                 return func(self, *args, **kwargs)
         return wrapper
     
-    
-    def make_detections_with_model(self, model, score_threshold) -> None:
-        if model.__class__.__name__ == 'YOLO':
-            result = detect_yolo(model, self.raw)
-            self.detections = [r for r in result]
 
-        else:
-            detections = detect_objects_on_Image_object(model, self.raw)
-            self.detections = [d for d in detections if d.score > score_threshold]
+    def make_detections_with_model(self, model, score_threshold) -> None:
+        detections = model.detect(self.raw)
+        self.detections = [d for d in detections if d.score > score_threshold]
         # sort and mark detections from top left to bottom right    
         self.detections.sort()
 
@@ -81,9 +81,11 @@ class Image():
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cv2.rectangle(self.raw, (xmin, ymin), (xmax, ymax), self.colors[detection.class_id], 3)
 
+
     def save(self, path : str) -> None:      
         cv2.imwrite(path, self.raw)
     
+
     def to_json(self, only_ball_detections=True, for_annotation = False) -> list:
         if only_ball_detections:
             json_data = []
