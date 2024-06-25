@@ -10,19 +10,26 @@ class FloatPoint():
 
 @dataclass
 class FloatBoundingBox():
-    ponto_min: FloatPoint = field(default=FloatPoint())
-    ponto_max: FloatPoint = field(default=FloatPoint())
+    p_min: FloatPoint = field(default=FloatPoint())
+    p_max: FloatPoint = field(default=FloatPoint())
 
     #Constructors
     @classmethod
     def from_floats(cls, x_min, y_min, x_max, y_max):
         return cls(
-            ponto_min = FloatPoint(x_min, y_min),
-            ponto_max = FloatPoint(x_max, y_max),
+            p_min = FloatPoint(x_min, y_min),
+            p_max = FloatPoint(x_max, y_max),
         )
+    @classmethod
+    def from_yolo(cls, x_center, y_center, width, height):
+        x_min = x_center - width / 2
+        y_min = y_center - height / 2
+        x_max = x_center + width / 2
+        y_max = y_center + height / 2
+        return cls.from_floats(x_min, y_min, x_max, y_max)
 
     def __iter__(self):
-        return iter((*self.ponto_min, *self.ponto_max))
+        return iter((*self.p_min, *self.p_max))
 
 
 

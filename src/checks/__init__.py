@@ -13,12 +13,14 @@ from typing import Callable
 FILTER_DETECTIONS = None
 FILTER_ONLY = None
 CONTINUE_ON_FAIL = None
+SAVE_YOLO = False
 
 logger = log.checks_logger
 
 
 def load_checker(flag_prova : str):
     global _checker
+    flag_prova = flag_prova.upper()
     if flag_prova == 'PS':
         import checks.ps_alunos_checks as _checker
     elif flag_prova == 'SIMUFSC':
@@ -52,6 +54,7 @@ def perform(img : Image, stage : int):
 Sorry for this meta mess i didant find a cleaner way to do this 
 The metaclass below is to ensure every Check child class gets
 his own copy of the detections list and checks list
+this is done so that fewer objects are created and destroyed
 '''
 # CHECKER CLASS
 class Meta(type):
@@ -66,13 +69,14 @@ class Checker(metaclass=Meta):
     
     IMG_INSTANCE : Image = None
 
-    #public getters
+    # Public getters
     @classmethod
     def get_detections(cls) -> list[Detection]:
         return cls.detections
     
-    # wrapper functions
+    # Wrapper functions
     def has_detections(func) -> Callable:
+        '''Ensures that the function is only called if there are detections to be checked'''
         def wrapper(cls, *args, **kwargs):
             if len(cls.detections) == 0:
                 cls.logger.warning(f'No detections found!')
@@ -82,6 +86,7 @@ class Checker(metaclass=Meta):
         return wrapper
     
     def execute(func) -> Callable:
+        '''Executes the test function and logs the result'''
         def wrapper(cls, *args, **kwargs):
             try:
                 func(cls, *args, **kwargs)
@@ -102,7 +107,7 @@ class Checker(metaclass=Meta):
 
         return wrapper
 
-    # checks
+    # Check functions
     @classmethod
     @execute
     def count(cls, expected_value : int, detections_type : str, **kwargs) -> bool:
@@ -119,11 +124,11 @@ class Checker(metaclass=Meta):
     @classmethod
     @execute
     def center_is_near_of(
-            cls, detection : Detection, point : FloatPoint, radius : float=None, **kwargs
+            cls, detection : Detection, target : FloatPoint, radius : float=None, **kwargs
         ) -> bool:
-        # O raio é sempre em porcentagem da medida da altura da imagem
+        # By convention the radius is always a percentage of the image HEIGHT
         radius = radius * cls.IMG_INSTANCE.height
-        distance = cls._get_distance_between_points(detection.middle_point, point)
+        distance = cls._get_distance_between_points(detection.middle_point, target)
         if not distance <= radius:
             raise AssertionError(
                 f'distance <= radius  ::  {distance} <= {radius}',

@@ -10,7 +10,7 @@ from utils import log
 logger = log.get_new_logger('exam scanner')
 
 
-def scan_exam(
+def exam_scanner(
     model_name_1st_stage,
     model_name_2nd_stage,
     label_map_1st_stage,
@@ -133,7 +133,7 @@ def main():
     )
     # save the image with detections drawn and the detections json file
     parser.add_argument(
-        "si","--save_images", action="store_true", default=False,
+        "-si","--save_images", action="store_true", default=False,
         help="save the image with detections drawn",
         )
     # continue the execution even if a check fails
@@ -141,7 +141,11 @@ def main():
         "-cf", "--continue_on_fail", action="store_true", default=False,
         help="continue the execution even if a check fails",
     )
-
+    # Add an option to save the detections in Yolo format (id, x, y, w, h)
+    parser.add_argument(
+        "-yl", "--yolo", action="store_true", default=False,
+        help="save the detections in Yolo format (id, x, y, w, h)",
+    )
 
     args = parser.parse_args()
     
@@ -162,12 +166,13 @@ def main():
     FileHandler.set_path( "MODELS_PATH", './models' )
     FileHandler.set_path("INPUT_DIR", args.input_directory)
     FileHandler.make_and_set_dir("OUTPUT_DIR", args.output_directory)
-    FileHandler.get_input_paths_checker(recursive=args.recursive)
+    FileHandler.get_input_paths(recursive=args.recursive)
     FileHandler.SAVE_IMAGES = args.save_images
+    FileHandler.SAVE_YOLO = args.yolo
 
 
 
-    scan_exam(
+    exam_scanner(
         args.model_name_1st_stage,
         args.model_name_2nd_stage,
         args.label_map_1st_stage,

@@ -13,7 +13,7 @@ logger = log.get_new_logger('build report')
 def build_report(falied, ec):
     
     logger.debug('getting paths...')
-    dir_paths : dict[str, list[Path]] = FileHandler.get_input_paths_builder()
+    dir_paths : dict[str, list[Path]] = FileHandler.get_input_paths()
     
     report = {}
     report['config'] = {
@@ -52,7 +52,7 @@ def main():
         help='run script in falied scans too'
     )
     parser.add_argument(
-        "cf", "--continue_on_fail", action="store_true", default=False,
+        "-cf", "--continue_on_fail", action="store_true", default=False,
         help="dont stop if it finds a falied scan"
     )
     parser.add_argument(

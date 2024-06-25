@@ -99,3 +99,7 @@ class Image():
                 for detection in self.detections:
                     json_data.append(detection.to_json(for_annotation=for_annotation))
             return json_data
+    
+    def to_yolo(self) -> str:
+        yolo = '\n'.join([detection.to_yolo() for detection in self.detections])
+        return yolo
