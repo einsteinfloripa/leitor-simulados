@@ -1,16 +1,13 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
 
+import inspect
+
 import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
 
 from core.object_detection import Detection
-
-# from utils.filehandler import FileHandler
-# from utils.data_classes import FloatBoundingBox, FloatPoint
-
-
 
 class Image():
 
@@ -23,13 +20,14 @@ class Image():
 
     colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (0,255,255), (255,0,255), (0,0,0)]
 
-    def __init__(self, name, raw, detections, cropped_by = None) -> None:
+    def __init__(self, name, raw, detections, cropped_from = None, cropped_from_detection=None) -> None:
         self.raw : np.ndarray = raw
         self.name : str = name
         self.detections : list[Detection] = detections
         self.height : int = raw.shape[0]
         self.width : int = raw.shape[1]
-        self.cropped_by : str | None = cropped_by
+        self.cropped_from : Image = cropped_from
+        self.cropped_from_detection = cropped_from_detection
         self.BOUNDING_BOXES_DRAWN = False
 
     
@@ -43,7 +41,13 @@ class Image():
     
 
     def make_detections_with_model(self, model, score_threshold) -> None:
-        detections = model.detect(self.raw)
+        # check if the model has the image_raw parameter
+        sig = inspect.signature(model.detect)
+        if 'img_raw' in sig.parameters:
+            detections = model.detect(self.raw)
+        else:
+            detections = model.detect(self)
+        # Filter detections by score
         self.detections = [d for d in detections if d.score > score_threshold]
         # sort and mark detections from top left to bottom right    
         self.detections.sort()
@@ -68,7 +72,8 @@ class Image():
                     f"{self.name[:-4]}_{detection.class_name}_{cont:02}.jpg",
                     self.raw[ymin:ymax, xmin:xmax],
                     None,
-                    cropped_by=detection.class_name
+                    cropped_from=self,
+                    cropped_from_detection = detection.class_name
                 )
             )
             cont += 1

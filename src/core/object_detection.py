@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 
 from utils.data_classes import FloatBoundingBox, FloatPoint
 
@@ -15,10 +16,13 @@ class Detection:
         self.img_width : int =  img_width
         self.img_height : int = img_height
     
-    # Public Setters
+    # Public Setters && getters
     @classmethod
     def set_label_map(cls, label_map):
         cls.label_map = label_map
+    @classmethod
+    def get_label_map(cls):
+        return cls.label_map
 
     # Properties
     @property
@@ -66,7 +70,7 @@ class Detection:
     def to_json(self, for_annotation=False) -> dict:
         p_min, p_max = self.xyxy
         return {
-            "class_id": self.label_map[self.class_id],
+            "class_id": self.class_name,
             "score": self.score,
             "bounding_box": [*p_min, *p_max],
         }
@@ -74,7 +78,28 @@ class Detection:
     def to_yolo(self) -> str:
         x, y, w, h = self.middle_point.x, self.middle_point.y, self.width, self.height
         return f"{self.class_id} {x} {y} {w} {h}"
-                
+
+    def rotate(self, angle, origin = None):
+        # Set the origin
+        if origin is None: origin = (.5, .5)
+        # Rotate the bounding box
+        angle = math.radians(angle)
+        iw, ih = origin
+        x1, y1, = self.bounding_box.p_min
+        # Transforma as coordenadas para o sistema cartesiano
+        y1 = ih - y1
+        x1 -= iw
+        # Calcula a posiçao dos pontos após a rotação
+        x1_ = x1 * math.cos(angle) - y1 * math.sin(angle)
+        y1_ = x1 * math.sin(angle) + y1 * math.cos(angle)
+        # Transforma as coordenadas para o sistema da imagem
+        y1_ = ih - y1_
+        x1_ += iw
+        # Atualiza os valores'
+        sw, sh = self.width, self.height
+        self.bounding_box.p_min = FloatPoint(x1_, y1_)
+        self.bounding_box.p_max = FloatPoint(x1_ + sw, y1_ + sh)
+
     # sorted from top right to bottom left
     def __lt__(self, other):
         # Check if below entirely from the other

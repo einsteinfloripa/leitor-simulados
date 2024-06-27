@@ -19,19 +19,29 @@ logger = log.checks_logger
 
 
 def load_checker(flag_prova : str):
+    class EmptyChecker:
+        __EMPTYCHECKER__ = True
     global _checker
     flag_prova = flag_prova.upper()
     if flag_prova == 'PS':
         import checks.ps_alunos_checks as _checker
     elif flag_prova == 'SIMUFSC':
-        raise NotImplementedError
+        _checker = EmptyChecker
     elif flag_prova == 'SIMUENEM':
-        raise NotImplementedError
+        _checker = EmptyChecker
+    elif flag_prova == 'PS':
+        _checker = EmptyChecker
+    elif flag_prova == 'SIMULINHO':
+        _checker = EmptyChecker
     else:
         raise ValueError(f'Prova inavlida: {flag_prova}')
 
 # MAIN FUNCTION
 def perform(img : Image, stage : int):
+
+    if hasattr(_checker, '__EMPTYCHECKER__'):
+        logger.error(f' ---- No checks for {img.name} ---- ')
+        return 'suceess'
 
     logger.error(f' ---- Performing checks on {img.name} ---- ')
 

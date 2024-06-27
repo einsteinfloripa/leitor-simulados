@@ -52,7 +52,9 @@ class FileHandler():
         # Get the paths from according to the caller function
         if caller == 'build_report.py':
             # Read the status file
-            status = FileHandler.txt_in(FileHandler.INPUT_DIR  / 'report.txt').strip('\n')
+            with open(FileHandler.INPUT_DIR  / 'report.txt', 'r') as f:
+                status = f.read().strip('\n')
+            # Parse the status file
             success, falied = [text.split('\n')[1:] for text in status.split('\n\n\n')]
             # Set input paths
             success_paths = [FileHandler.INPUT_DIR / f'{name}' / f'{name}.json' for name in success] 
@@ -152,14 +154,11 @@ class FileHandler():
     
     # Smaller Aux functions
     @classmethod
-    def txt_out(cls, text, filename):
-        with open(cls.OUTPUT_DIR / filename, "w") as f:
+    def txt_out(cls, text, filename, outpath=None):
+        if not outpath:
+            outpath = cls.OUTPUT_DIR / filename
+        with open(outpath, "w") as f:
             f.write(text)
-    
-    @classmethod
-    def txt_in(cls, filepath):
-        with open(filepath, 'r') as f:
-            return f.read()
         
     # Function only ment for the build_report.py
     @classmethod

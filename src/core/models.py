@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
 
@@ -13,18 +12,20 @@ from utils import normalize_image
 
 
 
-def load_model(model_name : str):
-    prefix = model_name.split('.')[-1]
-    if prefix == 'pt':
+def load_model(model_type, test_type, name):
+
+    if model_type.upper() == 'YOLOV8':
         model = YOLO(str(
-            FileHandler.MODELS_PATH / 'YoloV8' / model_name
+            str((FileHandler.MODELS_PATH / 'YoloV8' / test_type.lower() / name).resolve())
         ))
         return YOLOModel(model)
-    else:
+    elif model_type.upper() == 'LEGACY':
         interpreter = tflite.Interpreter(
-            str(FileHandler.MODELS_PATH / 'Legacy' / model_name / "saved_model" / "model.tflite")
+            str((FileHandler.MODELS_PATH / 'Legacy' / name / "saved_model" / "model.tflite").resolve())
         )
         return LegacyModel(interpreter)
+    elif model_type.upper() == 'EFSCANALGO':
+        return EFScanAlgoModel(test_type, name)
 
 
 ### YOLOV8 MODEL ###
@@ -106,7 +107,6 @@ class LegacyModel:
         input_tensor = interpreter.tensor(tensor_index)()[0]
         input_tensor[:, :] = image
 
-
     def __get_output_tensor(self, interpreter, index):
         output_details = interpreter.get_output_details()[index]
         tensor = np.squeeze(interpreter.get_tensor(output_details["index"]))
@@ -115,5 +115,31 @@ class LegacyModel:
 
 ### NON AI MODEL ###
 
-class EFscanAlgo:
-    pass
+class EFScanAlgoModel:
+    
+    __initialized = False
+    __scanner = None
+    def __init__(self, test_type : str, stage : str) -> None:
+        self.stage = stage.split('.')[0].upper()
+        # Set path to import dynamically
+        if not self.__initialized:
+            self.__init_paths()
+        # Import Scanner class and create instance
+        from EFscanAlgo import get_scanner
+        self.__scanner = get_scanner(test_type, self.stage)
+
+
+    def detect(self, img) -> list[Detection]:
+        return self.__scanner.detect(img)
+        
+
+    # Initialization function
+    def __init_paths(self):
+        import importlib
+        import sys
+        import pathlib
+        # Include the path to the src folde
+        path = pathlib.Path(__file__).parent.parent
+        # Include path to models EFscanAlgo
+        sys.path.append(str(path.parent / 'models'))
+        self.__initialized = True

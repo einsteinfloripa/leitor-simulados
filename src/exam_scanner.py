@@ -11,6 +11,7 @@ logger = log.get_new_logger('exam scanner')
 
 
 def exam_scanner(
+    prova,
     model_name_1st_stage,
     model_name_2nd_stage,
     label_map_1st_stage,
@@ -18,28 +19,46 @@ def exam_scanner(
     score_threshold_1st_stage,
     score_threshold_2nd_stage,
 ):
+    # Control variables
     falied_imgs = ''
     success_imgs = ''
-    detection_model_1st_stage = load_model(model_name_1st_stage)
-    detection_model_2nd_stage = load_model(model_name_2nd_stage)
-
-
+    # Parse the model names
+    model_type_first, name_first = (
+        model_name_1st_stage.split('/')[0],
+        model_name_1st_stage.split('/')[-1]
+    )
+    model_type_second, name_second = (
+        model_name_2nd_stage.split('/')[0],
+        model_name_2nd_stage.split('/')[-1]
+    )
+    # Load the models
+    detection_model_1st_stage = load_model(
+        model_type_first,
+        prova[0],
+        name_first
+        )
+    detection_model_2nd_stage = load_model(
+        model_type_second,
+        prova[0],
+        name_second
+        )
+    
+    # Main loop through the images
     for img_path in FileHandler.INPUT_PATHS:
         status = 'success'
         try:
+            # Get first stage detections
             Detection.set_label_map(label_map_1st_stage)
             img = Image.from_path(img_path)
-
             img.make_detections_with_model(
                 detection_model_1st_stage, score_threshold_1st_stage
             )
-            
+            # Perform First stage checks
             if checks.perform(img, stage=1) == 'failed':
                 falied_imgs += f'{img.name[:-4]}\n'
                 status = 'failed'
                 continue
-            
-            
+            # Get second stage detections for each cropped image
             Detection.set_label_map(label_map_2nd_stage)
             try:
                 cropped_imgs : list[Image] = img.get_cropped()
@@ -51,21 +70,20 @@ def exam_scanner(
                 crop_img.make_detections_with_model(
                     detection_model_2nd_stage, score_threshold_2nd_stage
                 )
-
+                # Perform Second stage checks 
                 if checks.perform(crop_img, stage=2) == 'failed' and status == 'success':
                     falied_imgs += f'{img.name[:-4]}\n'
                     status = 'failed'
                     continue
-
-
+            # If all checks passed, tag the img as 'success'
             if status == 'success':
                 success_imgs += f'{img.name[:-4]}\n'
         except Exception as e:
             logger.exception(e)
             exit(1)
-        
+        # Call save function, the save setting are set in FileHandler
         FileHandler.save(main_img=img, cropped_imgs=cropped_imgs)
-
+    # Write the scan report
     report = f'success:\n{success_imgs}\n\nfalied:\n{falied_imgs}'
     logger.info(report)
     FileHandler.txt_out(report, 'report.txt')
@@ -73,8 +91,8 @@ def exam_scanner(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="ps_first_stage.pt")
-    parser.add_argument("-ms", "--model_name_2nd_stage", type=str, default="2nd_stage_v0_0_1")
+    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="EFscanAlgo/first_stage.py")#TODO:"YoloV8/ps_first_stage.pt")
+    parser.add_argument("-ms", "--model_name_2nd_stage", type=str, default="EFscanAlgo/second_stage.py")
     parser.add_argument(
         "-lf",
         "--label_map_1st_stage",
@@ -173,6 +191,7 @@ def main():
 
 
     exam_scanner(
+        args.prova,
         args.model_name_1st_stage,
         args.model_name_2nd_stage,
         args.label_map_1st_stage,

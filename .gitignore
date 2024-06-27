@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+# dev
+.vscode
+scanner_output
+
+
 # Distribution / packaging
 .Python
 build/

@@ -296,14 +296,14 @@ class SelectedBallChecker(Checker):
 
     @classmethod
     def _precheck_setup(cls):
-        if cls.IMG_INSTANCE.cropped_by == 'cpf_block':
+        if cls.IMG_INSTANCE.cropped_from_detection == 'cpf_block':
             #count
             cls.EXPECTED_COUNT = 11
             #position
             cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
                 x_min=0.135, y_min=0.08, x_max=0.96, y_max=0.96
             )
-        elif cls.IMG_INSTANCE.cropped_by == 'questions_block':
+        elif cls.IMG_INSTANCE.cropped_from_detection == 'questions_block':
             #count
             cls.EXPECTED_COUNT = 10
             #position
@@ -349,14 +349,14 @@ class UnselectedBallChecker(Checker):
 
     @classmethod
     def _precheck_setup(cls):
-        if cls.IMG_INSTANCE.cropped_by == 'cpf_block':
+        if cls.IMG_INSTANCE.cropped_from_detection == 'cpf_block':
             #count
             cls.EXPECTED_COUNT = 100
             #position
             cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
                 x_min=0.135, y_min=0.08, x_max=0.96, y_max=0.96
             )
-        elif cls.IMG_INSTANCE.cropped_by == 'questions_block':
+        elif cls.IMG_INSTANCE.cropped_from_detection == 'questions_block':
             #count
             cls.EXPECTED_COUNT = 40
             #position
