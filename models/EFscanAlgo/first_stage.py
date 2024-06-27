@@ -198,7 +198,7 @@ class FirstStageScanner(Scanner):
             else:
                 groups.append([lines[i]])
         # Filter small groups
-        groups = [group for group in groups if len(group) > 2]
+        groups = [group for group in groups if len(group) > 1]
         # Get a form of average of the lines
         avg_lines = []
         for group in groups:

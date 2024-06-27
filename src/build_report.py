@@ -27,7 +27,7 @@ def build_report(falied, ec):
     for path in dir_paths['success']:
         logger.error(f'buiding report for {path.name}')
         name = path.name.split('.')[0]
-        report.update({name : builder.build(path, status='success', ec=False)})
+        report.update({name : builder.build(path, status='success', ec=ec)})
         logger.warning(f'{path.name} added to report')
 
     logger.debug('building falied reports...') 
@@ -94,6 +94,7 @@ def main():
     builder.CONTINUE_ON_FAIL = args.continue_on_fail
     builder.load_builder()
     build_report(args.falied_to, args.error_correction)
+
 
 if __name__ == '__main__':
     main()

@@ -7,7 +7,7 @@ from utils import log
 
 
 #config vars
-PROVA = 'PS'
+PROVA = None
 CONTINUE_ON_FAIL = False
 
 
@@ -19,7 +19,7 @@ def load_builder():
     if PROVA == 'SIMUENEM':
         raise NotImplementedError('SIMUENEM is not implemented yet')
     elif PROVA == 'SIMUFSC':
-        raise NotImplementedError('SIMUFSC is not implemented yet')
+        import builder.simufsc_builder as _builder
     elif PROVA == 'PS':
         import builder.ps_alunos_builder as _builder
 
@@ -150,22 +150,21 @@ class Builder():
     
     @classmethod
     def _get_selected_ball_position(cls, type, num_elements, detections : list[dict]) -> list[dict]:
-        logger.debug(f'getting selected ball position in {type}...')
-        logger.debug(f'detections: {detections}')
-        if len(detections) != num_elements:
-            return None
-        axis = 'y' if type == 'columns' else 'x'
-        sorted_detections = cls._sort_axis(axis, detections)
-        cont = 0
-        while True:
-            try:
+        try:
+            logger.debug(f'getting selected ball position in {type}...')
+            logger.debug(f'detections: {detections}')
+            if len(detections) != num_elements:
+                return None
+            axis = 'y' if type == 'columns' else 'x'
+            sorted_detections = cls._sort_axis(axis, detections)
+            cont = 0
+            while True:
                 if sorted_detections[cont]['class_id'] == 'selected_ball':
                     break
-            except IndexError:
-                return None
-            else:
                 cont += 1
-        return cont
+            return cont
+        except IndexError:
+            return None
     
     @classmethod
     def _get_cpf_lines_max_y_value(cls, cpf_block : Block) -> list[tuple[float, float]]:

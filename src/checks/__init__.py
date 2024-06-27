@@ -40,7 +40,7 @@ def load_checker(flag_prova : str):
 def perform(img : Image, stage : int):
 
     if hasattr(_checker, '__EMPTYCHECKER__'):
-        logger.error(f' ---- No checks for {img.name} ---- ')
+        logger.error(f' ---- No checks performed on {img.name} ---- ')
         return 'suceess'
 
     logger.error(f' ---- Performing checks on {img.name} ---- ')
