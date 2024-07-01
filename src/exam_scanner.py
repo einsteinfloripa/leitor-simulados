@@ -116,7 +116,7 @@ def main():
     parser.add_argument("-stf", "--score_threshold_1st_stage", type=float, default=0.5)
     parser.add_argument("-sts", "--score_threshold_2nd_stage", type=float, default=0.5)
     parser.add_argument(
-        "-i", "--input_directory", type=str, default='input_images'
+        "-i", "--input_directory", type=str, required=True
     )
     parser.add_argument("-o", "--output_directory", type=str, default="scanner_output")
     # make a log file

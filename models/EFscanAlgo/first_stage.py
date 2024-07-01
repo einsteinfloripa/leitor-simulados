@@ -8,6 +8,7 @@ from EFscanAlgo import Scanner, ef_get_tilt
 from core.object_detection import Detection
 from core.models import load_model
 from utils.data_classes import FloatBoundingBox
+from checks import CONTINUE_ON_FAIL
 
 class FirstStageScanner(Scanner):
     
@@ -81,16 +82,28 @@ class FirstStageScanner(Scanner):
         lines = [l[0] for l in cv2.HoughLinesP(edges, 1, math.pi / 90, 50, None, 70, 5)]
         # Filter the lines
         h_lines, v_lines = self.__first_filter_lines(lines, img)
-        # Draw the lines and save the image
+        h_lines, v_lines = self.__strip_outer_lines(h_lines, v_lines)
+
+
         # Merge the lines
         h_lines = self.__merge_lines(h_lines, 'h', img)
         v_lines = self.__merge_lines(v_lines, 'v', img)
         # Filter the lines again
+        h_lines, v_lines = self.__strip_outer_lines(h_lines, v_lines, img)  
         h_lines = self.__second_filter_lines(h_lines, 'h', img)
         v_lines = self.__second_filter_lines(v_lines, 'v', img)
-        # Assert if the number of lines is correct
-        assert len(h_lines) == self._get_test_data('n_h_lines')
-        assert len(v_lines) == self._get_test_data('n_v_lines')
+        # Merge the lines again
+        h_lines = self.__merge_lines(h_lines, 'h', img, const=10)
+        v_lines = self.__merge_lines(v_lines, 'v', img, const=10)
+        # Assert if the number of lines is correct TODO: define wrapper for this
+        try:
+            assert len(h_lines) == self._get_test_data('n_h_lines')
+            assert len(v_lines) == self._get_test_data('n_v_lines')
+        except AssertionError:
+            if CONTINUE_ON_FAIL:
+                return []
+            else:
+                raise AssertionError("Failed to find the correct number of lines.")
         # find the intersection of the lines
         img_h, img_w = img.shape[:2]
         intersec = []
@@ -132,7 +145,7 @@ class FirstStageScanner(Scanner):
             if tg > 2 and tg < 88 or tg < -2 and tg > -88:
                 continue
             # filter lines that are above some threshold
-            if l[1] > HEIGHT*0.85 or l[1] < HEIGHT*0.38 or \
+            if l[1] > HEIGHT*0.9 or l[1] < HEIGHT*0.36 or \
             l[0] > WIDTH*0.95 or l[2] < WIDTH*0.05:
                 continue
 
@@ -145,18 +158,17 @@ class FirstStageScanner(Scanner):
 
 
     def __second_filter_lines(self, lines, axis, img):
-        # Get relevant constants
-        n_h_line = self._get_test_data('n_h_lines')
-        n_v_line = self._get_test_data('n_v_lines') 
         # Define variables
         if axis == 'h':
             lines.sort(key=lambda x: x[1])
             n = 1
-            spacing_c = self._get_test_data('h_line_spacing') * img.shape[0]
+            # 3 times the normal spacing
+            spacing_c = self._get_test_data('h_line_spacing') * 3 * img.shape[0]
         elif axis == 'v':
             lines.sort(key=lambda x: x[0])
             n = 0
-            spacing_c = self._get_test_data('v_line_spacing') * img.shape[1]
+            # 3 times the normal spacing
+            spacing_c = self._get_test_data('v_line_spacing') * 3 * img.shape[1]
         # Group the lines
         # This time the groupping is more spaced appart
         groups = []
@@ -175,11 +187,14 @@ class FirstStageScanner(Scanner):
         lg = groups[-1]
         if len(groups[-1]) > 1:
             [lg.pop(-1) for _ in range(len(lg)-1)]
+        # TODO: get rid of the magic number 5
+        lower_bound = fg[0][n] - 5
+        upper_bound = lg[0][n] + 5
         # Return the lines
-        return [line for group in groups for line in group]
+        return [line for group in groups for line in group if line[n] > lower_bound and line[n] < upper_bound]
 
 
-    def __merge_lines(self, lines, axis, img):
+    def __merge_lines(self, lines, axis, img, const = 5):
         # Get variables set
         height, width = img.shape[:2]
         if axis == 'h':
@@ -193,12 +208,10 @@ class FirstStageScanner(Scanner):
         for i in range(0, len(lines)):
             if i == 0:
                 groups.append([lines[i]])
-            elif abs(lines[i][n] - lines[i-1][n]) < 5:
+            elif abs(lines[i][n] - lines[i-1][n]) < const:
                 groups[-1].append(lines[i])
             else:
                 groups.append([lines[i]])
-        # Filter small groups
-        groups = [group for group in groups if len(group) > 1]
         # Get a form of average of the lines
         avg_lines = []
         for group in groups:
@@ -217,3 +230,54 @@ class FirstStageScanner(Scanner):
                 line[:] = [line[0], 0, line[1], height]
 
         return avg_lines
+    
+
+    def __strip_outer_lines(self, h_lines, v_lines, img = None):
+        if img is not None:
+            img_h, img_w = img.shape[:2]
+            v_spacing = self._get_test_data('h_line_spacing')
+            h_spacing = self._get_test_data('v_line_spacing')
+        # Get variables set
+        bounds = [(None,None), (None, None)] # (h_bounds, v_bounds)
+        # get the upper and lower bounds for each axis
+        for lines in [h_lines, v_lines]: 
+            if lines == h_lines:
+                lines.sort(key=lambda x: x[1])
+                n = 1
+                constant = 5 if img is None else img_h*v_spacing*5
+            elif lines == v_lines:
+                lines.sort(key=lambda x: x[0])
+                n = 0
+                constant = 5 if img is None else img_w*h_spacing*3
+            # Cluster lines together
+            groups = []
+            for i in range(0, len(lines)):
+                if i == 0:
+                    groups.append([lines[i]])
+                elif abs(lines[i][n] - lines[i-1][n]) < constant:
+                    groups[-1].append(lines[i])
+                else:
+                    groups.append([lines[i]])
+            # Get the first and last group
+            first_group = groups[0]
+            last_group = groups[-1]
+            # Get the bound coordinates TODO: get reed of the magic number 10
+            lower_bound = sum(
+                [(line[n] + line[n+2])/2 for line in first_group]) / len(first_group) - 10
+            upper_bound = sum(
+                [(line[n] + line[n+2])/2 for line in last_group]) / len(last_group) + 10
+            # Set the bounds
+            bounds[n] = (lower_bound, upper_bound)
+        # Filter the outer lines
+        h_lines = [line for line in h_lines if (line[0]+line[2])/2 > bounds[0][0]
+                    and (line[0]+line[2])/2 < bounds[0][1] 
+                    and (line[1]+line[3])/2 > bounds[1][0]
+                    and (line[1]+line[3])/2 < bounds[1][1]
+                ]
+        v_lines = [line for line in v_lines if (line[1]+line[3])/2 > bounds[1][0]
+                    and (line[1]+line[3])/2 < bounds[1][1] 
+                    and (line[0]+line[2])/2 > bounds[0][0]
+                    and (line[0]+line[2])/2 < bounds[0][1]
+                ]
+        # Return the filtered lines
+        return h_lines, v_lines

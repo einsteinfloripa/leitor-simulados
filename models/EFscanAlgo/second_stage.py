@@ -14,7 +14,7 @@ class SecondStageScanner(Scanner):
         super().__init__(test_type)
 
 
-    def detect(self, img : Image) -> list[Detection]:
+    def detect(self, img):
         # Get the tilt of the image, this must use the parent img (the full img)
         parent_img_raw = img.cropped_from.raw
         tilt = ef_get_tilt(parent_img_raw)
@@ -54,13 +54,18 @@ class SecondStageScanner(Scanner):
         # Get the average gray value of the circles
         detections = []
         for circle in circles:
+            cont = 0
             avg = 0
             x, y, r = [int(c) for c in circle]
             for i in range(x-r, x+r):
                 for j in range(y-r, y+r):
                     if (i-x)**2 + (j-y)**2 < r**2:
-                        avg += img[j, i]
-            avg = avg / (math.pi * r**2)
+                        try:
+                            cont += 1
+                            avg += img[j, i]
+                        except:
+                            pass
+            avg = avg / cont
 
             # If the average is greater than 100, the circle is filled
             if avg > 100:
