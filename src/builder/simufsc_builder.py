@@ -11,8 +11,11 @@ def build(context : BuilderContext, status, ec) -> None:
     logger.debug('building report...')    
     # Create a dictionary to store the report
     report = {}
-    # Set the cpf pipeline if the error correction was set has a cpf key
-    if 'cpf' in ec: SimufscBuilder.set_cpf_ec_pipeline(context)
+    # Set the pipeline if the error correction was set
+    if 'cpf' in ec: SimufscBuilder.set_cpf_func(SimufscBuilder.standart_build_cpf_ec)
+    else: SimufscBuilder.set_cpf_func(SimufscBuilder.standart_build_cpf) 
+    if 'questions' in ec: raise NotImplementedError('Error correction for questions block not implemented yet')
+    else: SimufscBuilder.set_qb_func(SimufscBuilder.build_questions_block)
     # Build the cpf block if exists
     if context.cpf_block is not None:
         logger.debug('building cpf from cpf_block...')
@@ -24,7 +27,10 @@ def build(context : BuilderContext, status, ec) -> None:
     for block in context.questions_block:
         block_number = block.name.split('.')[0][-2:]
         block_number = str(int(block_number) + 1)
-        report.update({block_number:SimufscBuilder.build_questions_block(block)})
+        report.update(
+            {
+                block_number:SimufscBuilder.build_qb(block)
+            })
     # Return the report
     return report
 
@@ -58,5 +64,6 @@ class SimufscBuilder(Builder):
                 block_report += selected_ball_index * multyplier # Left digit are decimals
             else:
                 block_report = 'NAO DETECTADO'
+                break
         # Return the block report
         return str(block_report)

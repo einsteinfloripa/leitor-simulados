@@ -11,8 +11,11 @@ def build(context : BuilderContext, status, ec) -> None:
     logger.debug('building report...')    
     # Create a dictionary to store the report
     report = {}
-    # Set the cpf pipeline if the error correction was set has a cpf key
-    if 'cpf' in ec: PSAlunosBuilder.set_cpf_ec_pipeline(context)
+    # Set the pipeline if the error correction was set
+    if 'cpf' in ec: PSAlunosBuilder.set_cpf_func(PSAlunosBuilder.standart_build_cpf_ec)
+    else : PSAlunosBuilder.set_cpf_func(PSAlunosBuilder.standart_build_cpf)
+    if 'qb' in ec: raise NotImplementedError('Error correction for questions block not implemented yet')
+    else : PSAlunosBuilder.set_qb_func(PSAlunosBuilder.build_questions_block)
     # Build the cpf block if exists
     if context.cpf_block is not None:
         logger.debug('building cpf from cpf_block...')
@@ -22,7 +25,7 @@ def build(context : BuilderContext, status, ec) -> None:
     # Build the questions blocks
     logger.debug('building questions from questions_blocks...')
     for block in context.questions_block:
-        report.update(PSAlunosBuilder.build_questions_block(block))
+        report.update(PSAlunosBuilder.build_qb(block))
     # Return the report
     return report
 
