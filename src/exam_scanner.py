@@ -187,7 +187,8 @@ def main():
     FileHandler.get_input_paths(recursive=args.recursive)
     FileHandler.SAVE_IMAGES = args.save_images
     FileHandler.SAVE_YOLO = args.yolo
-
+    FileHandler.set_path("FIRST_STAGE_PATH", FileHandler.MODELS_PATH / args.model_name_1st_stage)
+    FileHandler.set_path("SECOND_STAGE_PATH", FileHandler.MODELS_PATH / args.model_name_2nd_stage)
 
 
     exam_scanner(

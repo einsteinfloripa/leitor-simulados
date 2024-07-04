@@ -35,7 +35,7 @@ class YOLOModel:
         self.model = model
 
     def detect(self, img_raw) -> list[Detection]:
-        result = self.model.predict(img_raw)[0]
+        result = self.model.predict(img_raw, verbose=False)[0]
         detections = []
         boxes = result.boxes.xyxyn.tolist()
         classes = result.boxes.cls.tolist()

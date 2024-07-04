@@ -19,6 +19,8 @@ class FileHandler():
     ACCEPTED_IMAGE_EXTENTIONS = (".jpg", ".jpeg", ".png")
 
     MODELS_PATH = None
+    FIRST_STAGE_MODEL = None
+    SECOND_STAGE_MODEL = None
 
     SAVE_IMAGES = False
     SAVE_YOLO = False

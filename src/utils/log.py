@@ -44,7 +44,8 @@ def set_log_level(level):
         try:
             if len(logger.handlers) < 2: continue
             try:
-                var = eval(f'logging.{level[0]}')
+                # TODO:KEEP IN MIND FOR THE FUTURE: THIS IS A SECURITY RISK
+                var = eval(f'logging.{level[0]}') 
                 eval("logger.handlers[1].setLevel(var)")
             except:
                 raise ValueError(f'Invalid log level: {level}')

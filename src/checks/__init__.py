@@ -11,7 +11,6 @@ from typing import Callable
 
 #File configs
 FILTER_DETECTIONS = None
-FILTER_ONLY = None
 CONTINUE_ON_FAIL = None
 SAVE_YOLO = False
 
@@ -89,7 +88,10 @@ class Checker(metaclass=Meta):
         '''Ensures that the function is only called if there are detections to be checked'''
         def wrapper(cls, *args, **kwargs):
             if len(cls.detections) == 0:
-                cls.logger.warning(f'No detections found!')
+                if hasattr(cls, 'EXPECTED_COUNT'):
+                    cls.logger.warning(f'[ FALIED ] No detections found! Expected {cls.EXPECTED_COUNT} detections')
+                    raise AssertionError(f'No detections found! Expected {cls.EXPECTED_COUNT} detections')
+                cls.logger.info(f'No detections found!')
                 return []
             else:
                 return func(cls, *args, **kwargs)
@@ -105,7 +107,7 @@ class Checker(metaclass=Meta):
                 if kwargs.get('filter', False):
                     cls.logger.info(f'[ REMOVED DETECTION ] {func.__name__}: {e}')
                     cls.logger.debug(f'Delecting detections: {e.args[1]}')
-                    cls.to_remove.extend(e.args[1])
+                    cls.reproved.extend(e.args[1])
                 else:
                     cls.logger.error(f'[ FALIED ] {func.__name__}: {e}')
                     cls.fail = True
@@ -116,6 +118,18 @@ class Checker(metaclass=Meta):
                 raise e
 
         return wrapper
+    
+    # Auxiliar functions
+    @classmethod
+    def flush_reproved(cls):
+        for detection in cls.reproved:
+            try:
+                cls.IMG_INSTANCE.detections.remove(detection)
+                cls.detections.remove(detection)
+            except ValueError:
+                cls.logger.error(f'Cant remove detection {detection} from detections')
+                continue
+        cls.reproved.clear()
 
     # Check functions
     @classmethod
@@ -141,7 +155,7 @@ class Checker(metaclass=Meta):
         distance = cls._get_distance_between_points(detection.middle_point, target)
         if not distance <= radius:
             raise AssertionError(
-                f'distance <= radius  ::  {distance} <= {radius}',
+                f'distance <= radius  ::  {distance:.4f} <= {radius:.4f}',
                 [detection]
             )
         
@@ -149,13 +163,12 @@ class Checker(metaclass=Meta):
     @execute
     def horizontally_alling(cls, detections : list[Detection], tolerance = None, **kwargs) -> bool:
         average_y : float = sum([detection.middle_point.y for detection in detections]) / len(detections)
-        result = None
         bad_detections = []
         for detection in detections:
             if abs(detection.middle_point.y - average_y) > tolerance:
                 bad_detections.append(detection)
         if bad_detections:
-            string = ' '.join([f'{abs(detection.middle_point.y - average_y)} <= {tolerance}' for detection in bad_detections])
+            string = ' | '.join([f'{abs(detection.middle_point.y - average_y):.4f} < {tolerance:.4f}' for detection in bad_detections])
             raise AssertionError(
                 f'abs(detection.middle_point.y - average_y) <= tolerance  ::  {string}',
                 bad_detections
@@ -165,15 +178,14 @@ class Checker(metaclass=Meta):
     @execute
     def vertically_alling(cls, detections : list[Detection], tolerance = None, **kwargs) -> bool:
         average_x : float = sum([detection.middle_point.x for detection in detections]) / len(detections)
-        result = None
         bad_detections = []
         for detection in detections:
             if abs(detection.middle_point.x - average_x) > tolerance:
                 bad_detections.append(detection)
         if bad_detections:
-            string = ' '.join([f'{abs(detection.middle_point.x - average_x)} <= {tolerance}' for detection in bad_detections])
+            string = ' | '.join([f'{abs(detection.middle_point.x - average_x):.4f} <= {tolerance:.4f}' for detection in bad_detections])
             raise AssertionError(
-                f'abs(detection.middle_point.x - average_x) <= tolerance  ::  {string}',
+                f'abs(detection.middle_point.x - average_x) < tolerance  ::  {string}',
                 bad_detections
             )
 
@@ -185,7 +197,7 @@ class Checker(metaclass=Meta):
         result = ymin <= middle.y <= ymax and xmin <= middle.x <= xmax
         if not result:
             raise AssertionError(
-                f'b.ymin <= s.y <= b.ymax and b.xmin <= s.x <= b.xmax  ::  {ymin} <= {middle.y} <= {ymax} and {xmin} <= {middle.x} <= {xmax}',
+                f'b.ymin <= s.y <= b.ymax and b.xmin <= s.x <= b.xmax  ::  {ymin:.4f} <= {middle.y:.4f} <= {ymax:.4f} and {xmin:.4f} <= {middle.x:.4f} <= {xmax:.4f}',
                 [bigger, smaller]
             )
 
@@ -196,7 +208,7 @@ class Checker(metaclass=Meta):
         ) -> bool:
         if not abs(detection.aspect_ratio - expected_ratio)/expected_ratio <= tolerance:
             raise AssertionError(
-                f'abs(detection.aspect_ratio - expected_ratio) <= tolerance  ::  {abs(detection.aspect_ratio - expected_ratio)/expected_ratio} <= {tolerance}',
+                f'abs(detection.aspect_ratio - expected_ratio) <= tolerance  ::  {abs((detection.aspect_ratio - expected_ratio)/expected_ratio):.4f} <= {tolerance}',
                 [detection]
             )
 
@@ -204,11 +216,11 @@ class Checker(metaclass=Meta):
     @execute
     def inside_box(cls, detection : Detection, bound_box : FloatBoundingBox, **kwargs) -> bool:
         point = detection.middle_point
-        result = (bound_box.ponto_min.x <= point.x <= bound_box.ponto_max.x 
-                  and bound_box.ponto_min.y <= point.y <= bound_box.ponto_max.y)
+        result = (bound_box.p_min.x <= point.x <= bound_box.p_max.x 
+                  and bound_box.p_min.y <= point.y <= bound_box.p_max.y)
         if not result:
             raise AssertionError(
-                f'min.x <= detection.x <= max.x and min.y <= detection.y <= max.y  ::  {bound_box.ponto_min.x} <= {point.x} <= {bound_box.ponto_max.x} and {bound_box.ponto_min.y} <= {point.y} <= {bound_box.ponto_max.y}',
+                f'min.x <= detection.x <= max.x and min.y <= detection.y <= max.y  ::  {bound_box.p_min.x:.4f} <= {point.x:.4f} <= {bound_box.p_max.x:.4f} and {bound_box.p_min.y:.4f} <= {point.y:.4f} <= {bound_box.p_max.y:.4f}',
                 [detection]
             )
 
