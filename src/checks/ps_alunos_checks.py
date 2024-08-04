@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from aux.log import checks_logger as logger
+from utils.log import checks_logger as logger
 
-from aux.object_detection import Detection
-from aux.data_classes import FloatBoundingBox, FloatPoint
+from core.object_detection import Detection
+from utils.data_classes import FloatBoundingBox, FloatPoint
 from checks import Checker, logger
 
 
@@ -27,16 +27,16 @@ def setup_detections(detections : list[Detection], filter_detections : bool, sta
                 handler_class = CHECKERS_MAP[detection.class_name]
                 handler_class.detections.append(detection)
         
-        # call auxiliar variables constructor for each class
-        for cls in CHECKERS_MAP.values():
-            if hasattr(cls, '_precheck_setup'):
-                cls._precheck_setup()
-
         # clean detections
         if filter_detections:
             for cls in CHECKERS_MAP.values():
                 if hasattr(cls, 'clean_detections'):
                     cls.clean_detections()
+
+        # call auxiliar variables constructor for each class
+        for cls in CHECKERS_MAP.values():
+            if hasattr(cls, '_precheck_setup'):
+                cls._precheck_setup()
 
 
 def perform_checks(stage : int) -> None:
@@ -44,12 +44,14 @@ def perform_checks(stage : int) -> None:
         CpfBlockChecker.perform_checks()
         QuestionsBlockChecker.perform_checks()
     elif stage == 2:
-        CpfColumnChecker.perform_checks()
-        QuestionLineChecker.perform_checks()
         SelectedBallChecker.perform_checks()
         UnselectedBallChecker.perform_checks()
-        QuestionNumberChecker.perform_checks()
-        QuestionLineClusterChecker.perform_checks()
+        if Checker.IMG_INSTANCE.cropped_from_detection == 'questions_block':
+            QuestionLineChecker.perform_checks()
+            QuestionNumberChecker.perform_checks()
+            QuestionLineClusterChecker.perform_checks()
+        if Checker.IMG_INSTANCE.cropped_from_detection == 'cpf_block':
+            CpfColumnChecker.perform_checks()
 
 
 
@@ -63,22 +65,17 @@ class CpfBlockChecker(Checker):
     MIDDLE_POINT_RADIUS_TOLERANCE = 0.05 # 5% of the image height
 
     @classmethod
-    @Checker.has_detections
     def clean_detections(cls):
         cls.logger.debug(f'Cleaning detections...')
-        cls.to_remove = []
+        cls.reproved = []
+        # Aspect Ratio
         for detection in cls.detections:
-            # Position
-            cls.center_is_near_of(detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT, radius=cls.MIDDLE_POINT_RADIUS_TOLERANCE, filter=True)
-            # Aspect Ratio
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
-
-        for detection in cls.to_remove:
-            try:
-                cls.IMG_INSTANCE.detections.remove(detection)
-                cls.detections.remove(detection)
-            except ValueError:
-                continue
+        cls.flush_reproved()
+        # Position
+        for detection in cls.detections:
+            cls.center_is_near_of(detection, cls.EXPECTED_AVERAGE_MIDDLE_POINT, radius=cls.MIDDLE_POINT_RADIUS_TOLERANCE, filter=True)
+        cls.flush_reproved()
 
     @classmethod
     @Checker.has_detections
@@ -97,11 +94,15 @@ class QuestionsBlockChecker(Checker):
     #count
     EXPECTED_COUNT = 6
     #position
-    EXPECTED_AVERAGE_MIDDLE_POINTS = [
+    EXPECTED_AVERAGE_MIDDLE_POINTS = [ # NOT USED FOR NOW
         FloatPoint(0.2101, 0.5249), FloatPoint(0.5, 0.5249), FloatPoint(0.7713, 0.5249),
         FloatPoint(0.2101, 0.7245), FloatPoint(0.5, 0.7245), FloatPoint(0.7713, 0.7245)
     ]
-    MIDDLE_POINTS_RADIUS = 0.05 # 5% of the image height
+    MIDDLE_POINTS_RADIUS = 0.05 # 5% of the image height NOT USED FOR NOW
+    #boundries
+    EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
+        x_min=0.15, y_min=0.4, x_max=0.9, y_max=0.85
+    )
     #aspect ratio
     EXPECTED_ASPECT_RATIO =  1.1896
     ASPECT_RATIO_TOLERANCE = 0.15
@@ -121,22 +122,17 @@ class QuestionsBlockChecker(Checker):
         cls.sorted_detections = cls.UPPER_TREE_BLOCKS + cls.LOWER_TREE_BLOCKS
 
     @classmethod
-    @Checker.has_detections
     def clean_detections(cls):
         cls.logger.debug(f'Cleaning detections...')
-        cls.to_remove = []
-        for i, detection in enumerate(cls.detections):
-            # Position
-            cls.center_is_near_of(cls.sorted_detections[i], cls.EXPECTED_AVERAGE_MIDDLE_POINTS[i], radius=cls.MIDDLE_POINTS_RADIUS, filter=True)
-            # Aspect Ratio
+        cls.reproved = []
+        # Aspect Ratio
+        for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
-
-        for detection in cls.to_remove:
-            try:
-                cls.IMG_INSTANCE.detections.remove(detection)
-                cls.detections.remove(detection)
-            except ValueError:
-                continue
+        cls.flush_reproved()
+        # Position
+        for detection in cls.detections:
+            cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
+        cls.flush_reproved()
 
     @classmethod
     @Checker.has_detections
@@ -174,22 +170,17 @@ class CpfColumnChecker(Checker):
 
     
     @classmethod
-    @Checker.has_detections
     def clean_detections(cls):
         cls.logger.debug(f'Cleaning detections...')
-        cls.to_remove = []
+        cls.reproved = []
+        for detection in cls.detections:
+            # Aspect Ratio
+            cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
+        cls.flush_reproved()
         for detection in cls.detections:
             # Position
             cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
-            # Aspect Ratio
-            cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
-
-        for detection in cls.to_remove:
-            try:
-                cls.IMG_INSTANCE.detections.remove(detection)
-                cls.detections.remove(detection)
-            except ValueError:
-                continue
+        cls.flush_reproved()
 
     @classmethod
     @Checker.has_detections
@@ -200,7 +191,7 @@ class CpfColumnChecker(Checker):
         for detection in cls.detections:
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE)
 
-        cls.logger.info(f'[ PASSED ]')
+        cls.logger.warning(f'[ PASSED ]')
 
 
 class QuestionLineChecker(Checker):
@@ -217,22 +208,17 @@ class QuestionLineChecker(Checker):
     ASPECT_RATIO_TOLERANCE = 0.8 
 
     @classmethod
-    @Checker.has_detections
     def clean_detections(cls):
         cls.logger.debug(f'Cleaning detections...')
-        cls.to_remove = []
+        cls.reproved = []
+        for detection in cls.detections:
+            # Aspect Ratio
+            cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
+        cls.flush_reproved()
         for detection in cls.detections:
             # Position
             cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
-            # Aspect Ratio
-            cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
-
-        for detection in cls.to_remove:
-            try:
-                cls.IMG_INSTANCE.detections.remove(detection)
-                cls.detections.remove(detection)
-            except ValueError:
-                continue
+        cls.flush_reproved()
 
     @classmethod
     @Checker.has_detections
@@ -260,22 +246,17 @@ class QuestionNumberChecker(Checker):
     ASPECT_RATIO_TOLERANCE = 0.8
 
     @classmethod
-    @Checker.has_detections
     def clean_detections(cls):
         cls.logger.debug(f'Cleaning detections...')
-        cls.to_remove = []
+        cls.reproved = []
+        for detection in cls.detections:
+            # Aspect Ratio
+            cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
+        cls.flush_reproved()
         for detection in cls.detections:
             # Position
             cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
-            # Aspect Ratio
-            cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
-
-        for detection in cls.to_remove:
-            try:
-                cls.IMG_INSTANCE.detections.remove(detection)
-                cls.detections.remove(detection)
-            except ValueError:
-                continue
+        cls.flush_reproved()
 
     @classmethod
     @Checker.has_detections
@@ -296,14 +277,14 @@ class SelectedBallChecker(Checker):
 
     @classmethod
     def _precheck_setup(cls):
-        if cls.IMG_INSTANCE.cropped_by == 'cpf_block':
+        if cls.IMG_INSTANCE.cropped_from_detection == 'cpf_block':
             #count
             cls.EXPECTED_COUNT = 11
             #position
             cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
                 x_min=0.135, y_min=0.08, x_max=0.96, y_max=0.96
             )
-        elif cls.IMG_INSTANCE.cropped_by == 'questions_block':
+        elif cls.IMG_INSTANCE.cropped_from_detection == 'questions_block':
             #count
             cls.EXPECTED_COUNT = 10
             #position
@@ -313,22 +294,19 @@ class SelectedBallChecker(Checker):
 
 
     @classmethod
-    @Checker.has_detections
     def clean_detections(cls):
+        # must have precheck set
+        cls._precheck_setup()
         cls.logger.debug(f'Cleaning detections...')
-        cls.to_remove = []
+        cls.reproved = []
+        # Aspect Ratio
         for detection in cls.detections:
-            # Position
-            cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
-            # Aspect Ratio
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
-
-        for detection in cls.to_remove:
-            try:
-                cls.IMG_INSTANCE.detections.remove(detection)
-                cls.detections.remove(detection)
-            except ValueError:
-                continue
+        cls.flush_reproved()
+        # Position
+        for detection in cls.detections:
+            cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
+        cls.flush_reproved()
 
     @classmethod
     @Checker.has_detections
@@ -349,14 +327,14 @@ class UnselectedBallChecker(Checker):
 
     @classmethod
     def _precheck_setup(cls):
-        if cls.IMG_INSTANCE.cropped_by == 'cpf_block':
+        if cls.IMG_INSTANCE.cropped_from_detection == 'cpf_block':
             #count
             cls.EXPECTED_COUNT = 100
             #position
             cls.EXPECTED_BOUNDRIES = FloatBoundingBox.from_floats(
                 x_min=0.135, y_min=0.08, x_max=0.96, y_max=0.96
             )
-        elif cls.IMG_INSTANCE.cropped_by == 'questions_block':
+        elif cls.IMG_INSTANCE.cropped_from_detection == 'questions_block':
             #count
             cls.EXPECTED_COUNT = 40
             #position
@@ -365,22 +343,19 @@ class UnselectedBallChecker(Checker):
             )
 
     @classmethod
-    @Checker.has_detections
     def clean_detections(cls):
+        # must have precheck set
+        cls._precheck_setup()
         cls.logger.debug(f'Cleaning detections...')
-        cls.to_remove = []
+        cls.reproved = []
+        # Aspect Ratio
         for detection in cls.detections:
-            # Position
-            cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
-            # Aspect Ratio
             cls.aspect_ratio(detection, cls.EXPECTED_ASPECT_RATIO, tolerance=cls.ASPECT_RATIO_TOLERANCE, filter=True)
-
-        for detection in cls.to_remove:
-            try:
-                cls.IMG_INSTANCE.detections.remove(detection)
-                cls.detections.remove(detection)
-            except ValueError:
-                continue
+        cls.flush_reproved()
+        # Position
+        for detection in cls.detections:
+            cls.inside_box(detection, cls.EXPECTED_BOUNDRIES, filter=True)
+        cls.flush_reproved()
 
     @classmethod
     @Checker.has_detections

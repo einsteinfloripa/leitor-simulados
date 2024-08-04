@@ -1,0 +1,35 @@
+from dataclasses import dataclass, field
+
+@dataclass
+class FloatPoint():
+    x: float = field(default=0)
+    y: float = field(default=0)
+
+    def __iter__(self):
+        return iter((self.x, self.y))
+
+@dataclass
+class FloatBoundingBox():
+    p_min: FloatPoint = field(default=FloatPoint())
+    p_max: FloatPoint = field(default=FloatPoint())
+
+    #Constructors
+    @classmethod
+    def from_floats(cls, x_min, y_min, x_max, y_max):
+        return cls(
+            p_min = FloatPoint(x_min, y_min),
+            p_max = FloatPoint(x_max, y_max),
+        )
+    @classmethod
+    def from_yolo(cls, x_center, y_center, width, height):
+        x_min = x_center - width / 2
+        y_min = y_center - height / 2
+        x_max = x_center + width / 2
+        y_max = y_center + height / 2
+        return cls.from_floats(x_min, y_min, x_max, y_max)
+
+    def __iter__(self):
+        return iter((*self.p_min, *self.p_max))
+
+
+

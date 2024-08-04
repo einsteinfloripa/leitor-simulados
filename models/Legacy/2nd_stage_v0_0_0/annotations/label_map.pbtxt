@@ -1,0 +1,16 @@
+item { 
+	name:'cpf_column'
+	id:1
+}
+item { 
+	name:'question_line'
+	id:2
+}
+item { 
+	name:'selected_ball'
+	id:3
+}
+item { 
+	name:'question_number'
+	id:4
+}

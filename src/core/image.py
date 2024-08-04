@@ -1,0 +1,110 @@
+# for Image.get_cropped type hinting
+from __future__ import annotations
+
+import inspect
+
+import cv2
+import numpy as np
+import tflite_runtime.interpreter as tflite
+
+from core.object_detection import Detection
+
+class Image():
+
+    @classmethod
+    def from_path(cls, path : str):
+        name : str = path.split("/")[-1]
+        raw : np.ndarray = cv2.imread(path)
+        detections : list[Detection] | None = None
+        return cls(name, raw, detections)
+
+    colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (0,255,255), (255,0,255), (0,0,0)]
+
+    def __init__(self, name, raw, detections, cropped_from = None, cropped_from_detection=None) -> None:
+        self.raw : np.ndarray = raw
+        self.name : str = name
+        self.detections : list[Detection] = detections
+        self.height : int = raw.shape[0]
+        self.width : int = raw.shape[1]
+        self.cropped_from : Image = cropped_from
+        self.cropped_from_detection = cropped_from_detection
+        self.BOUNDING_BOXES_DRAWN = False
+
+    
+    def _has_detections(func):
+        def wrapper(self, *args, **kwargs):
+            if self.detections is None:
+                raise Exception("Image detections not set")
+            else:
+                return func(self, *args, **kwargs)
+        return wrapper
+    
+
+    def make_detections_with_model(self, model, score_threshold) -> None:
+        # check if the model has the image_raw parameter
+        sig = inspect.signature(model.detect)
+        if 'img_raw' in sig.parameters:
+            detections = model.detect(self.raw)
+        else:
+            detections = model.detect(self)
+        # Filter detections by score
+        self.detections = [d for d in detections if d.score > score_threshold]
+        # sort and mark detections from top left to bottom right    
+        self.detections.sort()
+
+        for i, detection in enumerate(self.detections):
+            detection.order = i
+        self.BOUNDING_BOXES_DRAWN = False
+    
+    @_has_detections
+    def get_cropped(self) -> list[Image]:
+        cropped = []
+        # the detections are sorted by top left to bottom right
+        cont = 0
+        current_class = self.detections[0].class_id
+        for detection in self.detections:
+            if detection.class_id != current_class:
+                cont = 0
+                current_class = detection.class_id
+            xmin, ymin, xmax, ymax = detection.to_pixels()
+            cropped.append(
+                Image(
+                    f"{self.name[:-4]}_{detection.class_name}_{cont:02}.jpg",
+                    self.raw[ymin:ymax, xmin:xmax],
+                    None,
+                    cropped_from=self,
+                    cropped_from_detection = detection.class_name
+                )
+            )
+            cont += 1
+        return cropped
+            
+    @_has_detections
+    def draw_bounding_boxes(self) -> None:
+        if self.BOUNDING_BOXES_DRAWN: return
+        for detection in self.detections:
+            xmin, ymin, xmax, ymax = detection.to_pixels()
+            cv2.rectangle(self.raw, (xmin, ymin), (xmax, ymax), self.colors[detection.class_id], 3)
+
+
+    def save(self, path : str) -> None:      
+        cv2.imwrite(path, self.raw)
+    
+
+    def to_json(self, only_ball_detections=True, for_annotation = False) -> list:
+        if only_ball_detections:
+            json_data = []
+            for detection in self.detections:
+                if 'ball' in detection.class_name:
+                    json_data.append(detection.to_json(for_annotation=for_annotation))
+            return json_data
+        else:
+            json_data = []
+            if self.detections:
+                for detection in self.detections:
+                    json_data.append(detection.to_json(for_annotation=for_annotation))
+            return json_data
+    
+    def to_yolo(self) -> str:
+        yolo = '\n'.join([detection.to_yolo() for detection in self.detections])
+        return yolo

@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 
 from builder.dataclasses import Block, BuilderContext
-from aux import log
+from utils import log
 
 
 #config vars
-PROVA = 'PS'
+PROVA = None
 CONTINUE_ON_FAIL = False
 
 
@@ -19,7 +19,7 @@ def load_builder():
     if PROVA == 'SIMUENEM':
         raise NotImplementedError('SIMUENEM is not implemented yet')
     elif PROVA == 'SIMUFSC':
-        raise NotImplementedError('SIMUFSC is not implemented yet')
+        import builder.simufsc_builder as _builder
     elif PROVA == 'PS':
         import builder.ps_alunos_builder as _builder
 
@@ -58,16 +58,24 @@ def build(path, status, ec) -> dict:
 
     return _builder.build(context, status=status, ec=ec)
 
+
 # tools class to make the report
 class Builder():
 
-    @classmethod
-    def set_cpf_ec_pipeline(cls, context):
-        cls.build_cpf = cls.build_cpf_ec
+    build_cpf = None
+    build_qb = None
 
-
+    ## Config functions ##
     @classmethod
-    def build_cpf(cls, cpf_block : Block) -> str:
+    def set_cpf_func(cls, func):
+        cls.build_cpf = func
+    @classmethod
+    def set_qb_func(cls, func):
+        cls.build_qb = func
+
+    ## Build function ##
+    @classmethod
+    def standart_build_cpf(cls, cpf_block : Block) -> str:
         logger.debug(f'build_cpf : {cpf_block.name}')
         cpf = ''
         ball_columns = cls.get_ball_columns(0.02, cpf_block.detections)
@@ -88,21 +96,14 @@ class Builder():
         return cpf
 
     @classmethod
-    def get_ball_lines(cls, distance_threshold, detections : list[dict]):
-        return cls._get_balls('y', distance_threshold, detections)
-
-    @classmethod
-    def get_ball_columns(cls, distance_threshold, detections : list[dict]):
-        return cls._get_balls('x', distance_threshold, detections)
-
-
-    @classmethod
-    def build_cpf_ec(cls, cpf_block : Block):
+    def standart_build_cpf_ec(cls, cpf_block : Block):
         logger.debug(f'build_cpf_ec : {cpf_block.name}')
         max_values = cls._get_cpf_lines_max_y_value(cpf_block)
         if max_values is None:
             return "XXXXXXXXXXX"
         columns = cls.get_ball_columns(0.02, cpf_block.detections)
+        # Filter fake columns TODO: implement a better solution
+        columns = [column for column in columns if len(column) > 2]
         if len(columns) != 11:
             return "XXXXXXXXXXX"
         cpf = ''
@@ -119,8 +120,18 @@ class Builder():
                     break
         
         return cpf
-        
 
+
+    ## Aux functions ##
+    @classmethod
+    def get_ball_lines(cls, distance_threshold, detections : list[dict]):
+        return cls._get_balls('y', distance_threshold, detections)
+
+    @classmethod
+    def get_ball_columns(cls, distance_threshold, detections : list[dict]):
+        return cls._get_balls('x', distance_threshold, detections)
+
+        
     # aux functions
     @classmethod
     def _get_balls(cls, axis, distance_threshold, detections : list[dict]) -> list[list[dict]]:
@@ -150,22 +161,21 @@ class Builder():
     
     @classmethod
     def _get_selected_ball_position(cls, type, num_elements, detections : list[dict]) -> list[dict]:
-        logger.debug(f'getting selected ball position in {type}...')
-        logger.debug(f'detections: {detections}')
-        if len(detections) != num_elements:
-            return None
-        axis = 'y' if type == 'columns' else 'x'
-        sorted_detections = cls._sort_axis(axis, detections)
-        cont = 0
-        while True:
-            try:
+        try:
+            logger.debug(f'getting selected ball position in {type}...')
+            logger.debug(f'detections: {detections}')
+            if len(detections) != num_elements:
+                return None
+            axis = 'y' if type == 'columns' else 'x'
+            sorted_detections = cls._sort_axis(axis, detections)
+            cont = 0
+            while True:
                 if sorted_detections[cont]['class_id'] == 'selected_ball':
                     break
-            except IndexError:
-                return None
-            else:
                 cont += 1
-        return cont
+            return cont
+        except IndexError:
+            return None
     
     @classmethod
     def _get_cpf_lines_max_y_value(cls, cpf_block : Block) -> list[tuple[float, float]]:
