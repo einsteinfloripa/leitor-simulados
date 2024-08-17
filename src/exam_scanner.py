@@ -3,9 +3,10 @@ import checks
 
 from core.object_detection import Detection
 from core.image import Image
-from core.models import load_model
+from core.models import load_model, ModelError
 from utils.filehandler import FileHandler
 from utils import log
+from utils.misc import parse_model
 
 logger = log.get_new_logger('exam scanner')
 
@@ -18,69 +19,65 @@ def exam_scanner(
     label_map_2nd_stage,
     score_threshold_1st_stage,
     score_threshold_2nd_stage,
+    continue_on_fail
 ):
     # Control variables
     falied_imgs = ''
     success_imgs = ''
     # Parse the model names
-    model_type_first, name_first = (
-        model_name_1st_stage.split('/')[0],
-        model_name_1st_stage.split('/')[-1]
-    )
-    model_type_second, name_second = (
-        model_name_2nd_stage.split('/')[0],
-        model_name_2nd_stage.split('/')[-1]
-    )
+    fs_config = {'test': prova[0], 'stage': 'FIRST_STAGE'}
+    fs_config['model'] = parse_model(model_name_1st_stage)
+    ss_config = {'test': prova[0], 'stage': 'SECOND_STAGE'}
+    ss_config['model'] = parse_model(model_name_2nd_stage)
     # Load the models
-    detection_model_1st_stage = load_model(
-        model_type_first,
-        prova[0],
-        name_first
-        )
-    detection_model_2nd_stage = load_model(
-        model_type_second,
-        prova[0],
-        name_second
-        )
-    
+    detection_model_1st_stage = load_model(fs_config)
+    detection_model_2nd_stage = load_model(ss_config)
+
     # Main loop through the images
     for img_path in FileHandler.INPUT_PATHS:
-        status = 'success'
+
+        # Get first stage detections
+        Detection.set_label_map(label_map_1st_stage)
+        img = Image.from_path(img_path)
         try:
-            # Get first stage detections
-            Detection.set_label_map(label_map_1st_stage)
-            img = Image.from_path(img_path)
             img.make_detections_with_model(
                 detection_model_1st_stage, score_threshold_1st_stage
             )
-            # Perform First stage checks
-            if checks.perform(img, stage=1) == 'failed':
+        except Exception as e:
+            if continue_on_fail or isinstance(e, ModelError):
+                logger.error(f"Failed to detect on image {img.name}. Error: {e}")
                 falied_imgs += f'{img.name[:-4]}\n'
-                status = 'failed'
                 continue
-            # Get second stage detections for each cropped image
-            Detection.set_label_map(label_map_2nd_stage)
-            try:
-                cropped_imgs : list[Image] = img.get_cropped()
-            except IndexError:
-                logger.exception(f'Could not crop {img.name}')
-                continue
+            else:
+                logger.exception(f"Failed to detect on image {img.name}. Error: {e}")
+                exit(1)
 
-            for crop_img in cropped_imgs:
+        # Perform First stage checks
+        if checks.perform(img, stage=1) == 'failed':
+            falied_imgs += f'{img.name[:-4]}\n'
+            continue
+        # Get second stage detections for each cropped image
+        Detection.set_label_map(label_map_2nd_stage)
+        cropped_imgs : list[Image] = img.get_cropped()
+        for crop_img in cropped_imgs:
+            try:
                 crop_img.make_detections_with_model(
                     detection_model_2nd_stage, score_threshold_2nd_stage
                 )
-                # Perform Second stage checks 
-                if checks.perform(crop_img, stage=2) == 'failed' and status == 'success':
+            except Exception as e:
+                if continue_on_fail or isinstance(e, ModelError):
+                    logger.error(f"Failed to detect on image {crop_img.name}. Error: {e}")
                     falied_imgs += f'{img.name[:-4]}\n'
-                    status = 'failed'
                     continue
-            # If all checks passed, tag the img as 'success'
-            if status == 'success':
-                success_imgs += f'{img.name[:-4]}\n'
-        except Exception as e:
-            logger.exception(e)
-            exit(1)
+                else:
+                    logger.exception(f"Failed to detect on image {crop_img.name}. Error: {e}")
+                    exit(1)
+            # Perform Second stage checks 
+            if checks.perform(crop_img, stage=2) == 'failed':
+                falied_imgs += f'{img.name[:-4]}\n'
+                continue
+        # If all checks passed, tag the img as 'success'
+        success_imgs += f'{img.name[:-4]}\n'
         # Call save function, the save setting are set in FileHandler
         FileHandler.save(main_img=img, cropped_imgs=cropped_imgs)
     # Write the scan report
@@ -91,8 +88,8 @@ def exam_scanner(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-mf", "--model_name_1st_stage", type=str, default="EFscanAlgo/first_stage.py")#TODO:"YoloV8/ps_first_stage.pt")
-    parser.add_argument("-ms", "--model_name_2nd_stage", type=str, default="EFscanAlgo/second_stage.py")
+    parser.add_argument("-mf", "--model_first_stage", type=str, default="EFscanAlgo/first_stage/ef_algo_default.py")
+    parser.add_argument("-ms", "--model_second_stage", type=str, default="EFscanAlgo/second_stage/ef_algo_default.py")
     parser.add_argument(
         "-lf",
         "--label_map_1st_stage",
@@ -164,9 +161,7 @@ def main():
         "-yl", "--yolo", action="store_true", default=False,
         help="save the detections in Yolo format (id, x, y, w, h)",
     )
-
     args = parser.parse_args()
-    
 
     # SETTING GLOBALS
     checks.FILTER_DETECTIONS = args.filter_detections
@@ -187,18 +182,19 @@ def main():
     FileHandler.get_input_paths(recursive=args.recursive)
     FileHandler.SAVE_IMAGES = args.save_images
     FileHandler.SAVE_YOLO = args.yolo
-    FileHandler.set_path("FIRST_STAGE_PATH", FileHandler.MODELS_PATH / args.model_name_1st_stage)
-    FileHandler.set_path("SECOND_STAGE_PATH", FileHandler.MODELS_PATH / args.model_name_2nd_stage)
+    FileHandler.set_path("FIRST_STAGE_PATH", FileHandler.MODELS_PATH / args.model_first_stage)
+    FileHandler.set_path("SECOND_STAGE_PATH", FileHandler.MODELS_PATH / args.model_second_stage)
 
 
     exam_scanner(
         args.prova,
-        args.model_name_1st_stage,
-        args.model_name_2nd_stage,
+        args.model_first_stage,
+        args.model_second_stage,
         args.label_map_1st_stage,
         args.label_map_2nd_stage,
         args.score_threshold_1st_stage,
         args.score_threshold_2nd_stage,
+        args.continue_on_fail
     )
 
 

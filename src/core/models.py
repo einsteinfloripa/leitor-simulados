@@ -6,26 +6,36 @@ import tflite_runtime.interpreter as tflite
 from ultralytics import YOLO
 
 from core.object_detection import Detection
+from core.image import Image
 from utils.filehandler import FileHandler
 from utils.data_classes import FloatBoundingBox
-from utils import normalize_image
+from utils.misc import normalize_image
 
 
 
-def load_model(model_type, test_type, name):
+class ModelError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+def load_model(config : dict):
+
+    model_type = config['model']['type']
+    model_name = config['model']['name']
+    model_test = config['model'].get('test', None)
 
     if model_type.upper() == 'YOLOV8':
         model = YOLO(str(
-            str((FileHandler.MODELS_PATH / 'YoloV8' / test_type.lower() / name).resolve())
+            str((FileHandler.MODELS_PATH / 'YoloV8' / model_test.lower() / model_name).resolve())
         ))
         return YOLOModel(model)
     elif model_type.upper() == 'LEGACY':
         interpreter = tflite.Interpreter(
-            str((FileHandler.MODELS_PATH / 'Legacy' / name / "saved_model" / "model.tflite").resolve())
+            str((FileHandler.MODELS_PATH / 'Legacy' / model_name / "saved_model" / "model.tflite").resolve())
         )
         return LegacyModel(interpreter)
     elif model_type.upper() == 'EFSCANALGO':
-        return EFScanAlgoModel(test_type, name)
+        return EFScanAlgoModel(config)
 
 
 ### YOLOV8 MODEL ###
@@ -34,8 +44,8 @@ class YOLOModel:
     def __init__(self, model):
         self.model = model
 
-    def detect(self, img_raw) -> list[Detection]:
-        result = self.model.predict(img_raw, verbose=False)[0]
+    def detect(self, img : Image) -> list[Detection]:
+        result = self.model.predict(img.raw, verbose=False)[0]
         detections = []
         boxes = result.boxes.xyxyn.tolist()
         classes = result.boxes.cls.tolist()
@@ -47,8 +57,8 @@ class YOLOModel:
                     box,
                     int(class_id),
                     float(conf),
-                    img_raw.shape[1],
-                    img_raw.shape[0],
+                    img.raw.shape[1],
+                    img.raw.shape[0],
                 )
             )
         return detections
@@ -65,11 +75,11 @@ class LegacyModel:
         self.input_width = input_details[2]
 
 
-    def detect(self, img_raw) -> list[Detection]:
+    def detect(self, img : Image) -> list[Detection]:
         normalized_img = normalize_image(
-            img_raw, self.input_height, self.input_width
+            img.raw, self.input_height, self.input_width
         )
-        detections = self.__detect_objects(self.interpreter, normalized_img, img_raw)
+        detections = self.__detect_objects(self.interpreter, normalized_img, img.raw)
 
         return detections
 
@@ -119,23 +129,21 @@ class EFScanAlgoModel:
     
     __initialized = False
     __scanner = None
-    def __init__(self, test_type : str, stage : str) -> None:
-        self.stage = stage.split('.')[0].upper()
+    def __init__(self, config : dict) -> None:
         # Set path to import dynamically
         if not self.__initialized:
             self.__init_paths()
         # Import Scanner class and create instance
-        from EFscanAlgo import get_scanner
-        self.__scanner = get_scanner(test_type, self.stage)
+        from EFscanAlgo import Scanner
+        self.__scanner = Scanner(config)
 
 
-    def detect(self, img) -> list[Detection]:
+    def detect(self, img : Image) -> list[Detection]:
         return self.__scanner.detect(img)
         
 
     # Initialization function
     def __init_paths(self):
-        import importlib
         import sys
         import pathlib
         # Include the path to the src folde
