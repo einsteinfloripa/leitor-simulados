@@ -52,6 +52,7 @@ def init_pipeline(scanner : Scanner, config : dict) -> None:
     })
 
 def detect(scanner : Scanner, img : Image) -> list[Detection]:
+    
     img_raw = img.raw
     detections = list()
     try:
@@ -151,14 +152,14 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     h_groups = ef_group_lines(h_lines, Axis.HORIZONTAL, img, const=0.05)
     v_groups = ef_group_lines(v_lines, Axis.VERTICAL, img, const=0.01)
     # Perform consistency check
-    assert len(h_groups) == scanner.get_test_data('n_rows') + 1
-    assert len(v_groups) == scanner.get_test_data('n_boxes_per_row') + 1
+    assert len(h_groups) == scanner.get_test_data('n_rows') + 1, "Number of rows does not match with the expected value."
+    assert len(v_groups) == scanner.get_test_data('n_boxes_per_row') + 1, "Number of boxes per row does not match with the expected value."
     # Remove the outer lines
     h_lines = strip_outer_lines(h_groups, Axis.HORIZONTAL, img)
     v_lines = strip_outer_lines(v_groups, Axis.VERTICAL, img)
     # Perform consistency check
-    assert len(h_lines) == scanner.get_test_data('n_h_lines')
-    assert len(v_lines) == scanner.get_test_data('n_v_lines')
+    assert len(h_lines) == scanner.get_test_data('n_h_lines'), "Number of horizontal lines does not match with the expected value."
+    assert len(v_lines) == scanner.get_test_data('n_v_lines'), "Number of vertical lines does not match with the expected value."
     # find the intersection of the lines
     img_h, img_w = img.shape[:2]
     intersec = []

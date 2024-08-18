@@ -45,11 +45,11 @@ def exam_scanner(
             )
         except Exception as e:
             if continue_on_fail or isinstance(e, ModelError):
-                logger.error(f"Failed to detect on image {img.name}. Error: {e}")
+                logger.error(e)
                 falied_imgs += f'{img.name[:-4]}\n'
                 continue
             else:
-                logger.exception(f"Failed to detect on image {img.name}. Error: {e}")
+                logger.exception(e)
                 exit(1)
 
         # Perform First stage checks
@@ -66,11 +66,11 @@ def exam_scanner(
                 )
             except Exception as e:
                 if continue_on_fail or isinstance(e, ModelError):
-                    logger.error(f"Failed to detect on image {crop_img.name}. Error: {e}")
+                    logger.error(e)
                     falied_imgs += f'{img.name[:-4]}\n'
                     continue
                 else:
-                    logger.exception(f"Failed to detect on image {crop_img.name}. Error: {e}")
+                    logger.exception(e)
                     exit(1)
             # Perform Second stage checks 
             if checks.perform(crop_img, stage=2) == 'failed':
