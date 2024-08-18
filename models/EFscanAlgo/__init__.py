@@ -2,6 +2,7 @@ from __future__ import annotations
 import importlib
 
 from core.image import Image
+from utils.log import get_new_logger
 from EFscanAlgo.ef_defs import SimufscData, SimuenemData, SimulinhoData, PSData
 
 class Scanner:
@@ -10,6 +11,8 @@ class Scanner:
         return self.__test_data.__dict__.get(key)
     
     def __init__(self, config : dict):
+        # Set the logger
+        self.logger = get_new_logger(f"EFscanAlgo({config['stage']})")
         # Import and set the correct pipline
         import_string = f"EFscanAlgo.{config['model']['stage'].lower()}.{config['model']['name']}".strip('.py')
         try:
@@ -39,8 +42,11 @@ class Scanner:
                 init_pipeline_func(self, config)
             except Exception as e:
                 raise ValueError(f"Error while initializing pipeline: {e}")
+        self.logger.info(f"Scanner initialized with pipeline: {config['model']['name']}")
             
 
     def detect(self, image : Image):
-        return self.__detect_func(self, image)
-
+        self.logger.info(f"Detecting on image {image.name}")
+        detections = self.__detect_func(self, image)
+        self.logger.info(f"[Done!]")
+        return detections
