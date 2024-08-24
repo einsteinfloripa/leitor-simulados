@@ -4,6 +4,10 @@ class Axis(enum.Enum):
     VERTICAL = 0
     HORIZONTAL = 1
 
+    @property
+    def counterAxis(self):
+        return Axis.HORIZONTAL if self == Axis.VERTICAL else Axis.VERTICAL
+
 
 class Line():
     def __init__(self, init_as = [0, 0, 0, 0]):
@@ -47,10 +51,13 @@ class SimufscData:
     n_boxes_per_row = 14        # Number of boxes per row
     n_h_lines = 6               # Number of horizontal lines
     n_v_lines = 28              # Number of vertical lines
-    v_line_spacing = 0.0036     # Vertical line spacing (% of height)
-    h_line_spacing = 0.0075     # Horizontal line spacing (% of width)
-    box_width =  0.05306        # Question Block box width (% of width)
+    v_line_spacing = 0.0040     # Vertical line spacing (% of height)
+    h_line_spacing = 0.007     # Horizontal line spacing (% of width)
+    box_width =  0.05646        # Question Block box width (% of width)
     box_height = 0.1584         # Question Block box height (% of height)
+    # Question Block
+    qb_rows = 10
+    qb_cols = 2
 
 class SimuenemData:
     n_boxes = 9                 # Number of boxes in the test

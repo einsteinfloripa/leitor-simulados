@@ -13,9 +13,6 @@ from utils.misc import normalize_image
 
 
 
-class ModelError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
 
 
 def load_model(config : dict):
@@ -96,20 +93,17 @@ class LegacyModel:
 
         detections = []
         for i in range(count):
-            try:
-                ymin, xmin, ymax, xmax = boxes[i].tolist()
-                box = FloatBoundingBox.from_floats(xmin, ymin, xmax, ymax)
-                detections.append(
-                    Detection(
-                        box,
-                        classes[i],
-                        scores[i],
-                        raw_image.shape[1],
-                        raw_image.shape[0],
-                    )
+            ymin, xmin, ymax, xmax = boxes[i].tolist()
+            box = FloatBoundingBox.from_floats(xmin, ymin, xmax, ymax)
+            detections.append(
+                Detection(
+                    box,
+                    classes[i],
+                    scores[i],
+                    raw_image.shape[1],
+                    raw_image.shape[0],
                 )
-            except Exception as e:
-                print(e)
+            )
         return detections
 
     def __set_input_tensor(self, interpreter, image):

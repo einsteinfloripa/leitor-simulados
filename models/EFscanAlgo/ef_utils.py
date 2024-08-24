@@ -80,10 +80,25 @@ def ef_group_lines(
 
     return groups
 
+def ef_avg_group_distance(groups : list[list[Line]], axis : Axis, img : Image) -> float:
+    '''Receive a list of groups of lines and returns the average distance between the groups.'''
+    avg = 0
+    for i in range(1, len(groups)):
+        avg += ef_avg_lines(groups[i], axis, img)[axis.value] - \
+            ef_avg_lines(groups[i-1], axis, img)[axis.value]
+    return abs((avg / (len(groups)-1)))
+
+def ef_unpack_groups(groups : list[list[Line]], axis : Axis, sorted=False) -> list[Line]:
+    '''Receive a list of groups of lines and returns a list with the lines unpacked.'''
+    lines = [line for group in groups for line in group]
+    if sorted:
+        lines.sort(key=lambda x: x[axis.value])
+    return lines
+
 def ef_avg_lines(lines : list[Line], axis : Axis, img : Image) -> Line:
     '''Receive a list of lines and returns a line with average values on the chosen axis.'''
     # Get the lenght of the image in the desired axis
-    lenght = img.shape[:2][axis.value]
+    lenght = img.shape[axis.value]
     # Calculate the average of the lines
     avg = [0, 0]
     for line in lines:

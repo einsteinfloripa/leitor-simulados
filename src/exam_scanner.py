@@ -3,7 +3,7 @@ import checks
 
 from core.object_detection import Detection
 from core.image import Image
-from core.models import load_model, ModelError
+from core.models import load_model
 from utils.filehandler import FileHandler
 from utils import log
 from utils.misc import parse_model
@@ -44,12 +44,11 @@ def exam_scanner(
                 detection_model_1st_stage, score_threshold_1st_stage
             )
         except Exception as e:
-            if continue_on_fail or isinstance(e, ModelError):
-                logger.error(e)
+            logger.exception(e)
+            if continue_on_fail:
                 falied_imgs += f'{img.name[:-4]}\n'
                 continue
             else:
-                logger.exception(e)
                 exit(1)
 
         # Perform First stage checks
@@ -65,12 +64,11 @@ def exam_scanner(
                     detection_model_2nd_stage, score_threshold_2nd_stage
                 )
             except Exception as e:
-                if continue_on_fail or isinstance(e, ModelError):
-                    logger.error(e)
+                logger.exception(e)
+                if continue_on_fail:
                     falied_imgs += f'{img.name[:-4]}\n'
                     continue
                 else:
-                    logger.exception(e)
                     exit(1)
             # Perform Second stage checks 
             if checks.perform(crop_img, stage=2) == 'failed':
@@ -88,8 +86,8 @@ def exam_scanner(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-mf", "--model_first_stage", type=str, default="EFscanAlgo/first_stage/ef_algo_default.py")
-    parser.add_argument("-ms", "--model_second_stage", type=str, default="EFscanAlgo/second_stage/ef_algo_default.py")
+    parser.add_argument("-mf", "--model_first_stage", type=str, default="EFscanAlgo/first_stage/ef_predict_lines.py")
+    parser.add_argument("-ms", "--model_second_stage", type=str, default="EFscanAlgo/second_stage/ef_space_partition.py")
     parser.add_argument(
         "-lf",
         "--label_map_1st_stage",

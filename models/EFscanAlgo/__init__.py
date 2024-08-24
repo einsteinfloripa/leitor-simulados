@@ -11,6 +11,8 @@ class Scanner:
         return self.__test_data.__dict__.get(key)
     
     def __init__(self, config : dict):
+        # Set configs
+        self.config = config
         # Set the logger
         self.logger = get_new_logger(f"EFscanAlgo({config['stage']})")
         # Import and set the correct pipline

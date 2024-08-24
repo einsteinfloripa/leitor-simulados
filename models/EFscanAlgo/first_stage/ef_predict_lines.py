@@ -12,8 +12,12 @@ from EFscanAlgo import Scanner
 from EFscanAlgo.ef_utils import (
     ef_get_tilt,
     ef_get_axis_alling_lines,
+    ef_avg_lines,
     ef_merge_lines,
-    ef_group_lines
+    ef_group_lines,
+    ef_avg_group_distance,
+    ef_unpack_groups,
+    DEBUG
 )
 from EFscanAlgo.ef_defs import Axis, Line
 
@@ -42,14 +46,13 @@ class Configs:
         return rho, theta, threshold, lines, minLineLength, maxLineGap
 
 
-def init_pipeline(scanner : Scanner, config) -> None:
+def init_pipeline(scanner : Scanner, config : dict) -> None:
     scanner.yolo = load_model({'model': {
         'type':'yolov8',
         'name':'first_stage.pt',
         'test':'ps'
         }
     })
-
 
 def detect(scanner : Scanner, img : Image) -> list[Detection]:
     
@@ -62,6 +65,7 @@ def detect(scanner : Scanner, img : Image) -> list[Detection]:
 
 
 def __get_question_blocks(scanner : Scanner, img_raw):
+    db = DEBUG()
     # Get the relevant points for the bounding boxes
     def get_blocks(intersec, img_):
         # Get the relevant constants
@@ -143,17 +147,23 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     # Get the axis alling lines
     h_lines, v_lines = ef_get_axis_alling_lines(lines, img)
     # Merge the lines
-    h_lines = ef_merge_lines(h_lines, Axis.HORIZONTAL, img, const=0.005)
-    v_lines = ef_merge_lines(v_lines, Axis.VERTICAL, img, const=0.002)
+    h_lines = ef_merge_lines(h_lines, Axis.HORIZONTAL, img, const=0.05)
+    v_lines = ef_merge_lines(v_lines, Axis.VERTICAL, img, const=0.003)
     # Group the lines
     h_groups = ef_group_lines(h_lines, Axis.HORIZONTAL, img, const=0.05)
     v_groups = ef_group_lines(v_lines, Axis.VERTICAL, img, const=0.01)
-    # Perform consistency check
-    assert len(h_groups) == scanner.get_test_data('n_rows') + 1, "Number of rows does not match with the expected value."
-    assert len(v_groups) == scanner.get_test_data('n_boxes_per_row') + 1, "Number of boxes per row does not match with the expected value."
     # Remove the outer lines
     h_lines = strip_outer_lines(h_groups, Axis.HORIZONTAL, img)
     v_lines = strip_outer_lines(v_groups, Axis.VERTICAL, img)
+    # Filter the groups and add missing lines
+    h_groups = filter_groups(scanner, h_groups, Axis.HORIZONTAL, img)
+    v_groups = filter_groups(scanner, v_groups, Axis.VERTICAL, img)
+    # Unpack lines
+    h_lines = ef_unpack_groups(h_groups, Axis.HORIZONTAL)
+    v_lines = ef_unpack_groups(v_groups, Axis.VERTICAL)
+    # Perform consistency check
+    assert len(h_groups) == scanner.get_test_data('n_rows') + 1, "Number of rows does not match with the expected value."
+    assert len(v_groups) == scanner.get_test_data('n_boxes_per_row') + 1, "Number of boxes per row does not match with the expected value."
     # Perform consistency check
     assert len(h_lines) == scanner.get_test_data('n_h_lines'), "Number of horizontal lines does not match with the expected value."
     assert len(v_lines) == scanner.get_test_data('n_v_lines'), "Number of vertical lines does not match with the expected value."
@@ -173,7 +183,6 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     # Return the detections
     return detections
 
-
 def __get_cpf_blocks(scanner, img):
     # Calls the yolo model to detect the cpf blocks
     detections = scanner.yolo.detect(img)
@@ -183,3 +192,108 @@ def __get_cpf_blocks(scanner, img):
         if detection.class_id == 0:
             CPFBlocks.append(detection)
     return CPFBlocks
+
+def filter_groups(scanner : Scanner, groups : list[Line], axis : Axis, img : Image):
+
+    def new_group(axis, at, avg_dist, dir, single=False, side_line=False):
+        dist = scanner.get_test_data('v_line_spacing') if axis == Axis.HORIZONTAL else scanner.get_test_data('h_line_spacing')
+        delta = img.shape[axis.counterAxis.value] * dist * dir / 2
+        to = at + avg_dist*dir
+
+        if side_line:
+            to = to - delta
+        if single:
+            if axis == Axis.HORIZONTAL:
+                return [Line([0, int(to), img.shape[1], int(to)])]
+            else:
+                return [Line([int(to), 0, int(to), img.shape[0]])]
+
+
+        if axis == Axis.HORIZONTAL:
+            return [
+                Line([0, int(to-delta) , img.shape[1], int(to-delta)]),
+                Line([0, int(to+delta) , img.shape[1], int(to+delta)])
+            ]
+        else:
+            return [
+                Line([int(to-delta), 0, int(to-delta), img.shape[0]]),
+                Line([int(to+delta), 0, int(to+delta), img.shape[0]])
+            ]
+
+    def internal_distance_ok(group, axis, img):
+        if len(group) != 2:
+            return False
+        img_size = img.shape[axis.value]
+        emirical_mesure = scanner.get_test_data('h_line_spacing') if axis == Axis.HORIZONTAL else scanner.get_test_data('v_line_spacing')
+        dist = abs(group[0][axis.value] - group[1][axis.value])
+        return dist <= round(img_size*emirical_mesure*1.25)
+
+
+    if axis == Axis.HORIZONTAL:
+        avg_dist_empirical = scanner.get_test_data('h_line_spacing')/2 + scanner.get_test_data('box_height')
+    else:
+        avg_dist_empirical = scanner.get_test_data('v_line_spacing')/2 + scanner.get_test_data('box_width')
+        
+
+    avg_dist = avg_dist_empirical*img.shape[axis.counterAxis.value]
+    tolerance = avg_dist*0.2
+
+    direction = 0
+    if len(groups[0]) == 1:
+        direction=1
+    elif len(groups[-1]) == 1:
+        # Reverse the groups
+        groups = groups[::-1]
+        direction=-1
+    else:
+        # TODO: Add another method to find the lines
+        raise Exception("Unable to find a starting line.")
+
+    m = scanner.get_test_data('n_boxes_per_row') if axis == Axis.VERTICAL else scanner.get_test_data('n_rows')
+    new_groups = []
+    p = 0
+    q = 1
+    while q < m+1:
+        gp = groups[p]
+        # print(p, q)
+        # print([len(q) for q in groups])
+
+        try:
+            gq = groups[q]
+            dist = abs(ef_avg_lines(gq, axis, img)[axis.value] - ef_avg_lines(gp, axis, img)[axis.value])
+        except IndexError:
+            dist = float('inf')
+        if dist < avg_dist - tolerance:
+            # print("remove")
+            groups.pop(q)
+        elif dist > avg_dist + tolerance:
+            # print("add")
+            at = ef_avg_lines(gp, axis, img)[axis.value]
+            groups.insert(q,new_group(axis, at, avg_dist, direction))
+        elif q != m and ((len(gq) != 2) or (len(gq) == 2 and not internal_distance_ok(gq, axis, img))):
+            # print("subs")
+            groups.pop(q)
+            at = ef_avg_lines(gp, axis, img)[axis.value]
+            if p == 0:
+                groups.insert(q,new_group(axis, at, avg_dist, direction, side_line=True))
+            else:
+                groups.insert(q,new_group(axis, at, avg_dist, direction))
+        else:
+            # print("keep")
+            new_groups.append(gp)
+            p += 1
+            q += 1
+
+    while len(groups) > m+1:
+        groups.pop(-1)
+    last_group = groups[-1]
+    if len(last_group) != 1:
+        at = ef_avg_lines(groups[-2], axis, img)[axis.value]
+        ng = new_group(axis, at, avg_dist, direction, single=True, side_line=True)
+        new_groups.append(ng)
+    else:
+        new_groups.append(groups[-1])
+
+    return new_groups
+            
+
