@@ -30,10 +30,13 @@ class Scanner:
         if test_type.upper() == "SIMUFSC":
             self.__test_data = SimufscData
         elif test_type.upper() == "SIMUENEM":
+            raise NotImplementedError("SIMUENEM data not implemented yet")
             self.__test_data = SimuenemData
         elif test_type.upper() == "SIMULINHO":
+            raise NotImplementedError("SIMULINHO data not implemented yet")
             self.__test_data = SimulinhoData
         elif test_type.upper() == "PS":
+            raise NotImplementedError("PS data not implemented yet")
             self.__test_data = PSData
         else:
             raise ValueError("Invalid test type")
@@ -49,6 +52,14 @@ class Scanner:
 
     def detect(self, image : Image):
         self.logger.info(f"Detecting on image {image.name}")
-        detections = self.__detect_func(self, image)
+
+        try:
+            detections = self.__detect_func(self, image)
+        except Exception as e:
+            self.logger.error(f"[FALIED] {image.name} - {e}")
+            if self.config.get('continue_on_fail', False):
+                return []
+            else: raise e
+        
         self.logger.info(f"[Done!]")
         return detections

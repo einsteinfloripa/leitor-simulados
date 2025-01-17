@@ -54,15 +54,9 @@ def init_pipeline(scanner : Scanner, config) -> None:
 
 def detect(scanner : Scanner, img : Image) -> list[Detection]:
     
-    try:
-        detections = list()
-        detections.extend(__get_question_blocks(scanner, img.raw))
-        detections.extend(__get_cpf_blocks(scanner, img))
-    except Exception as e:
-        scanner.logger.error(f"[FALIED] {img.name} - {e}")
-        if scanner.config.get('continue_on_fail', False):
-            return []
-        else: raise e
+    detections = list()
+    detections.extend(__get_question_blocks(scanner, img.raw))
+    detections.extend(__get_cpf_blocks(scanner, img))
 
     return detections
 

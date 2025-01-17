@@ -10,8 +10,8 @@ class FloatPoint():
 
 @dataclass
 class FloatBoundingBox():
-    p_min: FloatPoint = field(default=FloatPoint())
-    p_max: FloatPoint = field(default=FloatPoint())
+    p_min: FloatPoint = field(default_factory=FloatPoint)
+    p_max: FloatPoint = field(default_factory=FloatPoint)
 
     #Constructors
     @classmethod
