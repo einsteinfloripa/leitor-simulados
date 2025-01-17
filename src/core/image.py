@@ -1,16 +1,13 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
 
-import inspect
-
 import cv2
 import numpy as np
-import tflite_runtime.interpreter as tflite
 
 from core.object_detection import Detection
 
 class Image():
-
+    
     @classmethod
     def from_path(cls, path : str):
         name : str = path.split("/")[-1]
@@ -41,12 +38,7 @@ class Image():
     
 
     def make_detections_with_model(self, model, score_threshold) -> None:
-        # check if the model has the image_raw parameter
-        sig = inspect.signature(model.detect)
-        if 'img_raw' in sig.parameters:
-            detections = model.detect(self.raw)
-        else:
-            detections = model.detect(self)
+        detections = model.detect(self)
         # Filter detections by score
         self.detections = [d for d in detections if d.score > score_threshold]
         # sort and mark detections from top left to bottom right    
@@ -55,9 +47,12 @@ class Image():
         for i, detection in enumerate(self.detections):
             detection.order = i
         self.BOUNDING_BOXES_DRAWN = False
+
     
     @_has_detections
     def get_cropped(self) -> list[Image]:
+        if not self.detections:
+            return []
         cropped = []
         # the detections are sorted by top left to bottom right
         cont = 0

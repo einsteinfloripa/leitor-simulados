@@ -12,12 +12,13 @@ def build(context : BuilderContext, status, ec) -> None:
     # Create a dictionary to store the report
     report = {}
     # Set the pipeline if the error correction was set
+    # TODO: I think this can be change to a flag set
     if 'cpf' in ec: SimufscBuilder.set_cpf_func(SimufscBuilder.standart_build_cpf_ec)
     else: SimufscBuilder.set_cpf_func(SimufscBuilder.standart_build_cpf) 
     if 'questions' in ec: raise NotImplementedError('Error correction for questions block not implemented yet')
     else: SimufscBuilder.set_qb_func(SimufscBuilder.build_questions_block)
     # Build the cpf block if exists
-    if context.cpf_block is not None:
+    if context.cpf_block is not None and context.cpf_block.detections:
         logger.debug('building cpf from cpf_block...')
         report['cpf'] = SimufscBuilder.build_cpf(context.cpf_block)
     else:
@@ -39,6 +40,8 @@ class SimufscBuilder(Builder):
 
     @classmethod
     def build_questions_block(cls, block : Block):
+        if not block.detections:
+            return 'NAO DETECTADO'
         logger.debug(f'building block: {block.name}')
         # Set variables
         block_number = block.order + 1 # Number of the Question Block

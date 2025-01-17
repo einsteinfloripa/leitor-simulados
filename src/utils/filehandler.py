@@ -109,7 +109,7 @@ class FileHandler():
     @classmethod
     def save(cls, main_img=None, cropped_imgs=None):
         # Check if the main_img and cropped_imgs are set
-        if not main_img or not cropped_imgs:
+        if main_img is None or cropped_imgs is None:
             raise Exception(f"main_img and cropped_imgs must be set, not: {main_img}, {cropped_imgs}")
         # Get the output path
         out_path = cls.OUTPUT_DIR / main_img.name[:-4]
