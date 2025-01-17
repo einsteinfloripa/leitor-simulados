@@ -9,6 +9,8 @@ __pycache__/
 # dev
 .vscode
 scanner_output
+*test*
+*dataset*
 
 
 # Distribution / packaging
