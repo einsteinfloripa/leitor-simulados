@@ -19,15 +19,16 @@ def exam_scanner(
     label_map_2nd_stage,
     score_threshold_1st_stage,
     score_threshold_2nd_stage,
-    continue_on_fail
+    continue_on_fail,
+    debug
 ):
     # Control variables
     falied_imgs = ''
     success_imgs = ''
     # Parse the model names
-    fs_config = {'test': prova[0], 'stage': 'FIRST_STAGE'}
+    fs_config = {'test': prova[0], 'stage': 'FIRST_STAGE', 'cf': continue_on_fail}
     fs_config['model'] = parse_model(model_name_1st_stage)
-    ss_config = {'test': prova[0], 'stage': 'SECOND_STAGE'}
+    ss_config = {'test': prova[0], 'stage': 'SECOND_STAGE', 'cf': continue_on_fail}
     ss_config['model'] = parse_model(model_name_2nd_stage)
     # Load the models
     detection_model_1st_stage = load_model(fs_config)
@@ -44,7 +45,7 @@ def exam_scanner(
                 detection_model_1st_stage, score_threshold_1st_stage
             )
         except Exception as e:
-            logger.exception(e)
+            if debug: logger.exception(e)
             if continue_on_fail:
                 falied_imgs += f'{img.name[:-4]}\n'
                 continue
@@ -64,7 +65,7 @@ def exam_scanner(
                     detection_model_2nd_stage, score_threshold_2nd_stage
                 )
             except Exception as e:
-                logger.exception(e)
+                if debug: logger.exception(e)
                 if continue_on_fail:
                     falied_imgs += f'{img.name[:-4]}\n'
                     continue
@@ -86,8 +87,8 @@ def exam_scanner(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-mf", "--model_first_stage", type=str, default="EFscanAlgo/first_stage/ef_predict_lines.py")
-    parser.add_argument("-ms", "--model_second_stage", type=str, default="EFscanAlgo/second_stage/ef_space_partition.py")
+    parser.add_argument("-mf", "--model_first_stage", type=str, default="EFscanAlgo/first_stage/ef_algo_default.py")
+    parser.add_argument("-ms", "--model_second_stage", type=str, default="EFscanAlgo/second_stage/ef_algo_default.py")
     parser.add_argument(
         "-lf",
         "--label_map_1st_stage",
@@ -159,6 +160,11 @@ def main():
         "-yl", "--yolo", action="store_true", default=False,
         help="save the detections in Yolo format (id, x, y, w, h)",
     )
+    # Add an option to debug
+    parser.add_argument(
+        "-d", "--debug", action="store_true", default=False,
+        help="print debug information",
+    )
     args = parser.parse_args()
 
     # SETTING GLOBALS
@@ -192,7 +198,8 @@ def main():
         args.label_map_2nd_stage,
         args.score_threshold_1st_stage,
         args.score_threshold_2nd_stage,
-        args.continue_on_fail
+        args.continue_on_fail,
+        args.debug
     )
 
 

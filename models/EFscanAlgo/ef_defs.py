@@ -47,7 +47,7 @@ class Line():
 
 class SimufscData:
     n_boxes = 40                # Number of boxes in the test
-    n_rows = 3                  # Number of rows
+    n_rows = 3                  # Number of row of boxes
     n_boxes_per_row = 14        # Number of boxes per row
     n_h_lines = 6               # Number of horizontal lines
     n_v_lines = 28              # Number of vertical lines
@@ -77,6 +77,7 @@ class SimulinhoData:
 
 class PSData:
     n_boxes = 6                 # Number of boxes in the test
+    n_rows = 2                  # Number of row of boxes
     n_boxes_per_row = 3         # Number of boxes per row
     n_h_lines = 4               # Number of horizontal lines
     n_v_lines = 6               # Number of vertical lines

@@ -19,6 +19,7 @@ from EFscanAlgo.ef_defs import Axis, Line
 
 
 class Configs:
+    DEBUG = False
 
     def getHoughLinesParams(img):
         # Define line sensitivity
@@ -53,10 +54,15 @@ def init_pipeline(scanner : Scanner, config) -> None:
 
 def detect(scanner : Scanner, img : Image) -> list[Detection]:
     
-    img_raw = img.raw
-    detections = list()
-    detections.extend(__get_question_blocks(scanner, img_raw))
-    detections.extend(__get_cpf_blocks(scanner, img))
+    try:
+        detections = list()
+        detections.extend(__get_question_blocks(scanner, img.raw))
+        detections.extend(__get_cpf_blocks(scanner, img))
+    except Exception as e:
+        scanner.logger.error(f"[FALIED] {img.name} - {e}")
+        if scanner.config.get('continue_on_fail', False):
+            return []
+        else: raise e
 
     return detections
 
@@ -183,3 +189,4 @@ def __get_cpf_blocks(scanner, img):
         if detection.class_id == 0:
             CPFBlocks.append(detection)
     return CPFBlocks
+
