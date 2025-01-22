@@ -5,7 +5,7 @@ import tflite_runtime.interpreter as tflite
 
 from ultralytics import YOLO
 
-from core.object_detection import Detection
+from core.detection import Detection
 from core.image import Image
 from utils.filehandler import FileHandler
 from utils.data_classes import FloatBoundingBox

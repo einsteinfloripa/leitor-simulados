@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import cv2
 
-from core.object_detection import Detection
+from core.detection import Detection
 from core.image import Image
 from core.models import load_model
 from utils.data_classes import FloatBoundingBox

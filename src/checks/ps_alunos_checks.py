@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from utils.log import checks_logger as logger
 
-from core.object_detection import Detection
+from core.detection import Detection
 from utils.data_classes import FloatBoundingBox, FloatPoint
 from checks import Checker, logger
 

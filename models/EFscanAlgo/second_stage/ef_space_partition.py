@@ -7,7 +7,7 @@ from EFscanAlgo.ef_utils import (
     ef_get_tilt,
     DEBUG
 )
-from core.object_detection import Detection
+from core.detection import Detection
 from core.image import Image
 from core.models import load_model
 from utils.data_classes import FloatBoundingBox

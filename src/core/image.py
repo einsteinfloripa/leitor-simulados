@@ -4,7 +4,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from core.object_detection import Detection
+from core.detection import Detection
 from utils.data_classes import IntPoint
 
 class Image():
