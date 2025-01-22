@@ -33,10 +33,11 @@ class Image():
         self.height : int = raw.shape[0]
         self.width : int = raw.shape[1]
         self.crops : list[Image] = []
+        self.BOUNDING_BOXES_DRAWN = False
+        # Those variable are for the cropped images
         self.cropped_from : Image = cropped_from
         self.cropped_from_detection = cropped_from_detection
         self.achored_at : IntPoint = achored_at
-        self.BOUNDING_BOXES_DRAWN = False
 
     
     def _has_detections(func):
@@ -112,3 +113,29 @@ class Image():
     def to_yolo(self) -> str:
         yolo = '\n'.join([detection.to_yolo() for detection in self.detections])
         return yolo
+
+    def to_cache(self) -> dict:
+        """
+        This method saves the current state of the image detection and its
+        cropped subregions
+        """
+        # Dereference the main image reference as it is likely to be deleted
+        for crop in self.crops:
+            crop.raw = None
+            self.cropped_from = None
+        cache = {
+            'detections':self.detections,
+            'cropped':self.crops
+        }
+        return { self.name : cache }
+
+    def from_cache(self, cache : dict) -> None:
+        """
+        This method restores the image state from a cache
+        """
+        self.detections = cache['detections']
+        self.crops = cache['cropped']
+        for crop in self.crops:
+            crop.raw = self.raw
+            crop.cropped_from = self
+        

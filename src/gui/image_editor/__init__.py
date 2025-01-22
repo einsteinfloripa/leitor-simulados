@@ -78,7 +78,7 @@ class ImageEditorApp(tk.Frame):
         self.number_of_images = 0  # Total number of images
         # Detection
         # Detection selected to be shown
-        self.current_detections = None
+        self.current_drawn_detections = None
 
         # Footer buttons
         self.footerButtons = _footerButtons(
@@ -119,6 +119,6 @@ class ImageEditorApp(tk.Frame):
                 d for d in detections if d.class_name in selected
             ]
             # Update the current detections
-            self.current_detections = filtered_detections
+            self.current_drawn_detections = filtered_detections
             # Redraw the canvas
             self.Canvas.display_image() 
