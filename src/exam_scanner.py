@@ -58,8 +58,8 @@ def exam_scanner(
             continue
         # Get second stage detections for each cropped image
         Detection.set_label_map(label_map_2nd_stage)
-        cropped_imgs : list[Image] = img.get_cropped()
-        for crop_img in cropped_imgs:
+        img.make_cropped()
+        for crop_img in img.crops:
             try:
                 crop_img.make_detections_with_model(
                     detection_model_2nd_stage, score_threshold_2nd_stage
@@ -78,7 +78,7 @@ def exam_scanner(
         # If all checks passed, tag the img as 'success'
         success_imgs += f'{img.name[:-4]}\n'
         # Call save function, the save setting are set in FileHandler
-        FileHandler.save(main_img=img, cropped_imgs=cropped_imgs)
+        FileHandler.save(main_img=img, cropped_imgs=img.crops)
     # Write the scan report
     report = f'success:\n{success_imgs}\n\nfalied:\n{falied_imgs}'
     logger.info(report)

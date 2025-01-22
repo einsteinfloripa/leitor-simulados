@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from core.object_detection import Detection
+from utils.data_classes import IntPoint
 
 class Image():
     
@@ -17,12 +18,21 @@ class Image():
 
     colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (0,255,255), (255,0,255), (0,0,0)]
 
-    def __init__(self, name, raw, detections, cropped_from = None, cropped_from_detection=None) -> None:
+    def __init__(self,
+                 name,
+                 raw,
+                 detections,
+                 cropped_from = None,
+                 cropped_from_detection=None,
+                 anchor_at = None
+                ) -> None:
         self.raw : np.ndarray = raw
         self.name : str = name
         self.detections : list[Detection] = detections
         self.height : int = raw.shape[0]
         self.width : int = raw.shape[1]
+        self.crops : list[Image] = []
+        self.anchor_at : IntPoint = anchor_at
         self.cropped_from : Image = cropped_from
         self.cropped_from_detection = cropped_from_detection
         self.BOUNDING_BOXES_DRAWN = False
@@ -36,7 +46,6 @@ class Image():
                 return func(self, *args, **kwargs)
         return wrapper
     
-
     def make_detections_with_model(self, model, score_threshold) -> None:
         detections = model.detect(self)
         # Filter detections by score
@@ -47,12 +56,11 @@ class Image():
         for i, detection in enumerate(self.detections):
             detection.order = i
         self.BOUNDING_BOXES_DRAWN = False
-
     
     @_has_detections
-    def get_cropped(self) -> list[Image]:
+    def make_cropped(self) -> list[Image]:
         if not self.detections:
-            return []
+            return False
         cropped = []
         # the detections are sorted by top left to bottom right
         cont = 0
@@ -68,11 +76,13 @@ class Image():
                     self.raw[ymin:ymax, xmin:xmax],
                     None,
                     cropped_from=self,
-                    cropped_from_detection = detection.class_name
+                    cropped_from_detection = detection.class_name,
+                    anchor_at=IntPoint(xmin, ymin)
                 )
             )
             cont += 1
-        return cropped
+        self.crops = cropped
+        return True
             
     @_has_detections
     def draw_bounding_boxes(self) -> None:
@@ -81,11 +91,9 @@ class Image():
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cv2.rectangle(self.raw, (xmin, ymin), (xmax, ymax), self.colors[detection.class_id], 3)
 
-
     def save(self, path : str) -> None:      
         cv2.imwrite(path, self.raw)
     
-
     def to_json(self, only_ball_detections=True, for_annotation = False) -> list:
         if only_ball_detections:
             json_data = []
