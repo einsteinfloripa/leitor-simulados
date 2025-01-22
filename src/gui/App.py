@@ -1,9 +1,3 @@
-
-if __name__ == "__main__":
-    import sys
-    import pathlib
-    sys.path.append(str(pathlib.Path(__file__).parent.parent))
-
 from pathlib import Path
 
 import tkinter as tk
@@ -11,7 +5,7 @@ from tkinter import filedialog
 
 from core.image import Image as CoreImage
 
-from image_editor import ImageEditorApp
+from gui.image_editor import ImageEditorApp
 
 class WindowApplication(tk.Tk):
 
@@ -92,9 +86,3 @@ class WindowApplication(tk.Tk):
         
     def load_image(self, index):
         self.image = CoreImage.from_path(self.image_files[index])
-
-
-
-if __name__ == "__main__":
-    app = WindowApplication()
-    app.mainloop()
