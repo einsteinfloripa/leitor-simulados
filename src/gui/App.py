@@ -91,16 +91,6 @@ class WindowApplication(tk.Tk):
             self.activate()
         
     def load_image(self, index):
-        from core.models import load_model
-        fs = load_model({
-            'model': {
-                'type':'EFSCANALGO',
-                'name':'ef_algo_default.py',
-                'stage':'first_stage',
-            },
-            'stage':'first_stage',
-            'test':'SIMUFSC',
-        })
         self.image = CoreImage.from_path(self.image_files[index])
 
 

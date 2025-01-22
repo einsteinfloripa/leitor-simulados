@@ -33,10 +33,9 @@ class Image():
         self.height : int = raw.shape[0]
         self.width : int = raw.shape[1]
         self.crops : list[Image] = []
-        self.anchor_at : IntPoint = anchor_at
         self.cropped_from : Image = cropped_from
         self.cropped_from_detection = cropped_from_detection
-        self.achored_at = achored_at
+        self.achored_at : IntPoint = achored_at
         self.BOUNDING_BOXES_DRAWN = False
 
     
