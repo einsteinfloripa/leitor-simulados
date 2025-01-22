@@ -5,6 +5,7 @@ from tkinter import filedialog
 
 from core.image import Image as CoreImage
 
+from gui.navbar import Navbar
 from gui.image_editor import ImageEditorApp
 
 class WindowApplication(tk.Tk):
@@ -43,11 +44,8 @@ class WindowApplication(tk.Tk):
         self.grid_columnconfigure(1, weight=1, minsize=600)  # Middle column (expandable)
 
 
-        self.header = tk.Frame(self, bg="lightblue", height=50)
+        self.header = Navbar(self)
         self.header.grid(row=0, column=0, columnspan=3, sticky="ew")
-        self.header.grid_columnconfigure(0, weight=1)  # Left column (takes extra space if needed)
-        self.header.grid_columnconfigure(1, weight=0)  # Center column (takes extra space if needed)
-        self.header.grid_columnconfigure(2, weight=1)  # Right column (optional)
 
         self.footer = tk.Frame(self, bg="lightblue", height=30)
         self.footer.grid(row=2, column=0, columnspan=3, sticky="ew")
@@ -62,13 +60,11 @@ class WindowApplication(tk.Tk):
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
 
 
-        # Button and button functions
-        open_folder_button = tk.Button(
-            self.header, text="Open Folder", command=self.open_folder
-        )
-        open_folder_button.pack(side=tk.LEFT, padx=5, pady=5)
+    def load_image(self, index):
+        self.image = CoreImage.from_path(self.image_files[index])
 
 
+    # Callback functions
     def open_folder(self):
         folder_path = filedialog.askdirectory()  # Open folder dialog
         if folder_path:
@@ -84,5 +80,3 @@ class WindowApplication(tk.Tk):
             self.imgEditor.show_image(0)
             self.activate()
         
-    def load_image(self, index):
-        self.image = CoreImage.from_path(self.image_files[index])
