@@ -45,8 +45,8 @@ class Detection:
         return (self.bounding_box.p_min, self.bounding_box.p_max)
 
     @property
-    def xywh(self) -> tuple[FloatPoint,float]:
-        return (self.middle_point, self.width, self.height)
+    def xywh(self) -> tuple[FloatPoint,float,float]:
+        return (*self.middle_point, self.width, self.height)
 
     @property
     def aspect_ratio(self) -> float:
