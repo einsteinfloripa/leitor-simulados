@@ -1,5 +1,15 @@
 from dataclasses import dataclass, field
 
+
+@dataclass
+class IntPoint():
+    x: int = field(default=0)
+    y: int = field(default=0)
+
+    def __iter__(self):
+        return iter((self.x, self.y))
+
+
 @dataclass
 class IntPoint():
     x: int = field(default=0)

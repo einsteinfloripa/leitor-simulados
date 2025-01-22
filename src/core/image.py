@@ -18,14 +18,15 @@ class Image():
 
     colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (0,255,255), (255,0,255), (0,0,0)]
 
-    def __init__(self,
-                 name,
-                 raw,
-                 detections,
-                 cropped_from = None,
-                 cropped_from_detection=None,
-                 anchor_at = None
-                ) -> None:
+    def __init__(
+            self,
+            name,
+            raw,
+            detections,
+            cropped_from = None,
+            cropped_from_detection=None,
+            achored_at : IntPoint | None = None
+            ) -> None:
         self.raw : np.ndarray = raw
         self.name : str = name
         self.detections : list[Detection] = detections
@@ -35,6 +36,7 @@ class Image():
         self.anchor_at : IntPoint = anchor_at
         self.cropped_from : Image = cropped_from
         self.cropped_from_detection = cropped_from_detection
+        self.achored_at = achored_at
         self.BOUNDING_BOXES_DRAWN = False
 
     
