@@ -94,18 +94,18 @@ class Image():
     def save(self, path : str) -> None:      
         cv2.imwrite(path, self.raw)
     
-    def to_json(self, only_ball_detections=True, for_annotation = False) -> list:
+    def to_json(self, only_ball_detections=True) -> list:
         if only_ball_detections:
             json_data = []
             for detection in self.detections:
                 if 'ball' in detection.class_name:
-                    json_data.append(detection.to_json(for_annotation=for_annotation))
+                    json_data.append(detection.to_json())
             return json_data
         else:
             json_data = []
             if self.detections:
                 for detection in self.detections:
-                    json_data.append(detection.to_json(for_annotation=for_annotation))
+                    json_data.append(detection.to_json())
             return json_data
     
     def to_yolo(self) -> str:

@@ -67,7 +67,7 @@ class Detection:
 
         return xmin, ymin, xmax, ymax
 
-    def to_json(self, for_annotation=False) -> dict:
+    def to_json(self) -> dict:
         p_min, p_max = self.xyxy
         return {
             "class_id": self.class_name,
