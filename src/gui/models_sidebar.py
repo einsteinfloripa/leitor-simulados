@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 from utils.filehandler import FileHandler
+from utils.misc import parse_model
 
 class TestFrame(tk.Frame):
     def __init__(self, sidebar):
@@ -27,7 +28,9 @@ class TestFrame(tk.Frame):
             bt.grid(row=i+1, column=0)
             radio_buttons.append(bt)
 
-    
+    def get_info(self):
+        return self.test_name.get()
+
     def set_test(self):
         test_path = filedialog.askopenfilename(
             filetypes=[("Test files", "*.py *.pt *.tflite")],
@@ -113,8 +116,6 @@ class ModelFrame(tk.Frame):
         # Get the relative path
         cropped_path = model_path.split("/models")[-1]
         self.model_path.set(cropped_path)
-        # Update the model name in the label
-        self.model_path.set(model_path.split("/")[-1])
         # Activate panel
         self.activate_panel()
 
@@ -127,12 +128,21 @@ class ModelFrame(tk.Frame):
         self.score_threshold_label.config(fg="black")
         self.score_threshold.set(0.5)
 
+    def get_info(self):
+        return {
+            "model": self.model_path.get(),
+            "st": self.score_threshold.get(),
+            "cf": self.cf.get()
+        }
+
+
 class PipelineSideBar(tk.Frame):
     
     def __init__(self, root):
         super().__init__(root)
         self.columnconfigure(0, weight=1)
-        
+        # Save the parent reference
+        self.root = root
         # Create widgets
         # Top label
         tk.Label(self, text="Pipeline", bg='light salmon').grid(
@@ -148,4 +158,28 @@ class PipelineSideBar(tk.Frame):
         # Second Stage Model
         self.second_stage = ModelFrame(self, "Second Stage", None)
         self.second_stage.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
+
+        # Apply button
+        self.apply_button = tk.Button(self, text="Run Pipeline", command=self.get_pipeline)
+        self.apply_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
         
+
+    def get_pipeline(self):
+        test = self.test_frame.get_info()
+        fs = self.first_stage.get_info()
+        ss = self.second_stage.get_info()
+        if fs['model'] != "Nao selecionado":
+            fs['model'] = parse_model(fs['model'].strip('/\\'))
+        if ss['model'] != "Nao selecionado":
+            ss['model'] = parse_model(ss['model'].strip('/\\'))
+        
+        fs_config = {
+            'test': test, 'stage': 'FIRST_STAGE', 'cf': fs['cf'],
+            'model': fs['model'], 'st': fs['st']
+        }
+        ss_config = {
+            'test': test, 'stage': 'SECOND_STAGE', 'cf': ss['cf'],
+            'model': ss['model'], 'st': ss['st']
+        }
+
+        self.root.apply_model(fs_config, ss_config)

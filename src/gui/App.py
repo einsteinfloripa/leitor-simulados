@@ -4,8 +4,8 @@ import tkinter as tk
 from tkinter import filedialog
 
 from core.image import Image as CoreImage
-from utils.misc import parse_model
-from core.models import load_model
+from core.detection import Detection
+from core.models import load_model, LegacyModel, YOLOModel, EFScanAlgoModel
 
 from gui.navbar import Navbar
 from gui.image_editor import ImageEditorApp
@@ -15,7 +15,10 @@ class WindowApplication(tk.Tk):
 
     # Non gui variables
     image_files = [] # List of images paths
-    model_files = [] # List of models paths
+    # Detections
+    detections = [] # List of detections
+    
+
 
     # Activate event handlers
     # Activate occurs when a new valid folder is opened
@@ -31,12 +34,15 @@ class WindowApplication(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title("Image Display Application")
+        self.title("Leitor de simulados")
         self.resizable(True, True)
 
         # Image variables
+        # Main image class data
         self.image : CoreImage = None
-
+        # Models
+        self.fs_model : LegacyModel | EFScanAlgoModel | YOLOModel | None = None
+        self.ss_model : LegacyModel | EFScanAlgoModel | YOLOModel | None = None
 
         # Grid configuration
         self.grid_rowconfigure(0, weight=0)  # Header row (fixed size)
@@ -80,3 +86,23 @@ class WindowApplication(tk.Tk):
             self.imgEditor.show_image(0)
             self.activate()
 
+    def apply_model(self, fs_config, ss_config):
+        self.fs_model = load_model(fs_config)
+        self.ss_model = load_model(ss_config)        
+        
+        Detection.set_label_map(['cpf_block', 'question_block'])
+        self.image.make_detections_with_model(self.fs_model, fs_config['st'])
+        self.image.make_cropped()
+        Detection.set_label_map([
+            "cpf_column",
+            "question_line",
+            "selected_ball",
+            "unselected_ball",
+            "question_number",
+        ])
+
+        for crop in self.image.crops:
+            crop.make_detections_with_model(self.ss_model, ss_config['st'])
+
+
+        self.imgEditor.show_image(self.imgEditor.current_image_index)
