@@ -25,7 +25,7 @@ class Image():
             detections,
             cropped_from = None,
             cropped_from_detection=None,
-            achored_at : IntPoint | None = None
+            anchored_at : IntPoint | None = None
             ) -> None:
         self.raw : np.ndarray = raw
         self.name : str = name
@@ -37,7 +37,7 @@ class Image():
         # Those variable are for the cropped images
         self.cropped_from : Image = cropped_from
         self.cropped_from_detection = cropped_from_detection
-        self.achored_at : IntPoint = achored_at
+        self.anchored_at : IntPoint = anchored_at
 
     
     def _has_detections(func):
@@ -79,7 +79,7 @@ class Image():
                     None,
                     cropped_from=self,
                     cropped_from_detection = detection.class_name,
-                    anchor_at=IntPoint(xmin, ymin)
+                    anchored_at=IntPoint(xmin, ymin)
                 )
             )
             cont += 1
