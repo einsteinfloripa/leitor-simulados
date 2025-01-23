@@ -1,10 +1,8 @@
 import tkinter as tk
 
 import cv2
-from PIL import Image, ImageTk
 
-from core.image import Image as CoreImage
-from core.detection import Detection
+from core.detection import Detection, DetectionCoords
 
 from .canvas import ImgCanvas
 from .sidePanel import SidePanel
@@ -78,13 +76,33 @@ class ImageEditorApp(tk.Frame):
         self.number_of_images = 0  # Total number of images
         # Detection
         # Detection selected to be shown
-        self.current_drawn_detections = None
+        self.current_drawn_detections = {}
+        # This is a map the has the detection buinding box in reltion to the root image
+        # as key and the values are the cached detections of the image
+        self.detection_map = None
+        # All the DetectionCoordenates of the current image by class name
+        self.current_detections = {}
 
         # Footer buttons
         self.footerButtons = _footerButtons(
             self.root.footer, self.load_previous_image, self.load_next_image
             )
         self.footerButtons.pack()
+
+
+    def cache_detection_coords(self, index):    
+        detections : list[Detection] = self.root.img_cache[index]['detections']
+        cropped_imgs = self.root.img_cache[index]['crops']
+        for img in cropped_imgs:
+            detections.extend(img.detections)
+
+        self.detection_map = {}
+        for detection in detections:
+            coords : DetectionCoords = detection.to_coords()
+            self.detection_map[coords] = detection
+            if not self.current_detections.get(coords.class_name):
+                self.current_detections[coords.class_name] = []
+            self.current_detections[coords.class_name].append(coords)
 
 
     def show_image(self, image_index):
@@ -109,15 +127,13 @@ class ImageEditorApp(tk.Frame):
         self.show_image(new_index)
 
     def update_detections(self, values_dict : dict[str, bool]):
-        if self.root.image.detections:
+        if self.current_detections:
             # Get the selected values
             selected : list[str] = [k for k, v in values_dict.items() if v]
-            # Get the detections
-            detections : list[Detection] = self.root.image.detections
             # Filter the detections
-            filtered_detections : list[Detection] = [
-                d for d in detections if d.class_name in selected
-            ]
+            filtered_detections : dict[str, list[DetectionCoords]] = {}
+            for class_name in selected:
+                filtered_detections[class_name] = self.current_detections[class_name]
             # Update the current detections
             self.current_drawn_detections = filtered_detections
             # Redraw the canvas

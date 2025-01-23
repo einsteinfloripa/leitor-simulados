@@ -1,20 +1,48 @@
 from __future__ import annotations
 import math
 
-from utils.data_classes import FloatBoundingBox, FloatPoint
+from utils.data_classes import FloatBoundingBox, FloatPoint, IntPoint, IntBoundingBox
+
+class DetectionCoords():
+    """
+    A simpler representation of the detection, the coordenetes are all in relation
+    to the root image
+
+    Args:
+        class_name (str): The class name of the detection
+        bounding_box (IntBoundingBox): The bounding box of the detection
+    """
+    def __init__(self, class_name, int_bbox):
+        self.class_name = class_name
+        self.bbox : IntBoundingBox = int_bbox
+
+    def __eq__(self, value):
+        return self.bbox == value.bbox
+    def __hash__(self):
+        return hash((self.bbox, self.class_name))
+
 
 
 class Detection:
 
     label_map = []
 
-    def __init__(self, bounding_box, class_id, score, img_width, img_height):
+    def __init__(
+            self,
+            bounding_box,
+            class_id,
+            score,
+            img_width,
+            img_height,
+            anchored_at = None
+        ):
         self.bounding_box : FloatBoundingBox = bounding_box
         self.class_id : int = int(class_id)
         self.class_name : str = self.label_map[self.class_id]
         self.score : float = float(score)
         self.img_width : int =  img_width
         self.img_height : int = img_height
+        self.anchored_at : IntPoint | None = anchored_at
     
     # Public Setters && getters
     @classmethod
@@ -100,6 +128,20 @@ class Detection:
         self.bounding_box.p_min = FloatPoint(x1_, y1_)
         self.bounding_box.p_max = FloatPoint(x1_ + sw, y1_ + sh)
 
+    def to_coords(self) -> DetectionCoords:
+        # get the coordinate in pixels
+        xmax = int(self.bounding_box.p_max.x * self.img_width)
+        xmin = int(self.bounding_box.p_min.x * self.img_width)
+        ymax = int(self.bounding_box.p_max.y * self.img_height)
+        ymin = int(self.bounding_box.p_min.y * self.img_height)
+        if self.anchored_at:
+            xmin += self.anchored_at.x
+            ymin += self.anchored_at.y
+            xmax += self.anchored_at.x
+            ymax += self.anchored_at.y
+        int_bbox = IntBoundingBox.from_ints(xmin, ymin, xmax, ymax)
+        return DetectionCoords(self.class_name, int_bbox)
+
     # sorted from top right to bottom left
     def __lt__(self, other):
         # Check if below entirely from the other
@@ -130,7 +172,4 @@ class Detection:
     
     def __repr__(self) -> str:
         return "{}_{:.2f}-{:.2f}-{:.2f}-{:.2f}".format(self.class_name, *[x for x in self.bounding_box])
-
-
-
 

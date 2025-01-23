@@ -52,6 +52,10 @@ class Image():
         detections = model.detect(self)
         # Filter detections by score
         self.detections = [d for d in detections if d.score > score_threshold]
+        # If the image is a crop, then add the ancor point to the detections
+        if self.anchored_at:
+            for detection in self.detections:
+                detection.anchored_at = self.anchored_at
         # sort and mark detections from top left to bottom right    
         self.detections.sort()
 
@@ -125,17 +129,14 @@ class Image():
             self.cropped_from = None
         cache = {
             'detections':self.detections,
-            'cropped':self.crops
+            'crops':self.crops
         }
-        return { self.name : cache }
+        return cache
 
     def from_cache(self, cache : dict) -> None:
         """
         This method restores the image state from a cache
         """
-        self.detections = cache['detections']
-        self.crops = cache['cropped']
-        for crop in self.crops:
-            crop.raw = self.raw
-            crop.cropped_from = self
+        pass
+        
         

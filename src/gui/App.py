@@ -43,6 +43,8 @@ class WindowApplication(tk.Tk):
         # Models
         self.fs_model : LegacyModel | EFScanAlgoModel | YOLOModel | None = None
         self.ss_model : LegacyModel | EFScanAlgoModel | YOLOModel | None = None
+        # Detection cache
+        self.img_cache = []
 
         # Grid configuration
         self.grid_rowconfigure(0, weight=0)  # Header row (fixed size)
@@ -80,6 +82,7 @@ class WindowApplication(tk.Tk):
                     f.suffix.lower() in {'.png', '.jpg', '.jpeg'}
                 ]
         if self.image_files:
+            self.img_cache = [None] * len(self.image_files)
             self.load_image(0)
             self.imgEditor.current_image_index = 0
             self.imgEditor.number_of_images = len(self.image_files)
@@ -103,6 +106,11 @@ class WindowApplication(tk.Tk):
 
         for crop in self.image.crops:
             crop.make_detections_with_model(self.ss_model, ss_config['st'])
-
+        
+        # Cache the detections if needed
+        index = self.imgEditor.current_image_index
+        if self.img_cache[index] is None:
+            self.img_cache[index] = self.image.to_cache()
+            self.imgEditor.cache_detection_coords(index)
 
         self.imgEditor.show_image(self.imgEditor.current_image_index)

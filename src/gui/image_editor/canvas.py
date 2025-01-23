@@ -3,8 +3,7 @@ import tkinter as tk
 import cv2
 from PIL import Image, ImageTk
 
-from core.image import Image as CoreImage
-from core.detection import Detection
+from core.detection import DetectionCoords
 
 
 ## AUXILIARY WIDGETS ##
@@ -114,29 +113,30 @@ class ImgCanvas(tk.Canvas):
         colors = ['green', 'blue', 'yellow', 'red']
         order = ["question_block", "cpf_block", "unselected_ball", "selected_ball"]
         # Sort the detections based on the order
-        sorted_detections : list[Detection] = sorted(
-            self.imgApp.current_drawn_detections,
-            key=lambda d: order.index(d.class_name)
-        )
-        # Get the rectangles
-        info_rect = [(d.to_pixels(), colors[d.class_id]) for d in sorted_detections]
-        for rect, color in info_rect:
-            x1, y1, x2, y2 = rect
-            # Scale and offset the coordinates
-            scaled_x1 = self.offset_x + x1 * self.zoom_factor
-            scaled_y1 = self.offset_y + y1 * self.zoom_factor
-            scaled_x2 = self.offset_x + x2 * self.zoom_factor
-            scaled_y2 = self.offset_y + y2 * self.zoom_factor
+        detections : dict[str,list[DetectionCoords]] = self.imgApp.current_drawn_detections
+        for i, class_name in enumerate(order):
+            if not detections: continue
+            # Get the rectangles
+
+            bboxs = [d.bbox for d in detections.get(class_name, [])]
+            for bbox in bboxs:
+                x1, y1, x2, y2 = bbox
+                color = colors[i]
+                # Scale and offset the coordinates
+                scaled_x1 = self.offset_x + x1 * self.zoom_factor
+                scaled_y1 = self.offset_y + y1 * self.zoom_factor
+                scaled_x2 = self.offset_x + x2 * self.zoom_factor
+                scaled_y2 = self.offset_y + y2 * self.zoom_factor
 
 
-            self.create_rectangle(
-                scaled_x1, scaled_y1, scaled_x2, scaled_y2,
-                fill="", outline=color, width=2
-            )
-            # self.create_rectangle(
-            #     scaled_x1, scaled_y1, scaled_x2, scaled_y2,
-            #     fill=color, stipple="gray25", outline=""
-            # )
+                self.create_rectangle(
+                    scaled_x1, scaled_y1, scaled_x2, scaled_y2,
+                    fill="", outline=color, width=2
+                )
+                # self.create_rectangle(
+                #     scaled_x1, scaled_y1, scaled_x2, scaled_y2,
+                #     fill=color, stipple="gray25", outline=""
+                # )
 
 
     # Event handlers
