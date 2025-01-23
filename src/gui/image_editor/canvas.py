@@ -87,7 +87,7 @@ class ImgCanvas(tk.Canvas):
         self.delete("all")
         self.create_image(self.offset_x, self.offset_y, image=self.photo_image, anchor=tk.NW)
         # Draw rectangles
-        if self.imgApp.current_detections:
+        if self.imgApp.current_drawn_detections:
             self.draw_detections()
 
     def center_image(self):
@@ -115,7 +115,7 @@ class ImgCanvas(tk.Canvas):
         order = ["question_block", "cpf_block", "unselected_ball", "selected_ball"]
         # Sort the detections based on the order
         sorted_detections : list[Detection] = sorted(
-            self.imgApp.current_detections,
+            self.imgApp.current_drawn_detections,
             key=lambda d: order.index(d.class_name)
         )
         # Get the rectangles

@@ -4,9 +4,12 @@ import tkinter as tk
 from tkinter import filedialog
 
 from core.image import Image as CoreImage
+from utils.misc import parse_model
+from core.models import load_model
 
 from gui.navbar import Navbar
 from gui.image_editor import ImageEditorApp
+from gui.models_sidebar import PipelineSideBar
 
 class WindowApplication(tk.Tk):
 
@@ -40,7 +43,7 @@ class WindowApplication(tk.Tk):
         self.grid_rowconfigure(1, weight=1, minsize=400)  # Middle row (expandable)
         self.grid_rowconfigure(2, weight=0, minsize=30)  # Footer row (fixed size)
 
-        self.grid_columnconfigure(0, weight=0, minsize=200)  # Left panel (fixed size)
+        self.grid_columnconfigure(0, weight=0, minsize=250)  # Left panel (fixed size)
         self.grid_columnconfigure(1, weight=1, minsize=600)  # Middle column (expandable)
 
 
@@ -50,11 +53,8 @@ class WindowApplication(tk.Tk):
         self.footer = tk.Frame(self, bg="lightblue", height=30)
         self.footer.grid(row=2, column=0, columnspan=3, sticky="ew")
 
-        self.left_panel = tk.Frame(self, bg="lightgray")
-        self.left_panel.grid(row=1, column=0, sticky="nswe")
-
-        label_left = tk.Label(self.left_panel, text="Left Panel", bg="lightgray")
-        label_left.pack(pady=10)
+        self.modelsSideBar = PipelineSideBar(self)
+        self.modelsSideBar.grid(row=1, column=0, sticky="nswe")
 
         self.imgEditor = ImageEditorApp(self)
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
@@ -79,4 +79,4 @@ class WindowApplication(tk.Tk):
             self.imgEditor.number_of_images = len(self.image_files)
             self.imgEditor.show_image(0)
             self.activate()
-        
+
