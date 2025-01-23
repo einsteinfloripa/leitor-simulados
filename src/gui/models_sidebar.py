@@ -24,13 +24,10 @@ class TestFrame(tk.Frame):
                     value=option,  # Value to store when selected
                     variable=self.test_name,  # Shared variable
             )
-            bt.grid(row=i+1, column=0, padx=10, sticky="w")
+            bt.grid(row=i+1, column=0)
             radio_buttons.append(bt)
 
     
- 
-
-
     def set_test(self):
         test_path = filedialog.askopenfilename(
             filetypes=[("Test files", "*.py *.pt *.tflite")],
@@ -70,13 +67,13 @@ class ModelFrame(tk.Frame):
         self.load_button = tk.Button(top_frame, text="Select Model", command=self.set_model)
         self.load_button.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         # Model Name Label
-        self.model_name = tk.StringVar(value="-----")
-        self.model_name_label = tk.Label(
+        self.model_path_label = tk.Label(
             top_frame,
             textvariable=self.model_path,
             wraplength=200,
+            fg="gray",
         )
-        self.model_name_label.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        self.model_path_label.grid(row=1, column=0, sticky="nsew")
         top_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         # Row 2 - Config widgets
         # Score Threshold input
@@ -84,9 +81,10 @@ class ModelFrame(tk.Frame):
         self.score_threshold_frame.columnconfigure(0, weight=1)
         self.score_threshold_frame.grid(row=2, column=0, padx=5, sticky="nsew")
         # Label
-        tk.Label(
-            self.score_threshold_frame, text="Score Threshold",
-        ).grid(row=0, column=0, sticky="nsew")
+        self.score_threshold_label = tk.Label(
+            self.score_threshold_frame, text="Score Threshold", fg="gray"
+        )
+        self.score_threshold_label.grid(row=0, column=0, sticky="nsew")
         # Scale
         self.score_threshold_scale = tk.Scale(
             self.score_threshold_frame,
@@ -116,15 +114,18 @@ class ModelFrame(tk.Frame):
         cropped_path = model_path.split("/models")[-1]
         self.model_path.set(cropped_path)
         # Update the model name in the label
-        self.model_name.set(model_path.split("/")[-1])
+        self.model_path.set(model_path.split("/")[-1])
         # Activate panel
         self.activate_panel()
 
     def activate_panel(self):
+        # Activate the buttons
         self.cf_checkbox.config(state=tk.NORMAL)
         self.score_threshold_scale.config(state=tk.NORMAL)
+        # Activate the labels
+        self.model_path_label.config(fg="black")
+        self.score_threshold_label.config(fg="black")
         self.score_threshold.set(0.5)
-        
 
 class PipelineSideBar(tk.Frame):
     
