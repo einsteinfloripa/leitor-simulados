@@ -89,7 +89,9 @@ class WindowApplication(tk.Tk):
             self.imgEditor.show_image(0)
             self.activate()
 
-    def apply_model(self, fs_config, ss_config):
+    def apply_model(self):
+        fs_config, ss_config = self.modelsSideBar.get_pipeline()
+
         self.fs_model = load_model(fs_config)
         self.ss_model = load_model(ss_config)        
         
@@ -106,11 +108,44 @@ class WindowApplication(tk.Tk):
 
         for crop in self.image.crops:
             crop.make_detections_with_model(self.ss_model, ss_config['st'])
-        
+
         # Cache the detections if needed
         index = self.imgEditor.current_image_index
         if self.img_cache[index] is None:
             self.img_cache[index] = self.image.to_cache()
             self.imgEditor.cache_detection_coords(index)
 
+        self.imgEditor.update_detections()
+        self.imgEditor.show_image(self.imgEditor.current_image_index)
+
+    def apply_model_to_all(self):
+        fs_config, ss_config = self.modelsSideBar.get_pipeline()
+
+        for i, path in enumerate(self.image_files):
+            image = CoreImage.from_path(path)
+            self.fs_model = load_model(fs_config)
+            self.ss_model = load_model(ss_config)        
+            
+            Detection.set_label_map(['cpf_block', 'question_block'])
+            image.make_detections_with_model(self.fs_model, fs_config['st'])
+
+            image.make_cropped()
+            Detection.set_label_map([
+                "cpf_column",
+                "question_line",
+                "selected_ball",
+                "unselected_ball",
+                "question_number",
+            ])
+
+            for crop in image.crops:
+                crop.make_detections_with_model(self.ss_model, ss_config['st'])
+
+
+            # Cache the detections if needed
+            if self.img_cache[i] is None:
+                self.img_cache[i] = image.to_cache()
+        
+        self.imgEditor.cache_detection_coords(self.imgEditor.current_image_index)
+        self.imgEditor.update_detections()
         self.imgEditor.show_image(self.imgEditor.current_image_index)

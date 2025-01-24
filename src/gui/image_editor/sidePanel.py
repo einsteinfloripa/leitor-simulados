@@ -15,10 +15,10 @@ class _buttonList(tk.Frame):
     cb_var = None
     qb_var = None
 
-    def __init__(self, parent, on_checked_callback, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+    def __init__(self, parent, imgApp, *args, **kwargs):
+        super().__init__(parent, imgApp, *args, **kwargs)
+        self.columnconfigure(0, weight=1)
         # Save the callback reference
-        self.on_checked_callback = on_checked_callback
         
         # Create control variables
         self.sb_var = tk.BooleanVar()
@@ -32,47 +32,47 @@ class _buttonList(tk.Frame):
             text="Selected Balls",
             state=tk.DISABLED,
             variable=self.sb_var,
-            command=self.on_checked
+            command=imgApp.update_detections
         )
-        self.sb_button.pack(anchor=tk.W)
+        self.sb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
         self.ub_button = tk.Checkbutton(
             self,
             text="Unselected Balls",
             state=tk.DISABLED,
             variable=self.ub_var,
-            command=self.on_checked
+            command=imgApp.update_detections
         )
-        self.ub_button.pack(anchor=tk.W)
+        self.ub_button.pack(anchor=tk.W, expand=True, fill=tk.X)
         self.cb_button = tk.Checkbutton(
             self,
             text="Cpf Blocks",
             state=tk.DISABLED,
             variable=self.cb_var,
-            command=self.on_checked
+            command=imgApp.update_detections
         )
-        self.cb_button.pack(anchor=tk.W)
+        self.cb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
         self.qb_button = tk.Checkbutton(
             self,
             text="Question Blocks",
             state=tk.DISABLED,
             variable=self.qb_var,
-            command=self.on_checked
+            command=imgApp.update_detections
         )
-        self.qb_button.pack(anchor=tk.W)
+        self.qb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
 
 
-    def on_checked(self):
+    def get_info(self):
         values = {
             "selected_ball": self.sb_var.get(),
             "unselected_ball": self.ub_var.get(),
             "cpf_block": self.cb_var.get(),
             "question_block": self.qb_var.get()
         }
-        self.on_checked_callback(values)
+        return values
 
 class _showDetectionsBox(tk.Frame):
     
-    def __init__(self, parent, root, on_check_callback, *args, **kwargs):
+    def __init__(self, parent, root, imgApp, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         # Save the parent reference
         self.imgApp = parent
@@ -84,8 +84,8 @@ class _showDetectionsBox(tk.Frame):
         # Top label
         tk.Label(self,text="Show Detections").pack()
         # Button list
-        self.buttonList = _buttonList(self, on_check_callback)
-        self.buttonList.pack(expand=True, fill=tk.BOTH, anchor=tk.W)
+        self.buttonList = _buttonList(self, imgApp)
+        self.buttonList.pack(expand=True, fill=tk.X)
         # Register the activate event
         root.on_activate(self.activate)
 
@@ -100,20 +100,22 @@ class _showDetectionsBox(tk.Frame):
 
 class SidePanel(tk.Frame):
 
-    def __init__(self, parent, root, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+    def __init__(self, imgApp, root, *args, **kwargs):
+        super().__init__(imgApp, *args, **kwargs)
         # Save the parent reference
-        self.imgApp = parent
+        self.imgApp = imgApp
         self.root = root
         # Create widgets
         self.showDetectionsBox = _showDetectionsBox(
             self,
             root,
-            self.imgApp.update_detections
+            imgApp
         )
         self.showDetectionsBox.pack(fill="x")
 
-    
+    def get_show_detection_values(self):
+        return self.showDetectionsBox.buttonList.get_info()
+
     def activate(self):
         pass
 

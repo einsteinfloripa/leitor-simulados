@@ -160,9 +160,12 @@ class PipelineSideBar(tk.Frame):
         self.second_stage.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
         # Apply button
-        self.apply_button = tk.Button(self, text="Run Pipeline", command=self.get_pipeline)
+        self.apply_button = tk.Button(self, text="Run Pipeline", command=self.root.apply_model)
         self.apply_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
         
+        # Apply to all button
+        self.apply_all_button = tk.Button(self, text="Apply to All", command=self.root.apply_model_to_all)
+        self.apply_all_button.grid(row=5, column=0, padx=5, pady=5, sticky="nsew")
 
     def get_pipeline(self):
         test = self.test_frame.get_info()
@@ -182,4 +185,4 @@ class PipelineSideBar(tk.Frame):
             'model': ss['model'], 'st': ss['st']
         }
 
-        self.root.apply_model(fs_config, ss_config)
+        return fs_config, ss_config

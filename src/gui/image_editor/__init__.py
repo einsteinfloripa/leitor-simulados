@@ -90,19 +90,33 @@ class ImageEditorApp(tk.Frame):
         self.footerButtons.pack()
 
 
-    def cache_detection_coords(self, index):    
-        detections : list[Detection] = self.root.img_cache[index]['detections']
+    def cache_detection_coords(self, index):
+        # Clear the current detections
+        self.current_detections = {}
+        # If there is no cache for the image, return
+        if not self.root.img_cache[index]:
+            self.current_detections = {}
+            self.current_drawn_detections = {}
+            return
+        # Get all the detections in the image cached data    
+        detections : list[Detection] = []
+        detections.extend(self.root.img_cache[index]['detections'])
         cropped_imgs = self.root.img_cache[index]['crops']
         for img in cropped_imgs:
             detections.extend(img.detections)
-
+        # Convert the detection to DetectionCoords
+        # Make a map from DetectionCoords to Detection
         self.detection_map = {}
         for detection in detections:
+            # Convert the detection to DetectionCoords
             coords : DetectionCoords = detection.to_coords()
+            # Add the detection to the map
             self.detection_map[coords] = detection
-            if not self.current_detections.get(coords.class_name):
-                self.current_detections[coords.class_name] = []
-            self.current_detections[coords.class_name].append(coords)
+            # Add the detection to the current_detections
+            try:
+                self.current_detections[coords.class_name].append(coords)
+            except KeyError:
+                self.current_detections[coords.class_name] = [coords]
 
 
     def show_image(self, image_index):
@@ -119,21 +133,29 @@ class ImageEditorApp(tk.Frame):
     def load_next_image(self):
         """Load the next image in the list."""
         new_index = (self.current_image_index + 1) % self.number_of_images
+        self.cache_detection_coords(new_index)
+        self.update_detections()
         self.show_image(new_index)
 
     def load_previous_image(self):
         """Load the previous image in the list."""
         new_index = (self.current_image_index - 1) % self.number_of_images
+        self.cache_detection_coords(new_index)
+        self.update_detections()
         self.show_image(new_index)
 
-    def update_detections(self, values_dict : dict[str, bool]):
+    def update_detections(self):
+        values_dict = self.sidePanel.get_show_detection_values()
         if self.current_detections:
             # Get the selected values
             selected : list[str] = [k for k, v in values_dict.items() if v]
             # Filter the detections
             filtered_detections : dict[str, list[DetectionCoords]] = {}
             for class_name in selected:
-                filtered_detections[class_name] = self.current_detections[class_name]
+                try:
+                    filtered_detections[class_name] = self.current_detections[class_name]
+                except KeyError:
+                    pass
             # Update the current detections
             self.current_drawn_detections = filtered_detections
             # Redraw the canvas
