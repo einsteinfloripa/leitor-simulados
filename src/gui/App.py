@@ -5,46 +5,21 @@ from tkinter import filedialog
 
 from core.image import Image as CoreImage
 from core.detection import Detection
-from core.models import load_model, LegacyModel, YOLOModel, EFScanAlgoModel
+from core.models import load_model
+
+from gui.context import AppContextData
 
 from gui.navbar import Navbar
-from gui.image_editor import ImageEditorApp
-from gui.models_sidebar import PipelineSideBar
+from gui.imageEditor import ImageEditorApp
+from gui.modelsSidebar import PipelineSideBar
 
-class WindowApplication(tk.Tk):
-
-    # Non gui variables
-    image_files = [] # List of images paths
-    # Detections
-    detections = [] # List of detections
-    
-
-
-    # Activate event handlers
-    # Activate occurs when a new valid folder is opened
-    activate_callbacks = []
-    # Register a function to be called when the activate event occurs
-    def on_activate(self, func : callable) -> None:
-        self.activate_callbacks.append(func)
-    # Call all the functions registered to the activate event
-    def activate(self) -> None:
-        for func in self.activate_callbacks:
-            func()
+class WindowApplication(tk.Tk, AppContextData):
 
 
     def __init__(self):
         super().__init__()
         self.title("Leitor de simulados")
         self.resizable(True, True)
-
-        # Image variables
-        # Main image class data
-        self.image : CoreImage = None
-        # Models
-        self.fs_model : LegacyModel | EFScanAlgoModel | YOLOModel | None = None
-        self.ss_model : LegacyModel | EFScanAlgoModel | YOLOModel | None = None
-        # Detection cache
-        self.img_cache = []
 
         # Grid configuration
         self.grid_rowconfigure(0, weight=0)  # Header row (fixed size)
@@ -68,57 +43,7 @@ class WindowApplication(tk.Tk):
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
 
 
-    def load_image(self, index):
-        self.image = CoreImage.from_path(self.image_files[index])
-
-
-    # Callback functions
-    def open_folder(self):
-        folder_path = filedialog.askdirectory()  # Open folder dialog
-        if folder_path:
-            folder = Path(folder_path)
-            self.image_files = [
-                str(f) for f in folder.glob('*.*') if \
-                    f.suffix.lower() in {'.png', '.jpg', '.jpeg'}
-                ]
-        if self.image_files:
-            self.img_cache = [None] * len(self.image_files)
-            self.load_image(0)
-            self.imgEditor.current_image_index = 0
-            self.imgEditor.number_of_images = len(self.image_files)
-            self.imgEditor.show_image(0)
-            self.activate()
-
     def apply_model(self):
-        fs_config, ss_config = self.modelsSideBar.get_pipeline()
-
-        self.fs_model = load_model(fs_config)
-        self.ss_model = load_model(ss_config)        
-        
-        Detection.set_label_map(['cpf_block', 'question_block'])
-        self.image.make_detections_with_model(self.fs_model, fs_config['st'])
-        self.image.make_cropped()
-        Detection.set_label_map([
-            "cpf_column",
-            "question_line",
-            "selected_ball",
-            "unselected_ball",
-            "question_number",
-        ])
-
-        for crop in self.image.crops:
-            crop.make_detections_with_model(self.ss_model, ss_config['st'])
-
-        # Cache the detections if needed
-        index = self.imgEditor.current_image_index
-        if self.img_cache[index] is None:
-            self.img_cache[index] = self.image.to_cache()
-            self.imgEditor.cache_detection_coords(index)
-
-        self.imgEditor.update_detections()
-        self.imgEditor.show_image(self.imgEditor.current_image_index)
-
-    def apply_model_to_all(self):
         fs_config, ss_config = self.modelsSideBar.get_pipeline()
 
         for i, path in enumerate(self.image_files):
@@ -148,4 +73,4 @@ class WindowApplication(tk.Tk):
         
         self.imgEditor.cache_detection_coords(self.imgEditor.current_image_index)
         self.imgEditor.update_detections()
-        self.imgEditor.show_image(self.imgEditor.current_image_index)
+        self.imgEditor.display_image(self.imgEditor.current_image_index)

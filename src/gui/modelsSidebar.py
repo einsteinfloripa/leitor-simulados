@@ -4,7 +4,7 @@ from tkinter import filedialog
 from utils.filehandler import FileHandler
 from utils.misc import parse_model
 
-class TestFrame(tk.Frame):
+class _testFrame(tk.Frame):
     def __init__(self, sidebar):
         super().__init__(sidebar, border=2, relief="groove")
         self.columnconfigure(0, weight=1)
@@ -29,7 +29,7 @@ class TestFrame(tk.Frame):
             radio_buttons.append(bt)
 
     def get_info(self):
-        return self.test_name.get()
+        return {'test_name' : self.test_name.get()}
 
     def set_test(self):
         test_path = filedialog.askopenfilename(
@@ -48,14 +48,13 @@ class TestFrame(tk.Frame):
         self.load_button.config(state=tk.NORMAL)
 
 
-class ModelFrame(tk.Frame):
+class _modelFrame(tk.Frame):
     def __init__(self, sidebar, modelstage="?", load_callback=None):
         super().__init__(sidebar, border=2, relief="groove")
         self.columnconfigure(0, weight=1)
         self.load_callback = load_callback
         
         # Config vars
-        self.cf = tk.BooleanVar(value=False)
         self.model_path = tk.StringVar(value="Nao selecionado")
         self.score_threshold = tk.DoubleVar(value=0)
 
@@ -99,11 +98,6 @@ class ModelFrame(tk.Frame):
             state=tk.DISABLED
         )
         self.score_threshold_scale.grid(row=1, column=0, sticky="nsew")
-        # Row 3 - Continue on fail option
-        self.cf_checkbox = tk.Checkbutton(
-            self, text="Continue on Fail", variable=self.cf, state=tk.DISABLED
-        )
-        self.cf_checkbox.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
 
     def set_model(self):
@@ -114,14 +108,12 @@ class ModelFrame(tk.Frame):
         if not model_path:
             return
         # Get the relative path
-        cropped_path = model_path.split("/models")[-1]
-        self.model_path.set(cropped_path)
+        self.model_path.set(model_path)
         # Activate panel
         self.activate_panel()
 
     def activate_panel(self):
         # Activate the buttons
-        self.cf_checkbox.config(state=tk.NORMAL)
         self.score_threshold_scale.config(state=tk.NORMAL)
         # Activate the labels
         self.model_path_label.config(fg="black")
@@ -130,9 +122,8 @@ class ModelFrame(tk.Frame):
 
     def get_info(self):
         return {
-            "model": self.model_path.get(),
+            "model_path": self.model_path.get(),
             "st": self.score_threshold.get(),
-            "cf": self.cf.get()
         }
 
 
@@ -149,14 +140,14 @@ class PipelineSideBar(tk.Frame):
             row=0, column=0, padx=5, pady=5, sticky="nsew"
         )
         # Test selection Frame
-        self.test_frame = TestFrame(self)
+        self.test_frame = _testFrame(self)
         self.test_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
         # First Stage Model
-        self.first_stage = ModelFrame(self, "First Stage", None)
+        self.first_stage = _modelFrame(self, "First Stage", None)
         self.first_stage.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
         # Second Stage Model
-        self.second_stage = ModelFrame(self, "Second Stage", None)
+        self.second_stage = _modelFrame(self, "Second Stage", None)
         self.second_stage.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
         # Apply button
@@ -171,18 +162,9 @@ class PipelineSideBar(tk.Frame):
         test = self.test_frame.get_info()
         fs = self.first_stage.get_info()
         ss = self.second_stage.get_info()
-        if fs['model'] != "Nao selecionado":
-            fs['model'] = parse_model(fs['model'].strip('/\\'))
-        if ss['model'] != "Nao selecionado":
-            ss['model'] = parse_model(ss['model'].strip('/\\'))
         
-        fs_config = {
-            'test': test, 'stage': 'FIRST_STAGE', 'cf': fs['cf'],
-            'model': fs['model'], 'st': fs['st']
+        return {
+            'test': test,
+            'fs': fs,
+            'ss': ss
         }
-        ss_config = {
-            'test': test, 'stage': 'SECOND_STAGE', 'cf': ss['cf'],
-            'model': ss['model'], 'st': ss['st']
-        }
-
-        return fs_config, ss_config

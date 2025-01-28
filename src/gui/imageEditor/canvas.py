@@ -5,19 +5,22 @@ from PIL import Image, ImageTk
 
 from core.detection import DetectionCoords
 
+from .drawingContext import DrawingContext
+from ..context import AppContextData
+
 
 ## AUXILIARY WIDGETS ##
 class _zoomButtons(tk.Frame):
     font = ("Helvetica", 16)
-    def __init__(self, parent, root, zoom_in_callback, zoom_out_callback, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+    def __init__(self, canvas, *args, **kwargs):
+        super().__init__(canvas, *args, **kwargs)
         # Create buttons in the bottom left corner
         self.zoom_out_button = tk.Button(
             self,
             text="-",
             width=1,
             height=1,
-            command=zoom_out_callback,
+            command=canvas._zoom_out,
             font=self.font,
             state=tk.DISABLED
             )
@@ -27,13 +30,13 @@ class _zoomButtons(tk.Frame):
             text="+",
             width=1,
             height=1,
-            command=zoom_in_callback,
+            command=canvas._zoom_in,
             font=self.font,
             state=tk.DISABLED
             )
         self.zoom_in_button.pack(side=tk.RIGHT)
 
-        root.on_activate(self.activate)
+        AppContextData.folder_loaded_callback.append(self.activate)
 
     def activate(self):
         self.zoom_out_button.config(state=tk.NORMAL)
@@ -43,41 +46,43 @@ class _zoomButtons(tk.Frame):
 ## MAIN WIDGET ##
 class ImgCanvas(tk.Canvas):
 
-    def __init__(self, parent, root, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        # Save the parent reference
-        self.imgApp = parent
         
         # Set the initial state and variables
-        self.zoom_factor = 1.0
-        self.offset_x = 0  # Offset for image dragging
-        self.offset_y = 0
+        # Image
+        self.zoom_factor : float = 1.0
+        self.offset_x : int = 0  # Offset for image dragging
+        self.offset_y : int = 0
+        # Detections
+        self.current_drawn_detections : dict[str:DetectionCoords] = None
+        # Operational
         self.drag_start = None  # Starting point of the drag
 
         # Create the zoom buttons
-        self.zoomButtons = _zoomButtons(
-            self, root, self.zoom_in, self.zoom_out
-        )
+        self.zoomButtons = _zoomButtons(self)
         self.zoomButtons.place(
             relx=0.0, rely=1.0, anchor=tk.SW, x=5, y=-5
         )
 
         # Bind events
-        self.bind("<Button-3>", self.start_drag)  # Right mouse button to start dragging
-        self.bind("<B3-Motion>", self.drag_image)  # Motion while holding right mouse button
-        self.bind("<ButtonRelease-3>", self.stop_drag)  # Release right mouse button to stop dragging
-        self.bind("<MouseWheel>", self.mouse_zoom)  # Zoom using mouse scroll
+        self.bind("<Button-3>", self._start_drag)  # Right mouse button to start dragging
+        self.bind("<B3-Motion>", self._drag_image)  # Motion while holding right mouse button
+        self.bind("<ButtonRelease-3>", self._stop_drag)  # Release right mouse button to stop dragging
+        self.bind("<MouseWheel>", self._mouse_zoom)  # Zoom using mouse scroll
 
 
     def display_image(self):
         """Display the current image on the canvas."""
-        img = self.imgApp.brg_image_raw
         # Resize the image based on the zoom factor
-        height, width, _ = img.shape
+        height, width, _ = DrawingContext.brg_image_raw.shape
         new_width = int(width * self.zoom_factor)
         new_height = int(height * self.zoom_factor)
-        self.display_image_cv = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
-
+        self.display_image_cv = cv2.resize(
+            DrawingContext.brg_image_raw,
+            (new_width, new_height),
+            interpolation=cv2.INTER_LINEAR
+        )
         # Convert OpenCV image to PhotoImage for Tkinter
         display_image_pil = Image.fromarray(self.display_image_cv)
         self.photo_image = ImageTk.PhotoImage(display_image_pil)
@@ -86,8 +91,8 @@ class ImgCanvas(tk.Canvas):
         self.delete("all")
         self.create_image(self.offset_x, self.offset_y, image=self.photo_image, anchor=tk.NW)
         # Draw rectangles
-        if self.imgApp.current_drawn_detections:
-            self.draw_detections()
+        if self.current_drawn_detections:
+            self.__draw_detections()
 
     def center_image(self):
         """Center the image and scale it to fit within the canvas."""
@@ -108,12 +113,14 @@ class ImgCanvas(tk.Canvas):
 
         self.display_image()
 
-    def draw_detections(self):
+
+    ## Private functions ##
+    def __draw_detections(self):
         """Draw rectangles on the image."""
         colors = ['green', 'blue', 'yellow', 'red']
         order = ["question_block", "cpf_block", "unselected_ball", "selected_ball"]
         # Sort the detections based on the order
-        detections : dict[str,list[DetectionCoords]] = self.imgApp.current_drawn_detections
+        detections : dict[str,list[DetectionCoords]] = DrawingContext.current_drawn_detections
         for i, class_name in enumerate(order):
             if not detections: continue
             # Get the rectangles
@@ -140,28 +147,28 @@ class ImgCanvas(tk.Canvas):
 
 
     # Event handlers
-    def zoom_in(self):
+    def _zoom_in(self):
         """Zoom in the image."""
         self.zoom_factor *= 1.2
         self.display_image()
 
-    def zoom_out(self):
+    def _zoom_out(self):
         """Zoom out the image."""
         self.zoom_factor /= 1.2
         self.display_image()
 
-    def mouse_zoom(self, event):
+    def _mouse_zoom(self, event):
         """Zoom the image using the mouse scroll."""
         if event.delta > 0:  # Scroll up to zoom in
             self.zoom_in()
         elif event.delta < 0:  # Scroll down to zoom out
             self.zoom_out()
 
-    def start_drag(self, event):
+    def _start_drag(self, event):
         """Start dragging the image."""
         self.drag_start = (event.x, event.y)
 
-    def drag_image(self, event):
+    def _drag_image(self, event):
         """Drag the image."""
         if self.drag_start:
             dx = event.x - self.drag_start[0]
@@ -171,7 +178,7 @@ class ImgCanvas(tk.Canvas):
             self.drag_start = (event.x, event.y)
             self.display_image()
 
-    def stop_drag(self, event):
+    def _stop_drag(self, event):
         """Stop dragging the image."""
         self.drag_start = None
                

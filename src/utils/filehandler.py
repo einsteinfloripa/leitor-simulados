@@ -16,7 +16,7 @@ class FileHandler():
     CROPPED_OUTPUT_DIR : Path = None
 
     INPUT_PATHS = None
-    ACCEPTED_IMAGE_EXTENTIONS = (".jpg", ".jpeg", ".png")
+    ACCEPTED_IMAGE_EXTENTIONS = {'.png', '.jpg', '.jpeg'}
 
     MODELS_PATH = None
     FIRST_STAGE_MODEL = None
@@ -45,6 +45,18 @@ class FileHandler():
             raise e
 
 
+    @classmethod
+    def get_img_files(cls, folder_path : str):
+        folder = Path(folder_path)
+        files = [
+                    str(f) for f in folder.glob('*.*') if \
+                        f.suffix.lower() in cls.ACCEPTED_IMAGE_EXTENTIONS
+                    ]
+        return files
+
+
+
+### OLD CODE ###
     @classmethod
     def get_input_paths(cls, recursive=False):
         # Get the caller function name

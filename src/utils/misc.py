@@ -10,14 +10,21 @@ def normalize_image(img_raw, detection_model_input_height, detection_model_input
 
     return img_np
 
-# yolo/prova/nome
-# Legacy/Nome
-# EFScanAlgo/stage/nome
+# .../models/yolo/prova/nome
+# .../models/Legacy/Nome
+# .../models/EFScanAlgo/stage/nome
 def parse_model(model_path) -> dict:
-    args = model_path.split('/')
-    if len(args) == 2:
+    # Check if the model path is a model path
+    if 'models' not in model_path:
+        return
+    # Get the relevant parts of the path
+    _, endpath = model_path.split('models')
+    endpath.strip('/')
+    args = endpath.split('/')
+    # Parse the model path
+    if args[0].lower() == 'legacy':
         return {'type': 'legacy', 'name': args[1]}
     if args[0].lower() == 'yolov8':
-        return {'type': args[0], 'name': args[-1], 'test': args[1]}
-    return {'type': args[0], 'name': args[-1], 'stage': args[1]}
+        return {'type': 'yolov8', 'name': args[-1], 'test': args[1]}
+    return {'type': 'efscanalgo', 'name': args[-1], 'stage': args[1]}
 

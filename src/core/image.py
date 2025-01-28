@@ -1,11 +1,18 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
 
 from core.detection import Detection
 from utils.data_classes import IntPoint
+
+
+@dataclass
+class ImageCache:
+    detections : list[Detection]
+    crops : list[Image]
 
 class Image():
     
@@ -118,22 +125,21 @@ class Image():
         yolo = '\n'.join([detection.to_yolo() for detection in self.detections])
         return yolo
 
-    def to_cache(self) -> dict:
+    def to_cache(self) -> ImageCache:
         """
         This method saves the current state of the image detection and its
         cropped subregions
         """
+        # If there are no detections, return None
+        if not self.detections:
+            return None
         # Dereference the main image reference as it is likely to be deleted
         for crop in self.crops:
             crop.raw = None
             self.cropped_from = None
-        cache = {
-            'detections':self.detections,
-            'crops':self.crops
-        }
-        return cache
+        return ImageCache(self.detections, self.crops)
 
-    def from_cache(self, cache : dict) -> None:
+    def from_cache(self, cache : ImageCache) -> None:
         """
         This method restores the image state from a cache
         """
