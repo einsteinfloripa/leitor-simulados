@@ -3,7 +3,7 @@ from __future__ import annotations
 import cv2
 import math
 
-from EFscanAlgo.ef_defs import Line, Axis
+from ef_defs import Line, Axis
 from core.image import Image
 
 ### HELPER FUNCTIONS ###

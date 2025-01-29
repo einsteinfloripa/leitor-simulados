@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 
 import inspect
 import os
@@ -6,6 +7,15 @@ import json
 
 from utils import log
 from pathlib import Path
+
+
+@dataclass
+class FoundModels:
+    rel_path : str
+    stage : str
+    name : str
+    type : str
+
 
 class FileHandler():
 
