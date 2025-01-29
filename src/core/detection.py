@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 from enum import Enum
 from dataclasses import dataclass
@@ -39,7 +41,7 @@ class Detection:
         QUESTION_NUMBER = 6
         QUESTION_COLUMN = 7
 
-    __label_map : "LabelMap" = None
+    __label_map : LabelMap = None
 
     def __init__(
             self,
@@ -62,10 +64,10 @@ class Detection:
 
     # Public Setters && getters
     @classmethod
-    def set_label_map(cls, label_map : "LabelMap") -> None:
+    def set_label_map(cls, label_map : LabelMap) -> None:
         cls.__label_map = label_map
     @classmethod
-    def get_label_map(cls) -> "LabelMap":
+    def get_label_map(cls) -> LabelMap:
         return cls.__label_map
 
     # Properties

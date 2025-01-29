@@ -1,4 +1,6 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
+from pathlib import Path
 
 import numpy as np
 import tflite_runtime.interpreter as tflite
@@ -12,37 +14,65 @@ from utils.data_classes import FloatBoundingBox
 from utils.misc import normalize_image
 
 
+def load_model(model_path : str) -> DetectionModel:
+    # parse the model path to get relevant info
 
 
+    # type = config['model']['type']
+    # name = config['model']['name']
+    # stage = config['model']['stage']
+    # test = config['model'].get('test', None)
 
-def load_model(config : dict):
+    # if model_type.upper() == 'YOLOV8':
+    #     model = YOLO(str(
+    #         str((FileHandler.MODELS_PATH / 'YoloV8' / model_test.lower() / model_name).resolve())
+    #     ))
+    #     return YOLOModel(model)
+    # elif model_type.upper() == 'LEGACY':
+    #     interpreter = tflite.Interpreter(
+    #         str((FileHandler.MODELS_PATH / 'Legacy' / model_name / "saved_model" / "model.tflite").resolve())
+    #     )
+    #     return LegacyModel(interpreter)
+    # elif model_type.upper() == 'EFSCANALGO':
+    #     return EFScanAlgoModel(config)
 
-    model_type = config['model']['type']
-    model_name = config['model']['name']
-    model_test = config['model'].get('test', None)
 
-    if model_type.upper() == 'YOLOV8':
-        model = YOLO(str(
-            str((FileHandler.MODELS_PATH / 'YoloV8' / model_test.lower() / model_name).resolve())
-        ))
-        return YOLOModel(model)
-    elif model_type.upper() == 'LEGACY':
-        interpreter = tflite.Interpreter(
-            str((FileHandler.MODELS_PATH / 'Legacy' / model_name / "saved_model" / "model.tflite").resolve())
-        )
-        return LegacyModel(interpreter)
-    elif model_type.upper() == 'EFSCANALGO':
-        return EFScanAlgoModel(config)
+class DetectionModel(ABC):
+
+    class ModelType:
+        YOLOV8 = 'YOLOV8'
+        LEGACY = 'LEGACY'
+        EFSCANALGO = 'EFSCANALGO'
+
+    class TargetStage:
+        FIRST = 'FIRST'
+        SECOND = 'SECOND'
+        BOTH = 'BOTH'
+
+    def __init__(
+            self,
+            name : str,
+            type : ModelType,
+            target_stage : TargetStage,
+            ) -> None:
+        self.name = name
+        self.type = type
+        self.target_stage = target_stage
+
+    @abstractmethod
+    def detect(self, img : Image) -> list[Detection]:
+        pass        
 
 
 ### YOLOV8 MODEL ###
 
-class YOLOModel:
-    def __init__(self, model):
-        self.model = model
+class YOLOModel(DetectionModel):
+    def __init__(self, name, type, target_stage, model_engine : YOLO):
+        super().__init__(name, type, target_stage)
+        self.engine = model_engine
 
     def detect(self, img : Image) -> list[Detection]:
-        result = self.model.predict(img.raw, verbose=False)[0]
+        result = self.engine.predict(img.raw, verbose=False)[0]
         detections = []
         boxes = result.boxes.xyxyn.tolist()
         classes = result.boxes.cls.tolist()
@@ -119,17 +149,24 @@ class LegacyModel:
 
 ### NON AI MODEL ###
 
-class EFScanAlgoModel:
+class EFScanAlgoModel(DetectionModel):
     
     __initialized = False
     __scanner = None
-    def __init__(self, config : dict) -> None:
+    def __init__(self, name, type, target_stage):
+        super().__init__(name, type, target_stage)
         # Set path to import dynamically
         if not self.__initialized:
             self.__init_paths()
-        # Import Scanner class and create instance
-        from EFscanAlgo import Scanner
+        # Import the relevant classes to initialize the model
+        from EFscanAlgo import Scanner, Config
+        config = Config(
+            model_name = name,
+            test = 'SIMUFSC', # TODO change this to be dynamic
+            stage = target_stage
+        )
         self.__scanner = Scanner(config)
+        
 
 
     def detect(self, img : Image) -> list[Detection]:
@@ -141,7 +178,7 @@ class EFScanAlgoModel:
         import sys
         import pathlib
         # Include the path to the src folde
-        path = pathlib.Path(__file__).parent.parent
+        path = pathlib.Path(__file__).parent.parent.parent
         # Include path to models EFscanAlgo
-        sys.path.append(str(path.parent / 'models'))
+        sys.path.append(str(path))
         self.__initialized = True
