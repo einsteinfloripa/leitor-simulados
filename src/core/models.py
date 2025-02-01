@@ -1,63 +1,53 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 import numpy as np
-import tflite_runtime.interpreter as tflite
 
 from ultralytics import YOLO
+import tflite_runtime.interpreter as tflite
 
 from core.detection import Detection
 from core.image import Image
-from utils.filehandler import FileHandler
+from core.defs import Stage, TestType, PATH_SEPARATOR
 from utils.data_classes import FloatBoundingBox
 from utils.misc import normalize_image
+from utils.filehandler import FileHandler
+
+def load_model(model_path : str, stage : Stage) -> DetectionModel:
+    """
+    Load the model from the given path
+    """
+    # Get the model type
+    parts = list(model_path.split(PATH_SEPARATOR))
+    model_name = parts[-1]
+    # Get the type of the model and load accordingly
+    model_suffix = model_name.split('.')[-1]
+    # Legacy model
+    if model_suffix == 'tflite':
+        interpreter = tflite.Interpreter(
+            model_path
+        )
+        return LegacyModel(interpreter)
+    # EFScanAlgo model
+    elif model_suffix == 'py':
+        return EFScanAlgoModel(model_name, stage)
+    # YOLOV8 model
+    elif model_suffix == 'pt':
+        engine = YOLO(
+            model_path
+        )
+        return YOLOModel(engine)
 
 
-def load_model(model_path : str) -> DetectionModel:
-    # parse the model path to get relevant info
-
-
-    # type = config['model']['type']
-    # name = config['model']['name']
-    # stage = config['model']['stage']
-    # test = config['model'].get('test', None)
-
-    # if model_type.upper() == 'YOLOV8':
-    #     model = YOLO(str(
-    #         str((FileHandler.MODELS_PATH / 'YoloV8' / model_test.lower() / model_name).resolve())
-    #     ))
-    #     return YOLOModel(model)
-    # elif model_type.upper() == 'LEGACY':
-    #     interpreter = tflite.Interpreter(
-    #         str((FileHandler.MODELS_PATH / 'Legacy' / model_name / "saved_model" / "model.tflite").resolve())
-    #     )
-    #     return LegacyModel(interpreter)
-    # elif model_type.upper() == 'EFSCANALGO':
-    #     return EFScanAlgoModel(config)
-
+class ModelType:
+    YOLOV8 = 'YOLOV8'
+    LEGACY = 'LEGACY'
+    EFSCANALGO = 'EFSCANALGO'
 
 class DetectionModel(ABC):
 
-    class ModelType:
-        YOLOV8 = 'YOLOV8'
-        LEGACY = 'LEGACY'
-        EFSCANALGO = 'EFSCANALGO'
-
-    class TargetStage:
-        FIRST = 'FIRST'
-        SECOND = 'SECOND'
-        BOTH = 'BOTH'
-
-    def __init__(
-            self,
-            name : str,
-            type : ModelType,
-            target_stage : TargetStage,
-            ) -> None:
-        self.name = name
-        self.type = type
-        self.target_stage = target_stage
+    def __init__(self, model_type : ModelType):
+        self.model_type = model_type
 
     @abstractmethod
     def detect(self, img : Image) -> list[Detection]:
@@ -67,9 +57,9 @@ class DetectionModel(ABC):
 ### YOLOV8 MODEL ###
 
 class YOLOModel(DetectionModel):
-    def __init__(self, name, type, target_stage, model_engine : YOLO):
-        super().__init__(name, type, target_stage)
-        self.engine = model_engine
+    def __init__(self, engine : YOLO):
+        super().__init__(ModelType.YOLOV8)
+        self.engine = engine
 
     def detect(self, img : Image) -> list[Detection]:
         result = self.engine.predict(img.raw, verbose=False)[0]
@@ -95,6 +85,7 @@ class YOLOModel(DetectionModel):
 # CLASSES
 class LegacyModel:
     def __init__(self, interpreter):
+        super().__init__(ModelType.LEGACY)
         self.interpreter = interpreter
         self.interpreter.allocate_tensors()
         input_details = self.interpreter.get_input_details()[0]["shape"]
@@ -152,22 +143,43 @@ class LegacyModel:
 class EFScanAlgoModel(DetectionModel):
     
     __initialized = False
+    __lazy_initialized = False
     __scanner = None
-    def __init__(self, name, type, target_stage):
-        super().__init__(name, type, target_stage)
+    def __init__(self, name : str, stage : Stage):
+        super().__init__(ModelType.EFSCANALGO)
         # Set path to import dynamically
         if not self.__initialized:
             self.__init_paths()
         # Import the relevant classes to initialize the model
         from EFscanAlgo import Scanner, Config
+        # Initialize static variables
+        self.name = name
+        self.stage = stage
+        # Initialize dynamic variables
+        self.test = None
+    
+    def init(self, test : TestType):
+        """
+        Explicit lazy initialization of the EFScanAlgo model, this must heppen lazily
+        because the EFScanAlgo needs to know additional info that can change
+        as the user changes the test selected.
+        So only when the user selects a test and run the model it is actualy initialized.
+        """
+        # Check if the model is trying to be initialized twice with the same test
+        if self.__lazy_initialized and self.test == test:
+            # No need to initialize again
+            return
+        # Import the relevant classes to initialize the model
         config = Config(
-            model_name = name,
-            test = 'SIMUFSC', # TODO change this to be dynamic
-            stage = target_stage
+            model_name = self.name,
+            test = test,
+            stage = self.stage
         )
         self.__scanner = Scanner(config)
+        # Stores the state of the model
+        self.test = test
+        self.__lazy_initialized = True
         
-
 
     def detect(self, img : Image) -> list[Detection]:
         return self.__scanner.detect(img)

@@ -1,4 +1,4 @@
-from src.gui.context import AppContextData
+from gui.context import AppContextData
 import tkinter as tk
 
 ## AUXILIARY WIDGETS ##
@@ -14,6 +14,7 @@ class _showDetectionsBox(tk.Frame):
 
         def __init__(self, parent, imgApp, *args, **kwargs):
             super().__init__(parent, imgApp, *args, **kwargs)
+            self.imgApp = imgApp
             self.columnconfigure(0, weight=1)
             # Save the callback reference
             
@@ -29,7 +30,7 @@ class _showDetectionsBox(tk.Frame):
                 text="Selected Balls",
                 state=tk.DISABLED,
                 variable=self.sb_var,
-                command=imgApp.update_detections
+                command=self.update_detections
             )
             self.sb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
             self.ub_button = tk.Checkbutton(
@@ -37,7 +38,7 @@ class _showDetectionsBox(tk.Frame):
                 text="Unselected Balls",
                 state=tk.DISABLED,
                 variable=self.ub_var,
-                command=imgApp.update_detections
+                command=self.update_detections
             )
             self.ub_button.pack(anchor=tk.W, expand=True, fill=tk.X)
             self.cb_button = tk.Checkbutton(
@@ -45,7 +46,7 @@ class _showDetectionsBox(tk.Frame):
                 text="Cpf Blocks",
                 state=tk.DISABLED,
                 variable=self.cb_var,
-                command=imgApp.update_detections
+                command=self.update_detections
             )
             self.cb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
             self.qb_button = tk.Checkbutton(
@@ -53,11 +54,14 @@ class _showDetectionsBox(tk.Frame):
                 text="Question Blocks",
                 state=tk.DISABLED,
                 variable=self.qb_var,
-                command=imgApp.update_detections
+                command=self.update_detections
             )
             self.qb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
 
-
+        def update_detections(self):
+            self.imgApp.update_detections()
+            self.imgApp.display_image()
+        
         def get_info(self):
             values = {
                 "selected_ball": self.sb_var.get(),
@@ -66,6 +70,7 @@ class _showDetectionsBox(tk.Frame):
                 "question_block": self.qb_var.get()
             }
             return values
+        
     
     def __init__(self, parent, root, imgApp, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -82,7 +87,7 @@ class _showDetectionsBox(tk.Frame):
         self.buttonList = self._buttonList(self, imgApp)
         self.buttonList.pack(expand=True, fill=tk.X)
         # Register the activate event
-        AppContextData.folder_loaded_callback.append(self.on_activate)
+        AppContextData.folder_loaded_callback.add_callback(self.on_activate)
 
 
     def on_activate(self):

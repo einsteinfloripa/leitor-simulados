@@ -1,13 +1,14 @@
-from pathlib import Path
-
 import tkinter as tk
-from tkinter import filedialog
 
-from core.image import Image as CoreImage
-from core.detection import Detection
-from core.models import load_model
+from core.detection import (
+    Detection,
+    DEFAULT_FIRST_STAGE_LABEL_MAP,
+    DEFAULT_SECOND_STAGE_LABEL_MAP
+)
+from core.models import EFScanAlgoModel
 
 from gui.context import AppContextData
+from gui.imageEditor.drawingContext import DrawingContext
 
 from gui.navbar import Navbar
 from gui.imageEditor import ImageEditorApp
@@ -43,34 +44,55 @@ class WindowApplication(tk.Tk, AppContextData):
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
 
 
-    def apply_model(self):
-        fs_config, ss_config = self.modelsSideBar.get_pipeline()
+    def open_folder(self, path):
+        AppContextData.open_folder(path)
+        DrawingContext.build_context(
+            AppContextData.image_cache[0],
+            AppContextData.image.raw,
+        )
+        self.imgEditor.display_image(0)
+        AppContextData.folder_loaded_callback()
 
-        for i, path in enumerate(self.image_files):
-            image = CoreImage.from_path(path)
-            self.fs_model = load_model(fs_config)
-            self.ss_model = load_model(ss_config)        
-            
-            Detection.set_label_map(['cpf_block', 'question_block'])
-            image.make_detections_with_model(self.fs_model, fs_config['st'])
-
+    def apply_model(self, to_all=False):
+        # Get the current pipeline configuration
+        config = self.modelsSideBar.get_pipeline()
+        test = config['test']
+        fs_config = config['fs']
+        ss_config = config['ss']
+        # Lazy init EFscanAlgo if needed
+        if isinstance(AppContextData.fs_model, EFScanAlgoModel):
+            AppContextData.fs_model.init(test)
+        if isinstance(AppContextData.ss_model, EFScanAlgoModel):
+            AppContextData.ss_model.init(test)
+        # Select the relevant images
+        if to_all:
+            indexes = range(len(self.image_files))
+        else:
+            indexes = [self.imgEditor.current_image_index]
+        # Apply the model to the images
+        for i in indexes:
+            AppContextData.load_image_to_context(i, do_cache=False)
+            image = AppContextData.image
+            # First stage
+            Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
+            image.make_detections_with_model(
+                AppContextData.fs_model, fs_config['st']
+            )
+            # Crop image in the detected areas
             image.make_cropped()
-            Detection.set_label_map([
-                "cpf_column",
-                "question_line",
-                "selected_ball",
-                "unselected_ball",
-                "question_number",
-            ])
-
+            # Second stage
+            Detection.set_label_map(DEFAULT_SECOND_STAGE_LABEL_MAP)
             for crop in image.crops:
-                crop.make_detections_with_model(self.ss_model, ss_config['st'])
+                crop.make_detections_with_model(
+                    AppContextData.ss_model, ss_config['st']
+                )
 
-
-            # Cache the detections if needed
-            if self.img_cache[i] is None:
-                self.img_cache[i] = image.to_cache()
+            # Make the detections cache
+            AppContextData.image_cache[i] = image.to_cache()
         
-        self.imgEditor.cache_detection_coords(self.imgEditor.current_image_index)
+        DrawingContext.build_context(
+            AppContextData.image_cache[indexes[0]],
+            AppContextData.image.raw,
+        )
         self.imgEditor.update_detections()
         self.imgEditor.display_image(self.imgEditor.current_image_index)

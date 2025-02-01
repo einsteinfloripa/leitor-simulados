@@ -3,7 +3,7 @@ import tkinter as tk
 import cv2
 from PIL import Image, ImageTk
 
-from core.detection import DetectionCoords
+from core.detection import DetectionCoords, Detection
 
 from .drawingContext import DrawingContext
 from ..context import AppContextData
@@ -36,7 +36,7 @@ class _zoomButtons(tk.Frame):
             )
         self.zoom_in_button.pack(side=tk.RIGHT)
 
-        AppContextData.folder_loaded_callback.append(self.activate)
+        AppContextData.folder_loaded_callback.add_callback(self.activate)
 
     def activate(self):
         self.zoom_out_button.config(state=tk.NORMAL)
@@ -46,9 +46,8 @@ class _zoomButtons(tk.Frame):
 ## MAIN WIDGET ##
 class ImgCanvas(tk.Canvas):
 
-    def __init__(self, parent, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-        
+    def __init__(self, imgEditor, *args, **kwargs):
+        super().__init__(imgEditor, *args, **kwargs)
         # Set the initial state and variables
         # Image
         self.zoom_factor : float = 1.0
@@ -97,7 +96,7 @@ class ImgCanvas(tk.Canvas):
     def center_image(self):
         """Center the image and scale it to fit within the canvas."""
         # Get the image's size and the canvas's size
-        img_height, img_width, _ = self.imgApp.brg_image_raw.shape
+        img_height, img_width, _ = DrawingContext.brg_image_raw.shape
         canvas_width = self.winfo_width()
         canvas_height = self.winfo_height()
 
@@ -118,14 +117,19 @@ class ImgCanvas(tk.Canvas):
     def __draw_detections(self):
         """Draw rectangles on the image."""
         colors = ['green', 'blue', 'yellow', 'red']
-        order = ["question_block", "cpf_block", "unselected_ball", "selected_ball"]
+        order = [
+            Detection.Type.QUESTION_BLOCK,
+            Detection.Type.CPF_BLOCK,
+            Detection.Type.UNSELECTED_BALL,
+            Detection.Type.SELECTED_BALL
+        ]
         # Sort the detections based on the order
-        detections : dict[str,list[DetectionCoords]] = DrawingContext.current_drawn_detections
-        for i, class_name in enumerate(order):
+        detections : dict[Detection.Type, list[DetectionCoords]] = self.current_drawn_detections
+        for i, class_type in enumerate(order):
             if not detections: continue
             # Get the rectangles
 
-            bboxs = [d.bbox for d in detections.get(class_name, [])]
+            bboxs = [d.bbox for d in detections.get(class_type, [])]
             for bbox in bboxs:
                 x1, y1, x2, y2 = bbox
                 color = colors[i]

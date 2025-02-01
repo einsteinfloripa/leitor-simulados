@@ -2,7 +2,9 @@ import tkinter as tk
 from tkinter import filedialog
 
 from utils.filehandler import FileHandler
-from utils.misc import parse_model
+from gui.context import AppContextData
+from core.defs import Stage
+
 
 class _testFrame(tk.Frame):
     def __init__(self, sidebar):
@@ -49,10 +51,11 @@ class _testFrame(tk.Frame):
 
 
 class _modelFrame(tk.Frame):
-    def __init__(self, sidebar, modelstage="?", load_callback=None):
+    def __init__(self, sidebar, modelstage : Stage = Stage.NULL, load_callback=None):
         super().__init__(sidebar, border=2, relief="groove")
         self.columnconfigure(0, weight=1)
         self.load_callback = load_callback
+        self.stage = modelstage
         
         # Config vars
         self.model_path = tk.StringVar(value="Nao selecionado")
@@ -66,7 +69,7 @@ class _modelFrame(tk.Frame):
         top_frame = tk.Frame(self, border=2, relief="groove")
         top_frame.columnconfigure(0, weight=1)
         # Button
-        self.load_button = tk.Button(top_frame, text="Select Model", command=self.set_model)
+        self.load_button = tk.Button(top_frame, text="Select Model", command=self.load_model)
         self.load_button.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         # Model Name Label
         self.model_path_label = tk.Label(
@@ -100,7 +103,7 @@ class _modelFrame(tk.Frame):
         self.score_threshold_scale.grid(row=1, column=0, sticky="nsew")
 
 
-    def set_model(self):
+    def load_model(self):
         model_path = filedialog.askopenfilename(
             filetypes=[("Model files", "*.py *.pt *.tflite")],
             initialdir=FileHandler.MODELS_PATH
@@ -109,8 +112,18 @@ class _modelFrame(tk.Frame):
             return
         # Get the relative path
         self.model_path.set(model_path)
-        # Activate panel
+        # Try to load the model to context
+        loaded = AppContextData.load_model_to_context(
+            model_path, stage=self.stage
+        )
         self.activate_panel()
+        if loaded:
+            self.model_success_status()
+        else:
+            self.model_error_status()
+
+
+    # Event handlers
 
     def activate_panel(self):
         # Activate the buttons
@@ -126,6 +139,11 @@ class _modelFrame(tk.Frame):
             "st": self.score_threshold.get(),
         }
 
+    def model_success_status(self):
+        self.model_path_label.config(bg="aquamarine2")
+
+    def model_error_status(self):
+        self.model_path_label.config(bg="indian red")
 
 class PipelineSideBar(tk.Frame):
     
@@ -144,19 +162,15 @@ class PipelineSideBar(tk.Frame):
         self.test_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
         # First Stage Model
-        self.first_stage = _modelFrame(self, "First Stage", None)
+        self.first_stage = _modelFrame(self, Stage.FIRST, None)
         self.first_stage.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
         # Second Stage Model
-        self.second_stage = _modelFrame(self, "Second Stage", None)
+        self.second_stage = _modelFrame(self, Stage.SECOND, None)
         self.second_stage.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
         # Apply button
         self.apply_button = tk.Button(self, text="Run Pipeline", command=self.root.apply_model)
         self.apply_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
-        
-        # Apply to all button
-        self.apply_all_button = tk.Button(self, text="Apply to All", command=self.root.apply_model_to_all)
-        self.apply_all_button.grid(row=5, column=0, padx=5, pady=5, sticky="nsew")
 
     def get_pipeline(self):
         test = self.test_frame.get_info()

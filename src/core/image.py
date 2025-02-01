@@ -77,19 +77,19 @@ class Image():
         cropped = []
         # the detections are sorted by top left to bottom right
         cont = 0
-        current_class = self.detections[0].class_id
+        current_class = self.detections[0].class_type
         for detection in self.detections:
-            if detection.class_id != current_class:
+            if detection.class_type != current_class:
                 cont = 0
-                current_class = detection.class_id
+                current_class = detection.class_type
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cropped.append(
                 Image(
-                    f"{self.name[:-4]}_{detection.class_name}_{cont:02}.jpg",
+                    f"{self.name[:-4]}_{detection.class_type.name.lower()}_{cont:02}.jpg",
                     self.raw[ymin:ymax, xmin:xmax],
                     None,
                     cropped_from=self,
-                    cropped_from_detection = detection.class_name,
+                    cropped_from_detection = detection.class_type,
                     anchored_at=IntPoint(xmin, ymin)
                 )
             )

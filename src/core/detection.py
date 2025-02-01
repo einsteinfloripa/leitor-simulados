@@ -5,6 +5,7 @@ from enum import Enum
 from dataclasses import dataclass
 
 from utils.data_classes import FloatBoundingBox, FloatPoint, IntPoint, IntBoundingBox
+from core.defs import Stage
 
 class DetectionCoords():
     """
@@ -15,14 +16,14 @@ class DetectionCoords():
         class_name (str): The class name of the detection
         bounding_box (IntBoundingBox): The bounding box of the detection
     """
-    def __init__(self, class_name, int_bbox):
-        self.class_name = class_name
+    def __init__(self, class_type : Detection.Type, int_bbox : IntBoundingBox):
+        self.class_type : Detection.Type = class_type
         self.bbox : IntBoundingBox = int_bbox
 
     def __eq__(self, value):
         return self.bbox == value.bbox
     def __hash__(self):
-        return hash((self.bbox, self.class_name))
+        return hash((self.bbox, self.class_type.value))
 
 
 
@@ -157,7 +158,7 @@ class Detection:
     def to_json(self) -> dict:
         p_min, p_max = self.xyxy
         return {
-            "class_id": self.class_name,
+            "class_id": self.class_type,
             "score": self.score,
             "bounding_box": [*p_min, *p_max],
         }
@@ -179,7 +180,7 @@ class Detection:
             xmax += self.anchored_at.x
             ymax += self.anchored_at.y
         int_bbox = IntBoundingBox.from_ints(xmin, ymin, xmax, ymax)
-        return DetectionCoords(self.class_name, int_bbox)
+        return DetectionCoords(self.class_type, int_bbox)
 
     # sorted from top right to bottom left
     def __lt__(self, other):
@@ -210,17 +211,16 @@ class Detection:
             return self.middle_point.x < other.middle_point.x
     
     def __repr__(self) -> str:
-        return "{}_{:.2f}-{:.2f}-{:.2f}-{:.2f}".format(self.class_name, *[x for x in self.bounding_box])
+        return "{}_{:.2f}-{:.2f}-{:.2f}-{:.2f}".format(
+            self.class_type.name.lower(), *[x for x in self.bounding_box]
+        )
 
 
 
 ## Label maps ##
 @dataclass
 class LabelMap:
-    class Stage(Enum):
-        FIRST = 0
-        SECOND = 1
-        
+
     detections : list[Detection.Type]
     stage : Stage
 
@@ -230,7 +230,7 @@ DEFAULT_FIRST_STAGE_LABEL_MAP = LabelMap(
         Detection.Type.CPF_BLOCK,
         Detection.Type.QUESTION_BLOCK,
     ],
-    stage = LabelMap.Stage.FIRST
+    stage = Stage.FIRST
 )
 
 DEFAULT_SECOND_STAGE_LABEL_MAP = LabelMap(
@@ -242,7 +242,7 @@ DEFAULT_SECOND_STAGE_LABEL_MAP = LabelMap(
         Detection.Type.QUESTION_NUMBER,
         Detection.Type.QUESTION_COLUMN,
     ],
-    stage = LabelMap.Stage.SECOND
+    stage = Stage.SECOND
 )
 
         

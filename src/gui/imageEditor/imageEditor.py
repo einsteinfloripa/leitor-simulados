@@ -66,7 +66,7 @@ class ImageEditorApp(tk.Frame):
         self.grid_columnconfigure(1, weight=0)
 
         # Canvas configuration
-        self.Canvas = ImgCanvas(self, root, width=800, height=600, bg="white")
+        self.Canvas = ImgCanvas(self, width=800, height=600, bg="white")
         self.Canvas.grid(row=0, column=0, sticky="nswe") 
         # Side panel configuration
         self.sidePanel = SidePanel(self, root, bg="lightgray", width=200, height=500)
@@ -74,29 +74,40 @@ class ImageEditorApp(tk.Frame):
 
         # Footer buttons
         self.footerButtons = _footerButtons(
-            self.root.footer, self.load_previous_image, self.load_next_image
+            root.footer, self._load_previous_image, self._load_next_image
             )
         self.footerButtons.pack()
 
-    def display_image(self, image_index):
-        """Show the image at the given index."""
+    def display_image(self, image_index = None):
+        # get the current image index if none is provided
+        if image_index is None:
+            image_index = self.current_image_index
         self.Canvas.center_image()
         self.footerButtons.update(image_index + 1, AppContextData.number_of_images)
     
     def update_detections(self):
+        name_type_map = {
+            "selected_ball": Detection.Type.SELECTED_BALL,
+            "unselected_ball": Detection.Type.UNSELECTED_BALL,
+            "cpf_block": Detection.Type.CPF_BLOCK,
+            "question_block": Detection.Type.QUESTION_BLOCK
+        }
         detections_selected = self.sidePanel.get_show_detection_values()
         if DrawingContext.has_detections():
             # Get the selected values
             selected : list[str] = [k for k, v in detections_selected.items() if v]
             # Filter the detections
-            filtered_detections : dict[str, list[DetectionCoords]] = {}
+            filtered_detections : dict[Detection.Type, list[DetectionCoords]] = {}
             for class_name in selected:
                 try:
-                    filtered_detections[class_name] = DrawingContext.detection_coords[class_name]
+                    type : Detection.Type = name_type_map[class_name]
+                    filtered_detections[type] = DrawingContext.detection_coords[type]
                 except KeyError:
                     pass
             # Update the current detections
             self.Canvas.current_drawn_detections = filtered_detections
+        print(self.Canvas.current_drawn_detections)
+        self.Canvas.display_image()
 
 
     ## Event Handlers ##   
@@ -106,6 +117,10 @@ class ImageEditorApp(tk.Frame):
         new_index = (self.current_image_index + 1) % AppContextData.number_of_images
         # Load and set all the relevant data
         AppContextData.load_image_to_context(new_index)
+        DrawingContext.build_context(
+            AppContextData.image_cache[new_index],
+            AppContextData.image.raw
+        )
         self.update_detections()
         self.current_image_index = new_index
         # Make draw call
@@ -117,6 +132,10 @@ class ImageEditorApp(tk.Frame):
         new_index = (self.current_image_index - 1) % AppContextData.number_of_images
         # Load and set all the relevant data
         AppContextData.load_image_to_context(new_index)
+        DrawingContext.build_context(
+            AppContextData.image_cache[new_index],
+            AppContextData.image.raw
+        )
         self.update_detections()
         self.current_image_index = new_index
         # Make draw call
