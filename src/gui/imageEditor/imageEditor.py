@@ -58,7 +58,7 @@ class ImageEditorApp(tk.Frame):
     def __init__(self, root):
         super().__init__(root, width=800, height=600, bg="white")
         # Operation variables
-        self.current_image_index = -1
+        self.current_image_index = 0
         
         # Make the frame responsive
         self.grid_rowconfigure(0, weight=1)
@@ -106,7 +106,8 @@ class ImageEditorApp(tk.Frame):
                     pass
             # Update the current detections
             self.Canvas.current_drawn_detections = filtered_detections
-        print(self.Canvas.current_drawn_detections)
+        else:
+            self.Canvas.current_drawn_detections = {}
         self.Canvas.display_image()
 
 
@@ -116,13 +117,13 @@ class ImageEditorApp(tk.Frame):
         # Get the new index
         new_index = (self.current_image_index + 1) % AppContextData.number_of_images
         # Load and set all the relevant data
-        AppContextData.load_image_to_context(new_index)
+        AppContextData.load_image_to_context(new_index, do_cache=False)
         DrawingContext.build_context(
             AppContextData.image_cache[new_index],
             AppContextData.image.raw
         )
-        self.update_detections()
         self.current_image_index = new_index
+        self.update_detections()
         # Make draw call
         self.display_image(new_index)
 
@@ -131,12 +132,12 @@ class ImageEditorApp(tk.Frame):
         # Get the new index
         new_index = (self.current_image_index - 1) % AppContextData.number_of_images
         # Load and set all the relevant data
-        AppContextData.load_image_to_context(new_index)
+        AppContextData.load_image_to_context(new_index, do_cache=False)
         DrawingContext.build_context(
             AppContextData.image_cache[new_index],
             AppContextData.image.raw
         )
-        self.update_detections()
         self.current_image_index = new_index
+        self.update_detections()
         # Make draw call
         self.display_image(new_index)

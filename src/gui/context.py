@@ -20,6 +20,7 @@ class Callback:
         for callback in self.callback_list:
             callback()
 
+
 class AppContextData:
     """
     Class for storing the current state of the application and its variables
@@ -29,7 +30,9 @@ class AppContextData:
     image_files = []
     # Current image
     image : CoreImage = None
+    # Cache of all images
     image_cache : list[ImageCache] = None
+    # Number of images
     number_of_images = -1
 
     # MODELS

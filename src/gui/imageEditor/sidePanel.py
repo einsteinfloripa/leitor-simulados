@@ -60,7 +60,6 @@ class _showDetectionsBox(tk.Frame):
 
         def update_detections(self):
             self.imgApp.update_detections()
-            self.imgApp.display_image()
         
         def get_info(self):
             values = {

@@ -22,6 +22,8 @@ class DrawingContext:
     ## Operation Functions ##
     @classmethod
     def build_context(cls, cache : ImageCache | None, img_raw : np.ndarray):
+        # Reset the context
+        cls.__reset_context()
         # check if it has a cache
         if cache:
             # Get all the detections in the image cached data
@@ -69,3 +71,9 @@ class DrawingContext:
             except KeyError:
                 return_list[detection.class_type] = [detection]
         return return_list
+
+    @classmethod
+    def __reset_context(cls):
+        cls.brg_image_raw = None
+        cls.detection_coords = {}
+        cls.detection_map = {}
