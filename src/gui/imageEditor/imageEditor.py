@@ -4,10 +4,11 @@ import cv2
 
 from core.detection import Detection, DetectionCoords
 
-from .canvas import ImgCanvas
-from .sidePanel import SidePanel
-from .drawingContext import DrawingContext
-from ..context import AppContextData
+from gui.imageEditor.canvas import ImgCanvas
+from gui.imageEditor.sidePanel import SidePanel
+
+from api.caching import CacheStruct
+from gui import api_instance
 
 
 
@@ -59,6 +60,7 @@ class ImageEditorApp(tk.Frame):
         super().__init__(root, width=800, height=600, bg="white")
         # Operation variables
         self.current_image_index = 0
+        self.current_drawn_detections : dict[Detection.Type : list[DetectionCoords]] = None
         
         # Make the frame responsive
         self.grid_rowconfigure(0, weight=1)
@@ -83,31 +85,28 @@ class ImageEditorApp(tk.Frame):
         if image_index is None:
             image_index = self.current_image_index
         self.Canvas.center_image()
-        self.footerButtons.update(image_index + 1, AppContextData.number_of_images)
+        self.footerButtons.update(image_index + 1, api_instance._number_of_images)
     
     def update_detections(self):
-        name_type_map = {
-            "selected_ball": Detection.Type.SELECTED_BALL,
-            "unselected_ball": Detection.Type.UNSELECTED_BALL,
-            "cpf_block": Detection.Type.CPF_BLOCK,
-            "question_block": Detection.Type.QUESTION_BLOCK
-        }
-        detections_selected = self.sidePanel.get_show_detection_values()
-        if DrawingContext.has_detections():
+
+        detections_selected : dict[Detection.Type, bool]\
+              = self.sidePanel.get_show_detection_values()
+        
+        cache : CacheStruct = api_instance.get_cache().from_index(self.current_image_index)
+        if cache:
             # Get the selected values
             selected : list[str] = [k for k, v in detections_selected.items() if v]
             # Filter the detections
             filtered_detections : dict[Detection.Type, list[DetectionCoords]] = {}
-            for class_name in selected:
+            for det_type in selected:
                 try:
-                    type : Detection.Type = name_type_map[class_name]
-                    filtered_detections[type] = DrawingContext.detection_coords[type]
+                    filtered_detections[det_type] = cache.coord_by_type[det_type]
                 except KeyError:
                     pass
             # Update the current detections
-            self.Canvas.current_drawn_detections = filtered_detections
+            self.current_drawn_detections = filtered_detections
         else:
-            self.Canvas.current_drawn_detections = {}
+            self.current_drawn_detections = {}
         self.Canvas.display_image()
 
 
@@ -115,14 +114,12 @@ class ImageEditorApp(tk.Frame):
     def _load_next_image(self):
         """Load the next image in the list."""
         # Get the new index
-        new_index = (self.current_image_index + 1) % AppContextData.number_of_images
+        new_index = (self.current_image_index + 1) % api_instance._number_of_images
         # Load and set all the relevant data
-        AppContextData.load_image_to_context(new_index, do_cache=False)
-        DrawingContext.build_context(
-            AppContextData.image_cache[new_index],
-            AppContextData.image.raw
-        )
+        api_instance.load_image(new_index, do_cache=False)
+        # Set the new index
         self.current_image_index = new_index
+        # Update the detections
         self.update_detections()
         # Make draw call
         self.display_image(new_index)
@@ -130,14 +127,12 @@ class ImageEditorApp(tk.Frame):
     def _load_previous_image(self):
         """Load the previous image in the list."""
         # Get the new index
-        new_index = (self.current_image_index - 1) % AppContextData.number_of_images
+        new_index = (self.current_image_index - 1) % api_instance._number_of_images
         # Load and set all the relevant data
-        AppContextData.load_image_to_context(new_index, do_cache=False)
-        DrawingContext.build_context(
-            AppContextData.image_cache[new_index],
-            AppContextData.image.raw
-        )
+        api_instance.load_image(new_index, do_cache=False)
+        # Set the new index
         self.current_image_index = new_index
+        # Update the detections
         self.update_detections()
         # Make draw call
         self.display_image(new_index)

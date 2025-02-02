@@ -7,14 +7,13 @@ from core.detection import (
 )
 from core.models import EFScanAlgoModel
 
-from gui.context import AppContextData
-from gui.imageEditor.drawingContext import DrawingContext
-
 from gui.navbar import Navbar
 from gui.imageEditor import ImageEditorApp
 from gui.modelsSidebar import PipelineSideBar
 
-class WindowApplication(tk.Tk, AppContextData):
+from gui import api_instance, folder_loaded_callback
+
+class WindowApplication(tk.Tk):
 
 
     def __init__(self):
@@ -42,16 +41,13 @@ class WindowApplication(tk.Tk, AppContextData):
 
         self.imgEditor = ImageEditorApp(self)
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
+    
+    def open_folder(self, path : str):
+        api_instance.open_folder(path)
+        api_instance.load_image(0)
+        self.imgEditor.display_image(self.imgEditor.current_image_index)
+        folder_loaded_callback.call()
 
-
-    def open_folder(self, path):
-        AppContextData.open_folder(path)
-        DrawingContext.build_context(
-            AppContextData.image_cache[0],
-            AppContextData.image.raw,
-        )
-        self.imgEditor.display_image(0)
-        AppContextData.folder_loaded_callback()
 
     def apply_model(self, to_all=False):
         # Get the current pipeline configuration
@@ -60,23 +56,23 @@ class WindowApplication(tk.Tk, AppContextData):
         fs_config = config['fs']
         ss_config = config['ss']
         # Lazy init EFscanAlgo if needed
-        if isinstance(AppContextData.fs_model, EFScanAlgoModel):
-            AppContextData.fs_model.init(test)
-        if isinstance(AppContextData.ss_model, EFScanAlgoModel):
-            AppContextData.ss_model.init(test)
+        if isinstance(api_instance._fs_model, EFScanAlgoModel):
+            api_instance._fs_model.init(test)
+        if isinstance(api_instance._ss_model, EFScanAlgoModel):
+            api_instance._ss_model.init(test)
         # Select the relevant images
         if to_all:
-            indexes = range(len(self.image_files))
+            indexes = range(api_instance._number_of_images)
         else:
             indexes = [self.imgEditor.current_image_index]
         # Apply the model to the images
         for i in indexes:
-            AppContextData.load_image_to_context(i, do_cache=False)
-            image = AppContextData.image
+            api_instance.load_image(i, do_cache=False)
+            image = api_instance._image
             # First stage
             Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
             image.make_detections_with_model(
-                AppContextData.fs_model, fs_config['st']
+                api_instance._fs_model, fs_config['st']
             )
             # Crop image in the detected areas
             image.make_cropped()
@@ -84,15 +80,11 @@ class WindowApplication(tk.Tk, AppContextData):
             Detection.set_label_map(DEFAULT_SECOND_STAGE_LABEL_MAP)
             for crop in image.crops:
                 crop.make_detections_with_model(
-                    AppContextData.ss_model, ss_config['st']
+                    api_instance._ss_model, ss_config['st']
                 )
 
             # Make the detections cache
-            AppContextData.image_cache[i] = image.to_cache()
+            api_instance.get_cache().cache_image(i, image)
         
-        DrawingContext.build_context(
-            AppContextData.image_cache[indexes[0]],
-            AppContextData.image.raw,
-        )
         self.imgEditor.update_detections()
         self.imgEditor.display_image(self.imgEditor.current_image_index)

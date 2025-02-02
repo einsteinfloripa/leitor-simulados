@@ -1,5 +1,8 @@
-from gui.context import AppContextData
 import tkinter as tk
+
+from core.detection import Detection
+
+from gui import folder_loaded_callback
 
 ## AUXILIARY WIDGETS ##
 
@@ -63,10 +66,10 @@ class _showDetectionsBox(tk.Frame):
         
         def get_info(self):
             values = {
-                "selected_ball": self.sb_var.get(),
-                "unselected_ball": self.ub_var.get(),
-                "cpf_block": self.cb_var.get(),
-                "question_block": self.qb_var.get()
+                Detection.Type.SELECTED_BALL   : self.sb_var.get(),
+                Detection.Type.UNSELECTED_BALL : self.ub_var.get(),
+                Detection.Type.CPF_BLOCK       : self.cb_var.get(),
+                Detection.Type.QUESTION_BLOCK  : self.qb_var.get()
             }
             return values
         
@@ -86,7 +89,7 @@ class _showDetectionsBox(tk.Frame):
         self.buttonList = self._buttonList(self, imgApp)
         self.buttonList.pack(expand=True, fill=tk.X)
         # Register the activate event
-        AppContextData.folder_loaded_callback.add_callback(self.on_activate)
+        folder_loaded_callback.bind(self.on_activate)
 
 
     def on_activate(self):

@@ -5,9 +5,7 @@ from PIL import Image, ImageTk
 
 from core.detection import DetectionCoords, Detection
 
-from .drawingContext import DrawingContext
-from ..context import AppContextData
-
+from gui import api_instance, folder_loaded_callback
 
 ## AUXILIARY WIDGETS ##
 class _zoomButtons(tk.Frame):
@@ -36,7 +34,7 @@ class _zoomButtons(tk.Frame):
             )
         self.zoom_in_button.pack(side=tk.RIGHT)
 
-        AppContextData.folder_loaded_callback.add_callback(self.activate)
+        folder_loaded_callback.bind(self.activate)
 
     def activate(self):
         self.zoom_out_button.config(state=tk.NORMAL)
@@ -48,13 +46,13 @@ class ImgCanvas(tk.Canvas):
 
     def __init__(self, imgEditor, *args, **kwargs):
         super().__init__(imgEditor, *args, **kwargs)
+        self.imgEditor = imgEditor
         # Set the initial state and variables
         # Image
         self.zoom_factor : float = 1.0
         self.offset_x : int = 0  # Offset for image dragging
         self.offset_y : int = 0
-        # Detections
-        self.current_drawn_detections : dict[str:DetectionCoords] = None
+        
         # Operational
         self.drag_start = None  # Starting point of the drag
 
@@ -74,11 +72,12 @@ class ImgCanvas(tk.Canvas):
     def display_image(self):
         """Display the current image on the canvas."""
         # Resize the image based on the zoom factor
-        height, width, _ = DrawingContext.brg_image_raw.shape
+        image = api_instance.get_image()
+        height, width, _ = image.raw.shape
         new_width = int(width * self.zoom_factor)
         new_height = int(height * self.zoom_factor)
         self.display_image_cv = cv2.resize(
-            DrawingContext.brg_image_raw,
+            api_instance.get_rbg_image_raw(),
             (new_width, new_height),
             interpolation=cv2.INTER_LINEAR
         )
@@ -90,13 +89,13 @@ class ImgCanvas(tk.Canvas):
         self.delete("all")
         self.create_image(self.offset_x, self.offset_y, image=self.photo_image, anchor=tk.NW)
         # Draw rectangles
-        if self.current_drawn_detections:
+        if self.imgEditor.current_drawn_detections:
             self.__draw_detections()
 
     def center_image(self):
         """Center the image and scale it to fit within the canvas."""
         # Get the image's size and the canvas's size
-        img_height, img_width, _ = DrawingContext.brg_image_raw.shape
+        img_height, img_width, _ = api_instance.get_rbg_image_raw().shape
         canvas_width = self.winfo_width()
         canvas_height = self.winfo_height()
 
@@ -124,7 +123,8 @@ class ImgCanvas(tk.Canvas):
             Detection.Type.SELECTED_BALL
         ]
         # Sort the detections based on the order
-        detections : dict[Detection.Type, list[DetectionCoords]] = self.current_drawn_detections
+        detections : dict[Detection.Type, list[DetectionCoords]] =\
+              self.imgEditor.current_drawn_detections
         for i, class_type in enumerate(order):
             if not detections: continue
             # Get the rectangles

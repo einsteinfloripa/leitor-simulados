@@ -2,8 +2,9 @@ import tkinter as tk
 from tkinter import filedialog
 
 from utils.filehandler import FileHandler
-from gui.context import AppContextData
 from core.defs import Stage
+
+from gui import api_instance
 
 
 class _testFrame(tk.Frame):
@@ -113,7 +114,7 @@ class _modelFrame(tk.Frame):
         # Get the relative path
         self.model_path.set(model_path)
         # Try to load the model to context
-        loaded = AppContextData.load_model_to_context(
+        loaded = api_instance.load_model(
             model_path, stage=self.stage
         )
         self.activate_panel()

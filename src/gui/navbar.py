@@ -1,7 +1,5 @@
 import tkinter as tk
 from tkinter import filedialog
-from gui.context import AppContextData
-
 
 class Navbar(tk.Frame):
     def __init__(self, root: tk.Tk):
