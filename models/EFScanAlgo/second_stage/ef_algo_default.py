@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import cv2
 
-from EFscanAlgo import Scanner
-from EFscanAlgo.ef_utils import ef_get_tilt
+from EFScanAlgoCore import Scanner
+from EFScanAlgoCore.ef_utils import ef_get_tilt
 from core.detection import Detection
 from core.image import Image
 from utils.data_classes import FloatBoundingBox

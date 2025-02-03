@@ -11,9 +11,8 @@ from core.image import Image
 from core.defs import Stage, TestType, PATH_SEPARATOR
 from utils.data_classes import FloatBoundingBox
 from utils.misc import normalize_image
-from utils.filehandler import FileHandler
 
-def load_model(model_path : str, stage : Stage) -> DetectionModel:
+def load_model(model_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
     """
     Load the model from the given path
     """
@@ -83,7 +82,7 @@ class YOLOModel(DetectionModel):
 ### LEGACY MODEL ###
 
 # CLASSES
-class LegacyModel:
+class LegacyModel(DetectionModel):
     def __init__(self, interpreter):
         super().__init__(ModelType.LEGACY)
         self.interpreter = interpreter
@@ -112,6 +111,7 @@ class LegacyModel:
         count = int(self.__get_output_tensor(interpreter, 2))
         classes = self.__get_output_tensor(interpreter, 3)
 
+
         detections = []
         for i in range(count):
             ymin, xmin, ymax, xmax = boxes[i].tolist()
@@ -119,7 +119,7 @@ class LegacyModel:
             detections.append(
                 Detection(
                     box,
-                    classes[i],
+                    int(classes[i]),
                     scores[i],
                     raw_image.shape[1],
                     raw_image.shape[0],
@@ -151,7 +151,7 @@ class EFScanAlgoModel(DetectionModel):
         if not self.__initialized:
             self.__init_paths()
         # Import the relevant classes to initialize the model
-        from EFscanAlgo import Scanner, Config
+        from EFScanAlgoCore import Scanner, Config
         # Initialize static variables
         self.name = name
         self.stage = stage
@@ -165,6 +165,7 @@ class EFScanAlgoModel(DetectionModel):
         as the user changes the test selected.
         So only when the user selects a test and run the model it is actualy initialized.
         """
+        from EFScanAlgoCore import Scanner, Config
         # Check if the model is trying to be initialized twice with the same test
         if self.__lazy_initialized and self.test == test:
             # No need to initialize again
@@ -190,7 +191,11 @@ class EFScanAlgoModel(DetectionModel):
         import sys
         import pathlib
         # Include the path to the src folde
+        # ../leitor-simulados
         path = pathlib.Path(__file__).parent.parent.parent
+        # ../leinor-simulados/models
+        path_models = path / 'models'
         # Include path to models EFscanAlgo
         sys.path.append(str(path))
+        sys.path.append(str(path_models))
         self.__initialized = True

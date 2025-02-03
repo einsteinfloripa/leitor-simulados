@@ -1,4 +1,13 @@
-### SOME BASIC DEFINITIONS ###
+
+### FOR IMPORTS ###
+from dataclasses import dataclass
+@dataclass
+class Config:
+    model_name : str
+    test : str
+    stage : str
+
+### SOME BASIC GEOMETRIC DEFINITIONS ###
 import enum
 class Axis(enum.Enum):
     VERTICAL = 0

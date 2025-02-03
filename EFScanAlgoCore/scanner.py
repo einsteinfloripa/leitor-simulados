@@ -1,20 +1,14 @@
-from dataclasses import dataclass
 import importlib
 
 from src.core.image import Image
 from utils.log import get_new_logger
-from ef_defs import (
+from EFScanAlgoCore.ef_defs import (
     SimuenemData, 
     SimufscData, 
     SimulinhoData, 
     PSData
 )
-
-@dataclass
-class Config:
-    model_name : str
-    test : str
-    stage : str
+from EFScanAlgoCore.ef_defs import Config
 
 
 class Scanner:
@@ -28,7 +22,7 @@ class Scanner:
         # Set the logger
         self.logger = get_new_logger(f"EFscanAlgo({config.stage})")
         # Import and set the correct pipline
-        import_string = f"EFscanAlgo.{config.stage.lower()}.{config.model_name}".strip('.py')
+        import_string = f"EFScanAlgo.{config.stage.name.lower()}_stage.{config.model_name}".strip('.cpy')
         try:
             pipeline_module = importlib.import_module(import_string)
         except ImportError:
@@ -40,7 +34,7 @@ class Scanner:
             raise AttributeError(f"Could not find detect function in {import_string}")   
 
         # Get the relevant data
-        test_type = config["test"]
+        test_type = config.test.name
         if test_type.upper() == "SIMUFSC":
             self.__test_data = SimufscData
         elif test_type.upper() == "SIMUENEM":

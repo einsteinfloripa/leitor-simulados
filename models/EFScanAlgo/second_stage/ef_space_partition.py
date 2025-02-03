@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import cv2
 
-from EFscanAlgo import Scanner
-from EFscanAlgo.ef_utils import (
+from EFScanAlgoCore import Scanner
+from EFScanAlgoCore.ef_utils import (
     ef_get_tilt,
     DEBUG
 )

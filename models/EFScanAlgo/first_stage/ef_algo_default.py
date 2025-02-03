@@ -7,16 +7,16 @@ from core.detection import Detection
 from core.image import Image
 from core.models import load_model
 from utils.data_classes import FloatBoundingBox
+from utils.filehandler import FileHandler
 
-from EFscanAlgo import Scanner
-from EFscanAlgo.ef_utils import (
+from EFScanAlgoCore import Scanner
+from EFScanAlgoCore.ef_utils import (
     ef_get_tilt,
     ef_get_axis_alling_lines,
     ef_merge_lines,
     ef_group_lines
 )
-from EFscanAlgo.ef_defs import Axis, Line
-
+from EFScanAlgoCore.ef_defs import Axis, Line, Config
 
 class Configs:
     DEBUG = False
@@ -43,13 +43,10 @@ class Configs:
         return rho, theta, threshold, lines, minLineLength, maxLineGap
 
 
-def init_pipeline(scanner : Scanner, config) -> None:
-    scanner.yolo = load_model({'model': {
-        'type':'yolov8',
-        'name':'first_stage.pt',
-        'test':'ps'
-        }
-    })
+def init_pipeline(scanner : Scanner, config : Config) -> None:
+    scanner.yolo = load_model(
+        str((FileHandler.MODELS_PATH / 'YoloV8' / 'first_stage' / 'ps.pt').resolve()),
+    )
 
 
 def detect(scanner : Scanner, img : Image) -> list[Detection]:
@@ -176,11 +173,11 @@ def __get_question_blocks(scanner : Scanner, img_raw):
 
 def __get_cpf_blocks(scanner, img):
     # Calls the yolo model to detect the cpf blocks
-    detections = scanner.yolo.detect(img)
+    detections : list[Detection] = scanner.yolo.detect(img)
     CPFBlocks = []
     # Filter the detections to get only the CPF blocks 
     for detection in detections:
-        if detection.class_id == 0:
+        if detection.model_assing_id == 0:
             CPFBlocks.append(detection)
     return CPFBlocks
 

@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 from utils.filehandler import FileHandler
-from core.defs import Stage
+from core.defs import Stage, TestType
 
 from gui import api_instance
 
@@ -174,7 +174,14 @@ class PipelineSideBar(tk.Frame):
         self.apply_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
 
     def get_pipeline(self):
+        test_map = {
+            "PS": TestType.PS,
+            "SIMULINHO": TestType.SIMULINHO,
+            "SIMUFSC": TestType.SIMUFSC,
+            "SIMUENEM": TestType.SIMUENEM
+        }
         test = self.test_frame.get_info()
+        test = test_map[test['test_name']]
         fs = self.first_stage.get_info()
         ss = self.second_stage.get_info()
         

@@ -61,13 +61,12 @@ class CoreApi():
             model_path : str,
             stage : Stage = Stage.NULL
             ) -> bool:
-        try:
-            model = load_model(model_path, stage)
-            if stage == Stage.FIRST:
-                self._fs_model = model
-            else:
-                self._ss_model = model
-            return True
-        except Exception as e:
-            print(e)
+
+        model = load_model(model_path, stage)
+        if not model:
             return False
+        if stage == Stage.FIRST:
+            self._fs_model = model
+        else:
+            self._ss_model = model
+        return True

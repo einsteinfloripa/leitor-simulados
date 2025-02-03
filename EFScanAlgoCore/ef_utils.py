@@ -3,7 +3,7 @@ from __future__ import annotations
 import cv2
 import math
 
-from ef_defs import Line, Axis
+from EFScanAlgoCore.ef_defs import Axis, Line
 from core.image import Image
 
 ### HELPER FUNCTIONS ###

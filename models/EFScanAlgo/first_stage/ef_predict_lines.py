@@ -8,8 +8,8 @@ from core.image import Image
 from core.models import load_model
 from utils.data_classes import FloatBoundingBox
 
-from EFscanAlgo import Scanner
-from EFscanAlgo.ef_utils import (
+from EFScanAlgoCore import Scanner
+from EFScanAlgoCore.ef_utils import (
     ef_get_tilt,
     ef_get_axis_alling_lines,
     ef_avg_lines,
@@ -19,7 +19,7 @@ from EFscanAlgo.ef_utils import (
     ef_unpack_groups,
     DEBUG
 )
-from EFscanAlgo.ef_defs import Axis, Line
+from EFScanAlgoCore.ef_defs import Axis, Line
 
 
 class Configs:
@@ -185,11 +185,11 @@ def __get_question_blocks(scanner : Scanner, img_raw):
 
 def __get_cpf_blocks(scanner, img):
     # Calls the yolo model to detect the cpf blocks
-    detections = scanner.yolo.detect(img)
+    detections : list[Detection] = scanner.yolo.detect(img)
     CPFBlocks = []
     # Filter the detections to get only the CPF blocks 
     for detection in detections:
-        if detection.class_id == 0:
+        if detection.model_assing_id == 0:
             CPFBlocks.append(detection)
     return CPFBlocks
 

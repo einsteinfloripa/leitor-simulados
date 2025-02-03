@@ -6,6 +6,7 @@ from core.detection import (
     DEFAULT_SECOND_STAGE_LABEL_MAP
 )
 from core.models import EFScanAlgoModel
+from core.defs import TestType
 
 from gui.navbar import Navbar
 from gui.imageEditor import ImageEditorApp
@@ -51,10 +52,10 @@ class WindowApplication(tk.Tk):
 
     def apply_model(self, to_all=False):
         # Get the current pipeline configuration
-        config = self.modelsSideBar.get_pipeline()
-        test = config['test']
-        fs_config = config['fs']
-        ss_config = config['ss']
+        info = self.modelsSideBar.get_pipeline()
+        test : TestType = info['test']
+        fs_config = info['fs']
+        ss_config = info['ss']
         # Lazy init EFscanAlgo if needed
         if isinstance(api_instance._fs_model, EFScanAlgoModel):
             api_instance._fs_model.init(test)
