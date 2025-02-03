@@ -1,6 +1,6 @@
 import importlib
 
-from src.core.image import Image
+from core.image import Image
 from utils.log import get_new_logger
 from EFScanAlgoCore.ef_defs import (
     SimuenemData, 

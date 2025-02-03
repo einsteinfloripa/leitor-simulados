@@ -11,6 +11,7 @@ from core.image import Image
 from core.defs import Stage, TestType, PATH_SEPARATOR
 from utils.data_classes import FloatBoundingBox
 from utils.misc import normalize_image
+from utils.filehandler import FileHandler
 
 def load_model(model_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
     """
@@ -189,13 +190,8 @@ class EFScanAlgoModel(DetectionModel):
     # Initialization function
     def __init_paths(self):
         import sys
-        import pathlib
-        # Include the path to the src folde
-        # ../leitor-simulados
-        path = pathlib.Path(__file__).parent.parent.parent
+        # Include the path to the sys tracked directories
         # ../leinor-simulados/models
-        path_models = path / 'models'
         # Include path to models EFscanAlgo
-        sys.path.append(str(path))
-        sys.path.append(str(path_models))
+        sys.path.append(str(FileHandler.MODELS_PATH))
         self.__initialized = True
