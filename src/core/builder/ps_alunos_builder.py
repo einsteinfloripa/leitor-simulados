@@ -1,5 +1,5 @@
 
-from builder.dataclasses import BuilderContext, Block
+from builder.data_classes import BuilderContext, Block
 from builder import Builder
 
 from utils import log

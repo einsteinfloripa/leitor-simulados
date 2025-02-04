@@ -1,5 +1,6 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
+from core.builder.data_classes import TestBlocks, Block
 
 import cv2
 import numpy as np
@@ -8,10 +9,30 @@ from core.detection import Detection
 from utils.data_classes import IntPoint
 
 
+
 class Image():
+    """
+    Image class is used to represent an image with its detections and cropped subregions.
+
+    Attributes:
+    - raw: The raw image data.
+    - name: The name of the image as in the file.
+    - detections: A list of detections in the image.
+    - height: The height of the image.
+    - width: The width of the image.
+    - crops: A list of cropped subregions of the image.
+    - cropped_from: The image that this image was cropped from.
+    - cropped_from_detection: The type of detection that this image was cropped from.
+    - anchored_at: The point where the image was cropped from the original image.
+    - order: The order of the image in the cropped image list.
+    - BOUNDING_BOXES_DRAWN: A flag that indicates if the bounding boxes were drawn in the image.
+    """
     
     @classmethod
     def from_path(cls, path : str):
+        """
+        Constructor that creates an Image object from a file path.
+        """
         name : str = path.split("/")[-1]
         raw : np.ndarray = cv2.imread(path)
         detections : list[Detection] | None = None
@@ -26,7 +47,8 @@ class Image():
             detections,
             cropped_from = None,
             cropped_from_detection=None,
-            anchored_at : IntPoint | None = None
+            anchored_at : IntPoint | None = None,
+            order : int = -1
             ) -> None:
         self.raw : np.ndarray = raw
         self.name : str = name
@@ -34,11 +56,13 @@ class Image():
         self.height : int = raw.shape[0]
         self.width : int = raw.shape[1]
         self.crops : list[Image] = []
-        self.BOUNDING_BOXES_DRAWN = False
         # Those variable are for the cropped images
         self.cropped_from : Image = cropped_from
-        self.cropped_from_detection = cropped_from_detection
+        self.cropped_from_detection : Detection = cropped_from_detection
         self.anchored_at : IntPoint = anchored_at
+        self.order : int = order
+        # Flags
+        self.BOUNDING_BOXES_DRAWN = False
 
     
     def _has_detections(func):
@@ -82,9 +106,10 @@ class Image():
                     f"{self.name[:-4]}_{detection.class_type.name.lower()}_{cont:02}.jpg",
                     self.raw[ymin:ymax, xmin:xmax],
                     None,
-                    cropped_from=self,
-                    cropped_from_detection = detection.class_type,
-                    anchored_at=IntPoint(xmin, ymin)
+                    cropped_from = self,
+                    cropped_from_detection = detection,
+                    anchored_at = IntPoint(xmin, ymin),
+                    order = cont
                 )
             )
             cont += 1
@@ -118,7 +143,33 @@ class Image():
     def to_yolo(self) -> str:
         yolo = '\n'.join([detection.to_yolo() for detection in self.detections])
         return yolo
-
+    
+    def to_block(self) -> TestBlocks | Block:
+        # Check if is the root image
+        # if not return a block
+        if self.cropped_from:
+            return Block(
+                root_detection = self.cropped_from_detection.class_type,
+                order = self.order,
+                detections = self.detections
+            )
+        # else create a TestBlocks object
+        cpf_block = None
+        questions_block = []
+        for crop in self.crops:
+            block = crop.to_block()
+            if block.root_detection == Detection.Type.CPF_BLOCK:
+                cpf_block = block
+            else:
+                questions_block.append(block)
+        questions_block.sort(key=lambda b: b.order)
+        # Return the object
+        return TestBlocks(
+            name = self.name,
+            cpf_block = cpf_block,
+            questions_block = questions_block
+        )
+        
     def to_cache(self) -> dict:
         """
         This method saves the current state of the image detection and its

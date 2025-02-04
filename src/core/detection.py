@@ -4,7 +4,12 @@ import math
 from enum import Enum
 from dataclasses import dataclass
 
-from utils.data_classes import FloatBoundingBox, FloatPoint, IntPoint, IntBoundingBox
+from utils.data_classes import (
+    FloatBoundingBox,
+    FloatPoint,
+    IntPoint,
+    IntBoundingBox
+)
 from core.defs import Stage
 
 class DetectionCoords():
@@ -48,6 +53,8 @@ class Detection:
     """
 
     class Type(Enum):
+        # Null detection
+        NULL = -1
         #First stage
         CPF_BLOCK = 0
         QUESTION_BLOCK = 1

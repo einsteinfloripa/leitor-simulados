@@ -12,6 +12,7 @@ class CacheStruct:
     coord_to_det_map : dict[DetectionCoords : Detection]
     coord_by_type : dict[Detection.Type : list[DetectionCoords]]
 
+
 class Cache:
 
     def __init__(self, number_of_images : int):

@@ -1,32 +1,26 @@
 from __future__ import annotations
-
+from abc import ABC, abstractmethod
 import json
 
-from builder.dataclasses import Block, BuilderContext
+from builder.data_classes import Block, BuilderContext
 from utils import log
-
-
-#config vars
-PROVA = None
-CONTINUE_ON_FAIL = False
-
+from core.defs import TestType
 
 logger = log.get_new_logger('builder')
 
 # init function
-def load_builder():
+def load_builder(test_type : TestType):
     global _builder
-    if PROVA == 'SIMUENEM':
+    if test_type == TestType.SIMUENEM:
         raise NotImplementedError('SIMUENEM is not implemented yet')
-    elif PROVA == 'SIMUFSC':
+    elif test_type == TestType.SIMUFSC:
         import builder.simufsc_builder as _builder
-    elif PROVA == 'PS':
+    elif test_type == TestType.PS:
         import builder.ps_alunos_builder as _builder
 
 
 # main function
 def build(path, status, ec) -> dict:
-
     context = BuilderContext()
     #loading file
     try:
@@ -60,44 +54,33 @@ def build(path, status, ec) -> dict:
 
 
 # tools class to make the report
-class Builder():
+class Builder(ABC):
+    """
+    The base class for the builders. It has the tool functions to build
+    the CPF and the questions blocks reports.
+    """
 
-    build_cpf = None
-    build_qb = None
+    ## Virtual Functions ##
+    @abstractmethod
+    @classmethod
+    def get_cpf_block_value(cls, cpf_block : Block, *args, **kwargs) -> str:
+        """
+        This funciton must be implemented and must return the detected CPF value
+        
+        *if no digit was detected, it must return 'X' in the place of the digit.
+        """
+        pass
 
-    ## Config functions ##
+    @abstractmethod
     @classmethod
-    def set_cpf_func(cls, func):
-        cls.build_cpf = func
-    @classmethod
-    def set_qb_func(cls, func):
-        cls.build_qb = func
+    def get_qustion_block_values(cls, questions_block : list[Block], *args, **kwargs) -> list:
+        pass   
 
     ## Build function ##
-    @classmethod
-    def standart_build_cpf(cls, cpf_block : Block) -> str:
-        logger.debug(f'build_cpf : {cpf_block.name}')
-        cpf = ''
-        ball_columns = cls.get_ball_columns(0.02, cpf_block.detections)
-
-        cont = 0
-        while cont < 11:
-            try:
-                answer_index = cls._get_selected_ball_position('columns', 10, ball_columns[cont])
-            except IndexError:
-                break
-            if answer_index is not None:
-                cpf += str(answer_index)
-            else:
-                cpf += 'X'
-            cont += 1
-        if cont < 11:
-            cpf += 'X' * (11 - cont)
-        return cpf
 
     @classmethod
-    def standart_build_cpf_ec(cls, cpf_block : Block):
-        logger.debug(f'build_cpf_ec : {cpf_block.name}')
+    def STANDART_BUILD_CPF_FUNCTION(cls, cpf_block : Block):
+        logger.debug(f'build_cpf_ec : {cpf_block.root_detection.name}')
         max_values = cls._get_cpf_lines_max_y_value(cpf_block)
         if max_values is None:
             return "XXXXXXXXXXX"
@@ -122,19 +105,13 @@ class Builder():
         return cpf
 
 
-    ## Aux functions ##
+    ## Tool functions ##
     @classmethod
-    def get_ball_lines(cls, distance_threshold, detections : list[dict]):
-        return cls._get_balls('y', distance_threshold, detections)
-
-    @classmethod
-    def get_ball_columns(cls, distance_threshold, detections : list[dict]):
-        return cls._get_balls('x', distance_threshold, detections)
-
-        
-    # aux functions
-    @classmethod
-    def _get_balls(cls, axis, distance_threshold, detections : list[dict]) -> list[list[dict]]:
+    def get_balls(cls,
+            axis,
+            distance_threshold,
+            detections : list[dict]
+        ) -> list[list[dict]]:
         sorted_detections = cls._sort_axis(axis, detections)
         index = 3 if axis == 'y' else 2
         ball_lines = []
@@ -153,14 +130,14 @@ class Builder():
         return ball_lines
 
     @classmethod
-    def _sort_axis(cls, axis : str, data : list[dict]) -> list[dict]:
+    def sort_axis(cls, axis : str, data : list[dict]) -> list[dict]:
             if axis.lower() == 'y':
                 return sorted(data, key=lambda d: d['bounding_box'][3])
             elif axis.lower() == 'x':
                 return sorted(data, key=lambda d: d['bounding_box'][2])
     
     @classmethod
-    def _get_selected_ball_position(cls, type, num_elements, detections : list[dict]) -> list[dict]:
+    def get_selected_ball_position(cls, type, num_elements, detections : list[dict]) -> list[dict]:
         try:
             logger.debug(f'getting selected ball position in {type}...')
             logger.debug(f'detections: {detections}')
@@ -178,7 +155,7 @@ class Builder():
             return None
     
     @classmethod
-    def _get_cpf_lines_max_y_value(cls, cpf_block : Block) -> list[tuple[float, float]]:
+    def get_cpf_lines_max_y_value(cls, cpf_block : Block) -> list[tuple[float, float]]:
         max = []
         lines = cls.get_ball_lines(0.05, cpf_block.detections)
         if len(lines) != 10:
@@ -188,7 +165,7 @@ class Builder():
         return max
 
     @classmethod
-    def _have_unique_selected_ball(cls, detections : list[dict]) -> dict:
+    def have_unique_selected_ball(cls, detections : list[dict]) -> dict:
         cont = 0
         detection = None
         for d in detections:
