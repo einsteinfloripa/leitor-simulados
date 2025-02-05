@@ -1,47 +1,27 @@
 
-from builder.data_classes import BuilderContext, Block
 from builder import Builder
+from builder.data_structs import Block
 
+from definitions.test_defs import Question
+from definitions.geometry import Axis
 from utils import log
 
-logger = log.get_new_logger('ps_alunos_builder')
-
-
-def build(context : BuilderContext, status, ec) -> None:
-    logger.debug('building report...')    
-    # Create a dictionary to store the report
-    report = {}
-    # Set the pipeline if the error correction was set
-    if 'cpf' in ec: PSAlunosBuilder.set_cpf_func(PSAlunosBuilder.standart_build_cpf_ec)
-    else : PSAlunosBuilder.set_cpf_func(PSAlunosBuilder.standart_build_cpf)
-    if 'qb' in ec: raise NotImplementedError('Error correction for questions block not implemented yet')
-    else : PSAlunosBuilder.set_qb_func(PSAlunosBuilder.build_questions_block)
-    # Build the cpf block if exists
-    if context.cpf_block is not None:
-        logger.debug('building cpf from cpf_block...')
-        report['cpf'] = PSAlunosBuilder.build_cpf(context.cpf_block)
-    else:
-        report['cpf'] = 'XXXXXXXXXXX'
-    # Build the questions blocks
-    logger.debug('building questions from questions_blocks...')
-    for block in context.questions_block:
-        report.update(PSAlunosBuilder.build_qb(block))
-    # Return the report
-    return report
 
 
 class PSAlunosBuilder(Builder):
     # Map to convert the index of the selected ball to a letter
-    LETTER_MAP = ['A', 'B', 'C', 'D', 'E']
 
     @classmethod
-    def build_questions_block(cls, block : Block):
-        logger.debug(f'building block: {block.name}')
+    def resolve_cpf(cls, block : Block) -> str:
+        return cls.STANDART_BUILD_CPF_FUNCTION(block)
+
+    @classmethod
+    def get_question_block_values(cls, block : Block) -> list[Question]:        
         # Set variables
         block_number = (block.order * 10) + 1 # Number of the Question Block
         block_report = {}                     # Stores the answers of a single block
         # Get the lines of balls
-        line_balls = cls.get_ball_lines(0.05, block.detections)
+        line_balls = cls._get_balls(Axis.HORIZONTAL, 0.05, block.detections)
         # TODO:Soluçao fraca, se tiver tempo implementar uma melhor
         # remove a primeira linha no caso de uma letra ser confundida com um número
         if len( line_balls[0] ) < 3:

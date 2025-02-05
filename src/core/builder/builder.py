@@ -1,57 +1,17 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-import json
 
-from builder.data_classes import Block, BuilderContext
+from abc import ABC, abstractmethod
+
 from utils import log
-from core.defs import TestType
+from definitions.question import TestType
+from definitions.test_defs import Question
+from definitions.geometry import Axis
+from core.builder.ps_alunos_builder import PSAlunosBuilder
+from core.builder.simufsc_builder import SimufscBuilder
+from core.builder.data_structs import Block
+from core.detection import DetectionCoords, Detection
 
 logger = log.get_new_logger('builder')
-
-# init function
-def load_builder(test_type : TestType):
-    global _builder
-    if test_type == TestType.SIMUENEM:
-        raise NotImplementedError('SIMUENEM is not implemented yet')
-    elif test_type == TestType.SIMUFSC:
-        import builder.simufsc_builder as _builder
-    elif test_type == TestType.PS:
-        import builder.ps_alunos_builder as _builder
-
-
-# main function
-def build(path, status, ec) -> dict:
-    context = BuilderContext()
-    #loading file
-    try:
-        with open(path) as f:
-            data : dict = json.load(f)
-    except FileNotFoundError as e:
-        logger.error(f'File not found! : {path.resolve()}')
-        if not CONTINUE_ON_FAIL:
-            raise e
-        return 'FILE NOT FOUND'
-    #getting cpf block in the context
-    logger.info('getting cpf block...')
-    for name in data:
-        if 'cpf' in name.lower():
-            cpf_nome = name
-            cpf_detections = data.pop(cpf_nome)
-            context.cpf_block = Block(name=cpf_nome, detections=cpf_detections)
-            logger.debug(f'cpf block found: {cpf_nome}')
-            break
-    else:
-        logger.error(f'cpf block not found for {path.name}')
-        if not CONTINUE_ON_FAIL:
-            raise Exception(f'cpf block not found for {path.name}')
-    #getting questions blocks in the context
-    logger.info('getting questions blocks...')
-    for i, block in enumerate(data):
-        logger.debug(f'adding block to context: {block}')
-        context.questions_block.append(Block(name=block, order=i, detections=data[block]))
-
-    return _builder.build(context, status=status, ec=ec)
-
 
 # tools class to make the report
 class Builder(ABC):
@@ -60,12 +20,28 @@ class Builder(ABC):
     the CPF and the questions blocks reports.
     """
 
-    ## Virtual Functions ##
+    ## Dispacher Constructor ##
+    @classmethod
+    def from_test_type(cls, test_type : TestType) -> Builder:
+        if test_type == TestType.PS:
+            return PSAlunosBuilder
+        elif test_type == TestType.SIMUFSC:
+            return SimufscBuilder
+        else:
+            raise NotImplementedError(f'Test type {test_type} not implemented')
+
+    ## Main Virtual Functions ##
     @abstractmethod
     @classmethod
-    def get_cpf_block_value(cls, cpf_block : Block, *args, **kwargs) -> str:
+    def resolve_cpf(
+            cls,
+            cpf_block : Block,
+            *args,
+            **kwargs
+        ) -> str:
         """
         This funciton must be implemented and must return the detected CPF value
+        for the given cpf block.
         
         *if no digit was detected, it must return 'X' in the place of the digit.
         """
@@ -73,18 +49,30 @@ class Builder(ABC):
 
     @abstractmethod
     @classmethod
-    def get_qustion_block_values(cls, questions_block : list[Block], *args, **kwargs) -> list:
+    def resolve_question_block(
+            cls,
+            questions_block : Block,
+            *args,
+            **kwargs
+        ) -> list[Question]:
+        """
+        This function must be implemented and must return the detected questions
+        in the given block.
+        """
         pass   
 
-    ## Build function ##
 
+    ## Standert Build function ##
     @classmethod
-    def STANDART_BUILD_CPF_FUNCTION(cls, cpf_block : Block):
-        logger.debug(f'build_cpf_ec : {cpf_block.root_detection.name}')
+    def STANDART_BUILD_CPF_FUNCTION(
+            cls,
+            cpf_block : Block
+        ):
+        logger.debug(f'build_cpf : {cpf_block.root_detection.name}')
         max_values = cls._get_cpf_lines_max_y_value(cpf_block)
         if max_values is None:
             return "XXXXXXXXXXX"
-        columns = cls.get_ball_columns(0.02, cpf_block.detections)
+        columns = cls._group_balls(Axis.HORIZONTAL, 0.02, cpf_block.detections)
         # Filter fake columns TODO: implement a better solution
         columns = [column for column in columns if len(column) > 2]
         if len(columns) != 11:
@@ -107,44 +95,52 @@ class Builder(ABC):
 
     ## Tool functions ##
     @classmethod
-    def get_balls(cls,
-            axis,
-            distance_threshold,
-            detections : list[dict]
-        ) -> list[list[dict]]:
+    def _group_balls(cls,
+            axis : Axis,
+            distance_threshold : float,
+            detections : list[DetectionCoords]
+        ) -> list[list[DetectionCoords]]:
+        # Sort the detections in the given axis
         sorted_detections = cls._sort_axis(axis, detections)
-        index = 3 if axis == 'y' else 2
-        ball_lines = []
-
-        ball_line = [sorted_detections.pop(0)]
+        # Select the index of the axis to be used
+        index = 3 if axis == Axis.VERTICAL else 2
+        # Group the detections
+        groups = []
+        group = [sorted_detections.pop(0)]
         while len(sorted_detections) > 0:
-            if abs(
-                sorted_detections[0]['bounding_box'][index] - ball_line[-1]['bounding_box'][index]
-            ) > distance_threshold:
-                ball_lines.append(ball_line)
-                ball_line = [sorted_detections.pop(0)] 
+            last_inserted = group[-1]
+            next_detection = sorted_detections[0]
+            if next_detection.internal_bbox[index] - last_inserted.internal_bbox[index]\
+                  > distance_threshold:
+                groups.append(group)
+                group = [sorted_detections.pop(0)] 
             else:
-                ball_line.append(sorted_detections.pop(0))
-        ball_lines.append(ball_line)
+                group.append(sorted_detections.pop(0))
+        groups.append(group)
 
-        return ball_lines
+        return groups
 
     @classmethod
-    def sort_axis(cls, axis : str, data : list[dict]) -> list[dict]:
-            if axis.lower() == 'y':
-                return sorted(data, key=lambda d: d['bounding_box'][3])
-            elif axis.lower() == 'x':
-                return sorted(data, key=lambda d: d['bounding_box'][2])
+    def _sort_axis(cls, axis : Axis, detections : list[DetectionCoords]) -> list[DetectionCoords]:
+            if axis == Axis.VERTICAL:
+                return sorted(detections, key=lambda d: d.internal_bbox.p_min.y)
+            elif axis == Axis.HORIZONTAL:
+                return sorted(detections, key=lambda d: d.internal_bbox.p_min.x)
     
     @classmethod
-    def get_selected_ball_position(cls, type, num_elements, detections : list[dict]) -> list[dict]:
+    def _get_selected_ball_position(
+            cls,
+            axis : Axis,
+            expected_num_elements : int,
+            detections : list[DetectionCoords]
+        ) -> int:
+        # Check if the number of detections is correct
+        if len(detections) != len(expected_num_elements):
+            return None
+        # Sort the detections
+        sorted_detections = cls._sort_axis(axis, detections)
+        # Get the selected ball position
         try:
-            logger.debug(f'getting selected ball position in {type}...')
-            logger.debug(f'detections: {detections}')
-            if len(detections) != num_elements:
-                return None
-            axis = 'y' if type == 'columns' else 'x'
-            sorted_detections = cls._sort_axis(axis, detections)
             cont = 0
             while True:
                 if sorted_detections[cont]['class_id'] == 'selected_ball':
@@ -155,21 +151,32 @@ class Builder(ABC):
             return None
     
     @classmethod
-    def get_cpf_lines_max_y_value(cls, cpf_block : Block) -> list[tuple[float, float]]:
+    def _get_cpf_lines_max_y_value(
+            cls,
+            cpf_block : Block
+        ) -> list[float]:
+        """
+        This function gets the maximum value of the y axis of each line of the CPF
+        (i. e. the lowest detection of each number in the cpf block).
+        """
         max = []
-        lines = cls.get_ball_lines(0.05, cpf_block.detections)
+        lines : list[list[DetectionCoords]] =\
+            cls._group_balls(Axis.VERTICAL, 0.05, cpf_block.detections)
         if len(lines) != 10:
             return None        
         for line in lines:
-            max.append(line[-1]['bounding_box'][3])
+            max.append(line[-1].internal_bbox.p_max.y)
         return max
 
     @classmethod
-    def have_unique_selected_ball(cls, detections : list[dict]) -> dict:
+    def _have_unique_selected_ball(
+            cls,
+            detections : list[DetectionCoords]
+        ) -> DetectionCoords | None:
         cont = 0
         detection = None
         for d in detections:
-            if d['class_id'] == 'selected_ball':
+            if d.class_type == Detection.Type.SELECTED_BALL:
                 cont += 1
                 detection = d
         if cont == 1:

@@ -8,8 +8,9 @@ import tflite_runtime.interpreter as tflite
 
 from core.detection import Detection
 from core.image import Image
-from core.defs import Stage, TestType, PATH_SEPARATOR
-from utils.data_classes import FloatBoundingBox
+from definitions.question import Stage, TestType
+from definitions import PATH_SEPARATOR
+from definitions.geometry import FloatBoundingBox
 from utils.misc import normalize_image
 from utils.filehandler import FileHandler
 

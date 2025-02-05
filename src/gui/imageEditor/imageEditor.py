@@ -7,7 +7,7 @@ from core.detection import Detection, DetectionCoords
 from gui.imageEditor.canvas import ImgCanvas
 from gui.imageEditor.sidePanel import SidePanel
 
-from api.caching import CacheStruct
+from api.data_structs import ImageCacheStruct
 from gui import api_instance
 
 
@@ -92,7 +92,7 @@ class ImageEditorApp(tk.Frame):
         detections_selected : dict[Detection.Type, bool]\
               = self.sidePanel.get_show_detection_values()
         
-        cache : CacheStruct = api_instance.get_cache().from_index(self.current_image_index)
+        cache : ImageCacheStruct = api_instance.get_cache().from_index(self.current_image_index)
         if cache:
             # Get the selected values
             selected : list[str] = [k for k, v in detections_selected.items() if v]

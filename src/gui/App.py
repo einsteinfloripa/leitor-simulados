@@ -5,8 +5,8 @@ from core.detection import (
     DEFAULT_FIRST_STAGE_LABEL_MAP,
     DEFAULT_SECOND_STAGE_LABEL_MAP
 )
-from core.models import EFScanAlgoModel
-from core.defs import TestType
+from core.model import EFScanAlgoModel
+from definitions.question import TestType
 
 from gui.navbar import Navbar
 from gui.imageEditor import ImageEditorApp

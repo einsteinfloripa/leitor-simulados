@@ -10,6 +10,7 @@ __pycache__/
 .vscode
 scanner_output
 *test*
+!test_defs.py
 *dataset*
 
 

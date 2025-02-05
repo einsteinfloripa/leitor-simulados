@@ -4,31 +4,42 @@ import math
 from enum import Enum
 from dataclasses import dataclass
 
-from utils.data_classes import (
+from definitions.question import Stage
+from definitions.geometry import (
     FloatBoundingBox,
     FloatPoint,
     IntPoint,
     IntBoundingBox
 )
-from core.defs import Stage
 
 class DetectionCoords():
     """
-    A simpler representation of the detection, the coordenetes are all in relation
-    to the root image
+    A simpler representation of the detection, with only detection type and coordenates
 
     Args:
-        class_name (str): The class name of the detection
-        bounding_box (IntBoundingBox): The bounding box of the detection
-    """
-    def __init__(self, class_type : Detection.Type, int_bbox : IntBoundingBox):
-        self.class_type : Detection.Type = class_type
-        self.bbox : IntBoundingBox = int_bbox
+        class_type (Detection.Type): The type of the detection
+        global_bbox (IntBoundingBox): The bounding box of the detection in pixels
+        internal_bbox (FloatBoundingBox): The bounding box of the detection in percentage
+        of its dimensions
 
-    def __eq__(self, value):
-        return self.bbox == value.bbox
+        * The global bounding box has coordenates in relation to the main image
+        * The internal bounding box has coordenates in relation to the cropped image if 
+        is a second stage detection.
+    """
+    def __init__(
+            self,
+            class_type : Detection.Type,
+            global_bbox : IntBoundingBox,
+            internal_bbox : FloatBoundingBox
+        ):
+        self.class_type : Detection.Type = class_type
+        self.global_bbox : IntBoundingBox = global_bbox
+        self.internal_bbox : FloatBoundingBox = internal_bbox
+
+    def __eq__(self, other):
+        return self.global_bbox == other.global_bbox and self.class_type == other.class_type
     def __hash__(self):
-        return hash((self.bbox, self.class_type.value))
+        return hash((self.global_bbox, self.class_type.value))
 
 
 
@@ -172,7 +183,7 @@ class Detection:
     
     def to_yolo(self) -> str:
         x, y, w, h = self.middle_point.x, self.middle_point.y, self.width, self.height
-        return f"{self.class_id} {x} {y} {w} {h}"
+        return f"{self.model_assing_id} {x} {y} {w} {h}"
 
     # Magic methods
     def to_coords(self) -> DetectionCoords:
@@ -187,7 +198,7 @@ class Detection:
             xmax += self.anchored_at.x
             ymax += self.anchored_at.y
         int_bbox = IntBoundingBox.from_ints(xmin, ymin, xmax, ymax)
-        return DetectionCoords(self.class_type, int_bbox)
+        return DetectionCoords(self.class_type, int_bbox, self.bounding_box)
 
     # sorted from top right to bottom left
     def __lt__(self, other):

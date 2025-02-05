@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 from utils.filehandler import FileHandler
-from core.defs import Stage, TestType
+from definitions.question import Stage, TestType
 
 from gui import api_instance
 
