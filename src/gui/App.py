@@ -44,10 +44,13 @@ class WindowApplication(tk.Tk):
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
     
     def open_folder(self, path : str):
-        api_instance.open_folder(path)
-        api_instance.load_image(0)
-        self.imgEditor.display_image(self.imgEditor.current_image_index)
-        folder_loaded_callback.call()
+        open = api_instance.open_folder(path)
+        if open:
+            self.imgEditor.current_image_index = 0
+            api_instance.load_image(0)
+            self.imgEditor.update_detections()
+            self.imgEditor.display_image(self.imgEditor.current_image_index)
+            folder_loaded_callback.call()
 
 
     def apply_model(self, to_all=False):
@@ -56,24 +59,26 @@ class WindowApplication(tk.Tk):
         test : TestType = info['test']
         fs_config = info['fs']
         ss_config = info['ss']
+        fs_model = api_instance.get_fs_model()
+        ss_model = api_instance.get_ss_model()
         # Lazy init EFscanAlgo if needed
-        if isinstance(api_instance._fs_model, EFScanAlgoModel):
-            api_instance._fs_model.init(test)
-        if isinstance(api_instance._ss_model, EFScanAlgoModel):
-            api_instance._ss_model.init(test)
+        if isinstance(fs_model, EFScanAlgoModel):
+            fs_model.init(test)
+        if isinstance(ss_model, EFScanAlgoModel):
+            ss_model.init(test)
         # Select the relevant images
         if to_all:
-            indexes = range(api_instance._number_of_images)
+            indexes = range(api_instance.get_number_of_images())
         else:
             indexes = [self.imgEditor.current_image_index]
         # Apply the model to the images
         for i in indexes:
             api_instance.load_image(i, do_cache=False)
-            image = api_instance._image
+            image = api_instance.get_image()
             # First stage
             Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
             image.make_detections_with_model(
-                api_instance._fs_model, fs_config['st']
+                fs_model, fs_config['st']
             )
             # Crop image in the detected areas
             image.make_cropped()
@@ -81,7 +86,7 @@ class WindowApplication(tk.Tk):
             Detection.set_label_map(DEFAULT_SECOND_STAGE_LABEL_MAP)
             for crop in image.crops:
                 crop.make_detections_with_model(
-                    api_instance._ss_model, ss_config['st']
+                    ss_model, ss_config['st']
                 )
 
             # Make the detections cache

@@ -85,7 +85,7 @@ class ImageEditorApp(tk.Frame):
         if image_index is None:
             image_index = self.current_image_index
         self.Canvas.center_image()
-        self.footerButtons.update(image_index + 1, api_instance._number_of_images)
+        self.footerButtons.update(image_index + 1, api_instance.get_number_of_images())
     
     def update_detections(self):
         # Get the selected values for the detections
@@ -113,7 +113,7 @@ class ImageEditorApp(tk.Frame):
     def _load_next_image(self):
         """Load the next image in the list."""
         # Get the new index
-        new_index = (self.current_image_index + 1) % api_instance._number_of_images
+        new_index = (self.current_image_index + 1) % api_instance.get_number_of_images()
         # Load and set all the relevant data
         api_instance.load_image(new_index, do_cache=False)
         # Set the new index
@@ -126,7 +126,7 @@ class ImageEditorApp(tk.Frame):
     def _load_previous_image(self):
         """Load the previous image in the list."""
         # Get the new index
-        new_index = (self.current_image_index - 1) % api_instance._number_of_images
+        new_index = (self.current_image_index - 1) % api_instance.get_number_of_images()
         # Load and set all the relevant data
         api_instance.load_image(new_index, do_cache=False)
         # Set the new index
