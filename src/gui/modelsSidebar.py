@@ -5,7 +5,7 @@ from utils.filehandler import FileHandler
 from definitions.question import TestType
 from definitions import Stage
 
-from gui import api_instance
+from gui import api_instance, folder_loaded_callback
 
 
 class _testFrame(tk.Frame):
@@ -171,8 +171,16 @@ class PipelineSideBar(tk.Frame):
         self.second_stage.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
         # Apply button
-        self.apply_button = tk.Button(self, text="Run Pipeline", command=self.root.apply_model)
+        self.apply_button = tk.Button(
+            self,
+            text="Run Pipeline",
+            command=self.root.apply_model,
+            state=tk.DISABLED
+        )
         self.apply_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
+
+        folder_loaded_callback.bind(self.on_folder_loaded)
+
 
     def get_pipeline(self):
         test_map = {
@@ -191,3 +199,6 @@ class PipelineSideBar(tk.Frame):
             'fs': fs,
             'ss': ss
         }
+
+    def on_folder_loaded(self):
+        self.apply_button.config(state=tk.NORMAL)

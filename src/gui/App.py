@@ -8,11 +8,12 @@ from core.detection import (
 from core.model import EFScanAlgoModel
 from definitions.question import TestType
 
-from gui.navbar import Navbar
+from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
 from gui.modelsSidebar import PipelineSideBar
 
 from gui import api_instance, folder_loaded_callback
+
 
 class WindowApplication(tk.Tk):
 
@@ -31,8 +32,8 @@ class WindowApplication(tk.Tk):
         self.grid_columnconfigure(1, weight=1, minsize=600)  # Middle column (expandable)
 
 
-        self.header = Navbar(self)
-        self.header.grid(row=0, column=0, columnspan=3, sticky="ew")
+        menu = TopMenu(self)
+        self.config(menu=menu)
 
         self.footer = tk.Frame(self, bg="lightblue", height=30)
         self.footer.grid(row=2, column=0, columnspan=3, sticky="ew")
