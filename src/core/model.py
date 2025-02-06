@@ -6,10 +6,10 @@ import numpy as np
 from ultralytics import YOLO
 import tflite_runtime.interpreter as tflite
 
-from core.detection import Detection
+from core.detection.base import Detection
 from core.image import Image
-from definitions.question import Stage, TestType
-from definitions import PATH_SEPARATOR
+from definitions.question import TestType
+from definitions import PATH_SEPARATOR, Stage
 from definitions.geometry import FloatBoundingBox
 from utils.misc import normalize_image
 from utils.filehandler import FileHandler

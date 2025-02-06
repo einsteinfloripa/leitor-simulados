@@ -1,12 +1,12 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
-from core.builder.data_classes import TestBlocks, Block
+from core.builder.data_structs import TestBlocks, Block
 
 import cv2
 import numpy as np
 
-from core.detection import Detection
-from utils.data_classes import IntPoint
+from core.detection import Detection, DetectionContainer
+from definitions.geometry import IntPoint
 
 
 
@@ -81,6 +81,10 @@ class Image():
         if self.anchored_at:
             for detection in self.detections:
                 detection.anchored_at = self.anchored_at
+                detection.global_pixel_bounding_box = detection.to_global_pixels()
+        else:
+            for detection in self.detections:
+                detection.global_pixel_bounding_box = detection.to_pixels()
         # sort and mark detections from top left to bottom right    
         self.detections.sort()
 
@@ -151,23 +155,23 @@ class Image():
             return Block(
                 root_detection = self.cropped_from_detection.class_type,
                 order = self.order,
-                detections = self.detections
+                container = DetectionContainer(self.detections)
             )
         # else create a TestBlocks object
         cpf_block = None
-        questions_block = []
+        questions_blocks = []
         for crop in self.crops:
             block = crop.to_block()
             if block.root_detection == Detection.Type.CPF_BLOCK:
                 cpf_block = block
             else:
-                questions_block.append(block)
-        questions_block.sort(key=lambda b: b.order)
+                questions_blocks.append(block)
+        questions_blocks.sort(key=lambda b: b.order)
         # Return the object
         return TestBlocks(
             name = self.name,
             cpf_block = cpf_block,
-            questions_block = questions_block
+            questions_blocks = questions_blocks
         )
         
     def to_cache(self) -> dict:

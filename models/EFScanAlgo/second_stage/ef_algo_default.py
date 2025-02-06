@@ -4,9 +4,9 @@ import cv2
 
 from EFScanAlgoCore import Scanner
 from EFScanAlgoCore.ef_utils import ef_get_tilt
-from core.detection import Detection
+from core.detection.base import Detection
 from core.image import Image
-from utils.data_classes import FloatBoundingBox
+from definitions.geometry import FloatBoundingBox
 
 def detect(scanner : Scanner, img : Image) -> list[Detection]:
     # Get the tilt of the image, this must use the parent img (the full img)

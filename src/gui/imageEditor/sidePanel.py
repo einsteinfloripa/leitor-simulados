@@ -1,6 +1,6 @@
 import tkinter as tk
 
-from core.detection import Detection
+from core.detection.base import Detection
 
 from gui import folder_loaded_callback
 

@@ -3,9 +3,12 @@ from enum import Enum
 from typing import Type
 
 from dataclasses import dataclass
-from definitions.test_defs import TestType
+
+from definitions import TestType
+
 
 class AlphaAnswer(Enum):
+    NOT_ANSWERED = -1
     NULL = 0
     A = 1
     B = 2
@@ -14,21 +17,27 @@ class AlphaAnswer(Enum):
     E = 5
 
 class BinaryAnswer(Enum):
+    NOT_ANSWERED = -1
     NULL = 0
     TRUE = 1
     FALSE = 2
 
 class NumericAnswer:
-    def __init__(self):
-        self.value = -1
-    
-    def set(self, value : int):
-        if value < 0:
+    NOT_ANSWERD = -1
+    NULL = 0
+
+    def __init__(self, value : int = -1):
+        if value == -1: self.set_null()
+        elif value == 0: self.set_not_answered()
+        else: self.set(value)
+
+    def set(self, value: int):
+        if not isinstance(value, int):
+            raise ValueError("Numeric answer must be an integer.")
+        if value < -1:
             raise ValueError("Numeric answer must be non-negative.")
         if value > 99:
             raise ValueError("Numeric answer must be less than 100.")
-        if not isinstance(value, int):
-            raise ValueError("Numeric answer must be an integer.")
         self.value = value
 
 @dataclass
@@ -38,8 +47,6 @@ class Question:
     """
     number : int
     answer : AlphaAnswer | NumericAnswer | BinaryAnswer | None = None
-
-
 
 
 class TestQuestions:
@@ -53,7 +60,7 @@ class TestQuestions:
             test_type : TestType,
             owner_cpf : str = "XXXXXXXXXXX"
         ) -> Type[TestQuestions]:
-        if test_type == TestType.PS:
+        if test_type == TestType.PS_ALUNOS:
             return PsQuestions(owner_cpf=owner_cpf)
         elif test_type == TestType.SIMULINHO:
             return SimulinhoQuestions(owner_cpf=owner_cpf)
@@ -88,7 +95,7 @@ class TestQuestions:
 
 class PsQuestions(TestQuestions):
     def __init__(self, **kwargs) -> None:
-        super().__init__(TestType.PS, **kwargs)
+        super().__init__(TestType.PS_ALUNOS, **kwargs)
         self.questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 61)]
 
 

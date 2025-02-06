@@ -1,12 +1,12 @@
 from core.image import Image
 from core.builder.data_structs import TestBlocks
 from api.data_structs import ImageCacheStruct
-
+from core.detection import DetectionContainer
 
 class Cache:
 
     def __init__(self, number_of_images : int):
-        self.data : list[ImageCacheStruct] = [None] * number_of_images
+        self.data : list[ImageCacheStruct | None] = [None] * number_of_images
 
     def cache_image(self, index : int, image : Image):
         """
@@ -20,32 +20,19 @@ class Cache:
         detections = image.detections
         if not detections:
             return
-        
+        # Get all the detections in the image
         crops = image.crops
         for crop in crops:
             detections.extend(crop.detections)
-        # Build the data structures
-        blocks : TestBlocks = image.to_blocks()
-        coord_to_det_map = {}
-        coord_by_type = {}
-        coords = []
-        for detection in detections:
-            coord = detection.to_coords()
-            coord_to_det_map[coord] = detection
-            coords.append(coord)
-            try:
-                coord_by_type[detection.class_type].append(coord)
-            except KeyError:
-                coord_by_type[detection.class_type] = [coord]
+        container = DetectionContainer(detections)
+        # Build blocks structure
+        blocks : TestBlocks = image.to_block()
         # Save the data
         self.data[index] = ImageCacheStruct(
-            detections,
+            container,
             crops,
             blocks,
-            coords,
-            coord_to_det_map,
-            coord_by_type
-            )
+        )
     
     def from_index(self, index : int) -> ImageCacheStruct:
         return self.data[index]

@@ -2,8 +2,8 @@ import numpy as np
 import cv2
 
 from core.image import Image
-from core.models import load_model, DetectionModel
-from core.defs import Stage
+from core.model import load_model, DetectionModel
+from definitions import Stage
 
 from utils.filehandler import FileHandler
 

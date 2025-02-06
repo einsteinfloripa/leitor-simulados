@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from core.detection import Detection, DetectionCoords
+from core.detection import DetectionContainer, Detection
 
 @dataclass
 class Block:
@@ -13,7 +13,7 @@ class Block:
     """
     root_detection: Detection.Type = field(default=Detection.Type.NULL)
     order: int = field(default=None)
-    detections: dict[Detection.Type, DetectionCoords] = field(default_factory=dict)
+    container: DetectionContainer = None
 
 
 @dataclass

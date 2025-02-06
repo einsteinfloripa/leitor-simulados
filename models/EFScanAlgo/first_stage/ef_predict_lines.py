@@ -3,10 +3,10 @@ from __future__ import annotations
 import math
 import cv2
 
-from core.detection import Detection
+from core.detection.base import Detection
 from core.image import Image
-from core.models import load_model
-from utils.data_classes import FloatBoundingBox
+from core.model import load_model
+from definitions.geometry import FloatBoundingBox, Axis, Line
 
 from EFScanAlgoCore import Scanner
 from EFScanAlgoCore.ef_utils import (
@@ -19,7 +19,7 @@ from EFScanAlgoCore.ef_utils import (
     ef_unpack_groups,
     DEBUG
 )
-from EFScanAlgoCore.ef_defs import Axis, Line
+
 
 
 class Configs:

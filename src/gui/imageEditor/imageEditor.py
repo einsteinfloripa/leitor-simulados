@@ -2,7 +2,7 @@ import tkinter as tk
 
 import cv2
 
-from core.detection import Detection, DetectionCoords
+from core.detection import Detection, DetectionContainer
 
 from gui.imageEditor.canvas import ImgCanvas
 from gui.imageEditor.sidePanel import SidePanel
@@ -60,7 +60,7 @@ class ImageEditorApp(tk.Frame):
         super().__init__(root, width=800, height=600, bg="white")
         # Operation variables
         self.current_image_index = 0
-        self.current_drawn_detections : dict[Detection.Type : list[DetectionCoords]] = None
+        self.current_drawn_detections : dict[Detection.Type : list[Detection]] = None
         
         # Make the frame responsive
         self.grid_rowconfigure(0, weight=1)
@@ -88,21 +88,20 @@ class ImageEditorApp(tk.Frame):
         self.footerButtons.update(image_index + 1, api_instance._number_of_images)
     
     def update_detections(self):
-
+        # Get the selected values for the detections
         detections_selected : dict[Detection.Type, bool]\
               = self.sidePanel.get_show_detection_values()
-        
-        cache : ImageCacheStruct = api_instance.get_cache().from_index(self.current_image_index)
-        if cache:
+        # Get the cache
+        cache : ImageCacheStruct = api_instance.get_cache().from_index(
+            self.current_image_index
+        )
+
+        if cache is not None:
             # Get the selected values
             selected : list[str] = [k for k, v in detections_selected.items() if v]
             # Filter the detections
-            filtered_detections : dict[Detection.Type, list[DetectionCoords]] = {}
-            for det_type in selected:
-                try:
-                    filtered_detections[det_type] = cache.coord_by_type[det_type]
-                except KeyError:
-                    pass
+            filtered_detections : dict[Detection.Type, list[Detection]] = \
+                cache.container.get_by_type(selected)
             # Update the current detections
             self.current_drawn_detections = filtered_detections
         else:

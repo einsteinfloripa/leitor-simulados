@@ -1,7 +1,7 @@
 import argparse
 import checks
 
-from core.detection import Detection
+from core.detection.base import Detection
 from core.image import Image
 from core.models import load_model
 from utils.filehandler import FileHandler

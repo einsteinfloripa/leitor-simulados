@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import utils.log as log
 
-from core.detection import Detection
+from core.detection.base import Detection
 from math import sqrt
 from core.image import Image
 from utils.data_classes import FloatPoint, FloatBoundingBox

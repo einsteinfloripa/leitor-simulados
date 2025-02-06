@@ -1,10 +1,11 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .label_map import LabelMap
 
 import math
 from enum import Enum
-from dataclasses import dataclass
 
-from definitions.question import Stage
 from definitions.geometry import (
     FloatBoundingBox,
     FloatPoint,
@@ -12,43 +13,12 @@ from definitions.geometry import (
     IntBoundingBox
 )
 
-class DetectionCoords():
-    """
-    A simpler representation of the detection, with only detection type and coordenates
-
-    Args:
-        class_type (Detection.Type): The type of the detection
-        global_bbox (IntBoundingBox): The bounding box of the detection in pixels
-        internal_bbox (FloatBoundingBox): The bounding box of the detection in percentage
-        of its dimensions
-
-        * The global bounding box has coordenates in relation to the main image
-        * The internal bounding box has coordenates in relation to the cropped image if 
-        is a second stage detection.
-    """
-    def __init__(
-            self,
-            class_type : Detection.Type,
-            global_bbox : IntBoundingBox,
-            internal_bbox : FloatBoundingBox
-        ):
-        self.class_type : Detection.Type = class_type
-        self.global_bbox : IntBoundingBox = global_bbox
-        self.internal_bbox : FloatBoundingBox = internal_bbox
-
-    def __eq__(self, other):
-        return self.global_bbox == other.global_bbox and self.class_type == other.class_type
-    def __hash__(self):
-        return hash((self.global_bbox, self.class_type.value))
-
-
-
 class Detection:
     """
     The core detection class is meant to store the information of a detections made by a model
     and provide some useful methods to work with it.
 
-    Attrivutes:
+    Attributes:
         - bounding_box (FloatBoundingBox): The bounding box of the detection
         - model_assing_id (int):   The id of the class assigned by the model
     as each model must starts at index 0 and since there are two stages some detections
@@ -61,6 +31,10 @@ class Detection:
     the width.
         - class_type (Detection.Type): The type of the detection. A unique identifier for each
     class of detection.
+
+    Class Attributes:
+        - __label_map: A map tha is used to define the type of the detection based
+        on an integer returned by the model. This map is set by the method set_label_map
     """
 
     class Type(Enum):
@@ -98,7 +72,10 @@ class Detection:
         self.img_width : int =  img_width
         self.img_height : int = img_height
         self.class_type : Detection.Type = self.__label_map.detections[model_assing_id]
+        # Lazy initialized by the Image class
         self.anchored_at : IntPoint | None = anchored_at
+        self.global_pixel_bounding_box : IntBoundingBox = None
+        
 
     # Public Setters && getters
     @classmethod
@@ -157,13 +134,17 @@ class Detection:
         # Transforma as coordenadas para o sistema da imagem
         y1_ = ih - y1_
         x1_ += iw
-        # Atualiza os valores'
+        # Atualiza os valores
         sw, sh = self.width, self.height
         self.bounding_box.p_min = FloatPoint(x1_, y1_)
         self.bounding_box.p_max = FloatPoint(x1_ + sw, y1_ + sh)
 
     # Export functions
-    def to_pixels(self) -> tuple[int]:
+    def to_pixels(self) -> IntBoundingBox:
+        """
+        Return the pixel coordinates of the bounding box in relation to the image
+        where the detection was made (cropped or not)
+        """
         xmin, ymin, xmax, ymax = self.bounding_box
 
         xmin = int(xmin * self.img_width)
@@ -171,8 +152,27 @@ class Detection:
         ymin = int(ymin * self.img_height)
         ymax = int(ymax * self.img_height)
 
-        return xmin, ymin, xmax, ymax
+        return IntBoundingBox.from_ints(xmin, ymin, xmax, ymax)
     
+
+    def to_global_pixels(self) -> IntBoundingBox:
+        """
+        Return the pixel coordinates of the bounding box in relation to the global image
+        """
+        if self.anchored_at is None:
+            raise Exception("Detection is not in a cropped image")
+        # get the coordinate in pixels in r1elation to the cropped image
+        xmax = int(self.bounding_box.p_max.x * self.img_width)
+        xmin = int(self.bounding_box.p_min.x * self.img_width)
+        ymax = int(self.bounding_box.p_max.y * self.img_height)
+        ymin = int(self.bounding_box.p_min.y * self.img_height)
+        if self.anchored_at:
+            xmin += self.anchored_at.x
+            ymin += self.anchored_at.y
+            xmax += self.anchored_at.x
+            ymax += self.anchored_at.y
+        return IntBoundingBox.from_ints(xmin, ymin, xmax, ymax)
+
     def to_json(self) -> dict:
         p_min, p_max = self.xyxy
         return {
@@ -185,21 +185,8 @@ class Detection:
         x, y, w, h = self.middle_point.x, self.middle_point.y, self.width, self.height
         return f"{self.model_assing_id} {x} {y} {w} {h}"
 
+    
     # Magic methods
-    def to_coords(self) -> DetectionCoords:
-        # get the coordinate in pixels
-        xmax = int(self.bounding_box.p_max.x * self.img_width)
-        xmin = int(self.bounding_box.p_min.x * self.img_width)
-        ymax = int(self.bounding_box.p_max.y * self.img_height)
-        ymin = int(self.bounding_box.p_min.y * self.img_height)
-        if self.anchored_at:
-            xmin += self.anchored_at.x
-            ymin += self.anchored_at.y
-            xmax += self.anchored_at.x
-            ymax += self.anchored_at.y
-        int_bbox = IntBoundingBox.from_ints(xmin, ymin, xmax, ymax)
-        return DetectionCoords(self.class_type, int_bbox, self.bounding_box)
-
     # sorted from top right to bottom left
     def __lt__(self, other):
         # Check if below entirely from the other
@@ -235,35 +222,6 @@ class Detection:
 
 
 
-## Label maps ##
-@dataclass
-class LabelMap:
-
-    detections : list[Detection.Type]
-    stage : Stage
-
-## Default Label Maps ##
-DEFAULT_FIRST_STAGE_LABEL_MAP = LabelMap(
-    detections = [
-        Detection.Type.CPF_BLOCK,
-        Detection.Type.QUESTION_BLOCK,
-    ],
-    stage = Stage.FIRST
-)
-
-DEFAULT_SECOND_STAGE_LABEL_MAP = LabelMap(
-    detections = [
-        Detection.Type.CPF_COLUMN,
-        Detection.Type.QUESTION_LINE,
-        Detection.Type.SELECTED_BALL,
-        Detection.Type.UNSELECTED_BALL,
-        Detection.Type.QUESTION_NUMBER,
-        Detection.Type.QUESTION_COLUMN,
-    ],
-    stage = Stage.SECOND
-)
-
-        
 
 
 

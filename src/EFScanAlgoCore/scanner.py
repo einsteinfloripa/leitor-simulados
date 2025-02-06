@@ -22,10 +22,12 @@ class Scanner:
         # Set the logger
         self.logger = get_new_logger(f"EFscanAlgo({config.stage})")
         # Import and set the correct pipline
-        import_string = f"EFScanAlgo.{config.stage.name.lower()}_stage.{config.model_name}".strip('.cpy')
+        import_string = f"EFScanAlgo.{config.stage.name.lower()}_stage.{config.model_name}".strip('.py')
         try:
             pipeline_module = importlib.import_module(import_string)
         except ImportError:
+            import sys
+            print(sys.path)
             raise ImportError(f"Could not import {import_string}")
         try:
             self.__detect_func = getattr(pipeline_module, "detect")

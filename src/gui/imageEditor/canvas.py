@@ -3,7 +3,9 @@ import tkinter as tk
 import cv2
 from PIL import Image, ImageTk
 
-from core.detection import DetectionCoords, Detection
+from core.detection.base import Detection
+
+from definitions.geometry import IntBoundingBox
 
 from gui import api_instance, folder_loaded_callback
 
@@ -123,13 +125,15 @@ class ImgCanvas(tk.Canvas):
             Detection.Type.SELECTED_BALL
         ]
         # Sort the detections based on the order
-        detections : dict[Detection.Type, list[DetectionCoords]] =\
+        detections : dict[Detection.Type, list[Detection]] = \
               self.imgEditor.current_drawn_detections
         for i, class_type in enumerate(order):
             if not detections: continue
             # Get the rectangles
 
-            bboxs = [d.bbox for d in detections.get(class_type, [])]
+            bboxs : list[IntBoundingBox] = [
+                d.global_pixel_bounding_box for d in detections.get(class_type, [])
+            ]
             for bbox in bboxs:
                 x1, y1, x2, y2 = bbox
                 color = colors[i]

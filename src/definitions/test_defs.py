@@ -1,29 +1,12 @@
 from __future__ import annotations
 
-from enum import Enum
-
-from dataclasses import dataclass, field
-from typing import Type
+from definitions import TestType, Subject
 from definitions.question import (
     AlphaAnswer,
     BinaryAnswer,
     NumericAnswer,
 )
 
-
-class TestType(Enum):
-    NULL = 0
-    PS_ALUNOS = 1
-    SIMULINHO = 2
-    SIMUFSC = 3
-    SIMUENEM = 4
-
-class Subject(Enum):
-    MATH = 0
-    PHYSICS = 1
-    CHEMISTRY = 2
-    BIOLOGY = 3
-    HISTORY = 4
 
 
 # The folowing classes are used to store constant definitions for each test type

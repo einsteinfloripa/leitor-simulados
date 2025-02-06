@@ -2,7 +2,8 @@ import tkinter as tk
 from tkinter import filedialog
 
 from utils.filehandler import FileHandler
-from definitions.question import Stage, TestType
+from definitions.question import TestType
+from definitions import Stage
 
 from gui import api_instance
 
@@ -175,7 +176,7 @@ class PipelineSideBar(tk.Frame):
 
     def get_pipeline(self):
         test_map = {
-            "PS": TestType.PS,
+            "PS": TestType.PS_ALUNOS,
             "SIMULINHO": TestType.SIMULINHO,
             "SIMUFSC": TestType.SIMUFSC,
             "SIMUENEM": TestType.SIMUENEM
