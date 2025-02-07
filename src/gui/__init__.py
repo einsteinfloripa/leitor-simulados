@@ -1,4 +1,8 @@
 from api import CoreApi
+from definitions.test_defs import TestType
+
+# Global variables
+selected_test_type : TestType = TestType.PS_ALUNOS
 
 # Fonts
 title_font = ("Helvetica", 13, "bold")

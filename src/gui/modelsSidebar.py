@@ -6,6 +6,7 @@ from definitions.question import TestType
 from definitions import Stage
 
 from gui import (
+    selected_test_type,
     api_instance,
     folder_loaded_callback,
     title_font,
@@ -19,23 +20,25 @@ class _testFrame(tk.Frame):
         self.columnconfigure(0, weight=1)
 
         # Config vars
-        self.test_name = tk.StringVar(value="PS")
-        self.options = ["PS", "SIMULINHO", "SIMUFSC", "SIMUENEM"]
+        self.test_name = tk.StringVar(value="PS_ALUNOS")
+        self.options = ["PS_ALUNOS", "SIMULINHO", "SIMUFSC", "SIMUENEM"]
 
         # Create bullet buttons
-        self.label = tk.Label(self, text="Tipo de Prova")
+        self.label = tk.Label(self, text="Tipo de Prova", font=title_font)
         self.label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
-        radio_buttons = []
+        self.radio_buttons = []
         for i, option in enumerate(self.options):
-            bt =tk.Radiobutton(
+            bt = tk.Radiobutton(
                     self,
                     text=option,  # Displayed text
                     value=option,  # Value to store when selected
                     variable=self.test_name,  # Shared variable
+                    command=self.set_global_test_type
             )
-            bt.grid(row=i+1, column=0)
-            radio_buttons.append(bt)
+            bt.grid(row=i+1, column=0, sticky="ew")
+            self.radio_buttons.append(bt)
+        self.radio_buttons[0].config(bg="dark sea green")
 
     def get_info(self):
         return {'test_name' : self.test_name.get()}
@@ -52,6 +55,17 @@ class _testFrame(tk.Frame):
         self.test_path.set(cropped_path)
         # Update the test name in the label
         self.test_name.set(test_path.split("/")[-1])
+
+    def set_global_test_type(self):
+        global selected_test_type
+        test_type_str = self.test_name.get()
+        selected_test_type = TestType[test_type_str]
+        for rb in self.radio_buttons:
+            if rb.cget("value") == test_type_str:
+                rb.config(bg="dark sea green")
+            else:
+                rb.config(bg="lightgray")
+
 
     def activate_buttons(self):
         self.load_button.config(state=tk.NORMAL)
@@ -161,14 +175,14 @@ class PipelineSideBar(tk.Frame):
         # Save the parent reference
         self.root = root
         # Create widgets
-        # Top label
-        tk.Label(self, text="Pipeline", font=title_font, bg='light salmon').grid(
-            row=0, column=0, padx=5, pady=5, sticky="nsew"
-        )
         # Test selection Frame
         self.test_frame = _testFrame(self)
-        self.test_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        self.test_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
+        # Pipeline label
+        tk.Label(self, text="Pipeline", font=title_font, bg='light salmon').grid(
+            row=1, column=0, padx=5, pady=5, sticky="nsew"
+        )
         # First Stage Model
         self.first_stage = _modelFrame(self, Stage.FIRST, None)
         self.first_stage.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
