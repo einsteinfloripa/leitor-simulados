@@ -100,6 +100,14 @@ class Detection:
     @property
     def height(self) -> float:
         return self.bounding_box.p_max.y - self.bounding_box.p_min.y
+    
+    @property
+    def pixel_width(self) -> int:
+        return int(self.width * self.img_width)
+    
+    @property
+    def pixel_height(self) -> int:
+        return int(self.height * self.img_height)
 
     @property
     def xyxy(self) -> tuple[float]:

@@ -1,8 +1,6 @@
 import tkinter as tk
 
-import cv2
-
-from core.detection import Detection, DetectionContainer
+from core.detection import Detection
 from core.builder.data_structs import TestBlocks
 from definitions.question import TestQuestions
 
@@ -65,7 +63,7 @@ class ImageEditorApp(tk.Frame):
         # Operation variables
         self.current_image_index = 0
         self.current_drawn_detections : dict[Detection.Type : list[Detection]] = None
-        self.current_answers = None
+        self.test_report : TestQuestions = None
 
         # Make the frame responsive
         self.grid_rowconfigure(0, weight=1)
@@ -114,7 +112,8 @@ class ImageEditorApp(tk.Frame):
             self.current_drawn_detections = {}
         self.Canvas.display_image()
     
-    def update_answers(self):
+
+    def update_questions_answers(self):
         test_type = self.root.modelsSideBar.get_pipeline()['test']
         builder : BuilderApi = api_instance.get_builder(test_type)
         cache : ImageCacheStruct = api_instance.get_cache().from_index(
@@ -122,9 +121,11 @@ class ImageEditorApp(tk.Frame):
         )
         if cache is not None:
             test_blocks : TestBlocks = cache.blocks
-            answers : TestQuestions = builder.resolve_test(test_blocks)
-            self.current_answers = answers
-            cache.questions = answers        
+            test_report : TestQuestions = builder.resolve_test(test_blocks)
+            cache.questions = test_report   
+            self.test_report = test_report
+            self.Canvas.display_image()
+        
         
         
     ## Event Handlers ##   

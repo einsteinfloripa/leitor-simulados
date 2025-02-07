@@ -1,4 +1,4 @@
-from definitions.geometry import Axis
+from definitions.geometry import Axis, IntPoint, IntBoundingBox
 from definitions.question import Question, AlphaAnswer
 from core.detection import Detection
 
@@ -35,15 +35,31 @@ class PSAlunosBuilder(Builder):
         # Iterate over the lines and get the selected ball
         cont = 0
         while cont < 10:
+            # Get the number of the question to be analized
             question_number = block_number + cont
+            # Sort the balls in the line by the x axis
             line = sort_axis(line_balls[cont], Axis.HORIZONTAL)
+            # Stores the position of the last ball
+            last_ball_ne_point = None
+            if len(line) == 5:
+                last_ball : Detection = line[-1]
+                global_pixels : IntBoundingBox = last_ball.to_global_pixels()
+                # Offset so is not on top of the ball detections
+                offset_x = last_ball.pixel_width // 2
+                offset_y = last_ball.pixel_height // 2
+                last_ball_ne_point = IntPoint(
+                    global_pixels.p_max.x + offset_x,
+                    global_pixels.p_min.y + offset_y
+                )
+            # Get the index of the selected ball
             answer_index = get_selected_balls_index(line)
             # If the line has not 5 balls, or there are more the one selected ball
             if len(line) != 5 or len(answer_index) > 1:
                 block_report.append(
                     Question(
                         question_number,
-                        AlphaAnswer.NULL
+                        AlphaAnswer.NULL,
+                        last_ball_ne_point
                         )
                     )
                 cont += 1
@@ -53,7 +69,8 @@ class PSAlunosBuilder(Builder):
                 block_report.append(
                     Question(
                             question_number,
-                            AlphaAnswer.NOT_ANSWERED
+                            AlphaAnswer.NOT_ANSWERED,
+                            last_ball_ne_point
                         )
                     )
                 cont += 1
@@ -63,7 +80,8 @@ class PSAlunosBuilder(Builder):
             block_report.append(
                 Question(
                         question_number,
-                        AlphaAnswer(answer_index[0] + 1)
+                        AlphaAnswer(answer_index[0] + 1),
+                        last_ball_ne_point
                     )
                 )
             cont += 1

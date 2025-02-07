@@ -1,5 +1,10 @@
 from api import CoreApi
 
+# Fonts
+title_font = ("Helvetica", 13, "bold")
+semititle_font = ("Helvetica", 11, "bold")
+
+# Callback class
 class Callback():
     def __init__(self):
         self.__callbacks = []

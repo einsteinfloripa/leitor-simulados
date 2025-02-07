@@ -5,7 +5,7 @@ from typing import Type
 from dataclasses import dataclass
 
 from definitions import TestType
-
+from definitions.geometry import IntPoint
 
 class AlphaAnswer(Enum):
     NOT_ANSWERED = -1
@@ -47,6 +47,7 @@ class Question:
     """
     number : int
     answer : AlphaAnswer | NumericAnswer | BinaryAnswer | None = None
+    position : IntPoint | None = None
 
     def __repr__(self):
         return f'{self.number}: {self.answer}'

@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 
 from core.detection.base import Detection
 
+from definitions.question import Question
 from definitions.geometry import IntBoundingBox
 
 from gui import api_instance, folder_loaded_callback
@@ -93,6 +94,10 @@ class ImgCanvas(tk.Canvas):
         # Draw rectangles
         if self.imgEditor.current_drawn_detections:
             self.__draw_detections()
+        # Draw questions
+        show_answers = self.imgEditor.sidePanel.get_show_answers()
+        if self.imgEditor.test_report and show_answers:
+            self.__draw_questions()
 
     def center_image(self):
         """Center the image and scale it to fit within the canvas."""
@@ -153,6 +158,30 @@ class ImgCanvas(tk.Canvas):
                 #     fill=color, stipple="gray25", outline=""
                 # )
 
+    def __draw_questions(self):
+        questions : list[Question] = self.imgEditor.test_report.get_questions()
+        for question in questions:
+            if question.position is None:
+                continue
+            x, y = question.position
+            # Scale and offset the coordinates
+            scaled_x = self.offset_x + x * self.zoom_factor
+            scaled_y = self.offset_y + y * self.zoom_factor
+
+            value = question.answer.value
+            if value == 0:
+                text = "BRANCO"
+            elif value == -1:
+                text = "NAO DETECTADO"
+            else:
+                text = f"{question.number} : {question.answer.name}"
+                
+            self.create_text(
+                scaled_x, scaled_y,
+                text=text,
+                fill="indian red",
+                font=("Helvetica", 12, "bold")
+            )
 
     # Event handlers
     def _zoom_in(self):

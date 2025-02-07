@@ -2,7 +2,11 @@ import tkinter as tk
 
 from core.detection.base import Detection
 
-from gui import folder_loaded_callback, api_instance
+from gui import (
+    folder_loaded_callback,
+    api_instance,
+    title_font
+)
 
 ## AUXILIARY WIDGETS ##
 
@@ -75,7 +79,7 @@ class _showDetectionsBox(tk.Frame):
         
     
     def __init__(self, parent, root, imgApp, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+        super().__init__(parent, *args, **kwargs, border=1, relief=tk.RAISED)
         # Save the parent reference
         self.imgApp = parent
         self.root = root
@@ -84,7 +88,7 @@ class _showDetectionsBox(tk.Frame):
 
         # Create widgets
         # Top label
-        tk.Label(self,text="Show Detections").pack()
+        tk.Label(self,text="Detecções", pady=5, font=title_font).pack()
         # Button list
         self.buttonList = self._buttonList(self, imgApp)
         self.buttonList.pack(expand=True, fill=tk.X)
@@ -101,15 +105,45 @@ class _showDetectionsBox(tk.Frame):
 
 class _builderPanel(tk.Frame):
     def __init__(self, sidepanel, imgApp):
-        super().__init__(sidepanel, imgApp)
+        super().__init__(sidepanel, border=1, relief=tk.RAISED)
         self.sidepanel = sidepanel
         self.imgApp = imgApp
 
-        self.update_button = tk.Button(self, text="Get Answers", command=self.update)
+        self.top_label = tk.Label(
+            self, text="Respostas", pady=5, font=title_font
+        ).pack()
+
+        self.show_answers_var = tk.BooleanVar()
+        self.show_answers_checkbox = tk.Checkbutton(
+            self,
+            text="Mostrar respostas",
+            variable=self.show_answers_var,
+            command=sidepanel.imgApp.Canvas.display_image,
+            state=tk.DISABLED
+        )
+        self.show_answers_checkbox.pack()
+
+        self.update_button = tk.Button(
+            self,
+            text="Procurar",
+            command=self.update,
+            state=tk.DISABLED
+        )
         self.update_button.pack()
 
+        folder_loaded_callback.bind(self.activate_update_button)
+
     def update(self):
-        self.imgApp.update_answers()
+        self.imgApp.update_questions_answers()
+    
+    def get_show_answers(self):
+        return self.show_answers_var.get()
+    
+    def activate_update_button(self):
+        self.update_button.config(state=tk.NORMAL)
+        self.show_answers_checkbox.config(state=tk.NORMAL)
+        
+
 
 
 #### MAIN WIDGET ####
@@ -127,14 +161,17 @@ class SidePanel(tk.Frame):
             root,
             imgApp
         )
-        self.showDetectionsBox.pack(fill="x")
+        self.showDetectionsBox.pack(fill=tk.X, pady=2, padx=2)
         # Builder Panel
         self.builder_panel = _builderPanel(self, imgApp)
-        self.builder_panel.pack()
+        self.builder_panel.pack(fill=tk.X, pady=2, padx=2)
 
 
     def get_show_detection_values(self):
         return self.showDetectionsBox.buttonList.get_info()
+    
+    def get_show_answers(self):
+        return self.builder_panel.get_show_answers()
 
     def activate(self):
         pass

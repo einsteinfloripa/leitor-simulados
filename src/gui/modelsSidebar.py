@@ -5,7 +5,12 @@ from utils.filehandler import FileHandler
 from definitions.question import TestType
 from definitions import Stage
 
-from gui import api_instance, folder_loaded_callback
+from gui import (
+    api_instance,
+    folder_loaded_callback,
+    title_font,
+    semititle_font
+)
 
 
 class _testFrame(tk.Frame):
@@ -65,7 +70,8 @@ class _modelFrame(tk.Frame):
 
         # Create widgets
         # Top label
-        self.label = tk.Label(self, text=modelstage)
+        text = "Primeiro Estágio" if modelstage == Stage.FIRST else "Segundo Estágio"
+        self.label = tk.Label(self, text=text, font=semititle_font)
         self.label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         # Row 1 - Model selection
         top_frame = tk.Frame(self, border=2, relief="groove")
@@ -156,7 +162,7 @@ class PipelineSideBar(tk.Frame):
         self.root = root
         # Create widgets
         # Top label
-        tk.Label(self, text="Pipeline", bg='light salmon').grid(
+        tk.Label(self, text="Pipeline", font=title_font, bg='light salmon').grid(
             row=0, column=0, padx=5, pady=5, sticky="nsew"
         )
         # Test selection Frame
