@@ -33,7 +33,7 @@ def group_detections(
     as the distance_threshold gets greater, fewer groups will be created.
     """
     # Sort the detections in the given axis
-    sorted_detections = sort_axis(axis, detections)
+    sorted_detections = sort_axis(detections, axis)
     # Select the index of the axis to be used
     index = 3 if axis == Axis.VERTICAL else 2
     # Group the detections

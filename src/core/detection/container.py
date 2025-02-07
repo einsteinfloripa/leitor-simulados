@@ -21,9 +21,19 @@ class DetectionContainer:
     def get_detections(self) -> list[Detection]:
         return self.__detections
 
-    def get_by_type(self, class_types : list[Detection.Type]) -> dict[Detection.Type, list[Detection]]:
+    def get_by_type(
+            self,
+            class_types : list[Detection.Type],
+            to_list : bool = False
+        ) -> dict[Detection.Type, list[Detection]]:
         if isinstance(class_types, Detection.Type):
-            return {class_types: self.__by_type.get(class_types, [])}
+            class_types = [class_types]
+        if to_list:
+            return [
+                item for class_type in class_types
+                if class_type in self.__by_type
+                for item in self.__by_type[class_type]
+            ]
         return {k: v for k, v in self.__by_type.items() if k in class_types}
 
     def empty(self) -> bool:

@@ -1,9 +1,10 @@
-from.base import Builder
-from builder.data_structs import Block
+from definitions.geometry import Axis
+from definitions.question import Question, AlphaAnswer
+from core.detection import Detection
 
-from definitions.question import Question, AlphaAnswer, NumericAnswer
-
-from .tools import get_lines, get_selected_balls_index
+from .base import Builder
+from .data_structs import Block
+from .tools import get_lines, get_selected_balls_index, sort_axis
 
 
 class PSAlunosBuilder(Builder):
@@ -16,11 +17,17 @@ class PSAlunosBuilder(Builder):
     @classmethod
     def resolve_question_block(cls, block : Block) -> list[Question]:        
         # Set variables
-        detections = block.container.get_detections()
+        ball_detections = block.container.get_by_type(
+            [
+                Detection.Type.SELECTED_BALL,
+                Detection.Type.UNSELECTED_BALL
+            ],
+            to_list = True
+        )
         block_number = (block.order * 10) + 1 # Number of the Question Block
         block_report : list[Question] = []    # Stores the answers of a single block
         # Get the lines of balls
-        line_balls = get_lines(detections, 0.05)
+        line_balls = get_lines(ball_detections, 0.05)
         # TODO:Soluçao fraca, se tiver tempo implementar uma melhor
         # Remove a primeira linha no caso de uma letra ser confundida com um número
         if len( line_balls[0] ) < 3:
@@ -29,8 +36,8 @@ class PSAlunosBuilder(Builder):
         cont = 0
         while cont < 10:
             question_number = block_number + cont
-            line = line_balls[cont]
-            answer_index = get_selected_balls_index(line_balls[cont])
+            line = sort_axis(line_balls[cont], Axis.HORIZONTAL)
+            answer_index = get_selected_balls_index(line)
             # If the line has not 5 balls, or there are more the one selected ball
             if len(line) != 5 or len(answer_index) > 1:
                 block_report.append(
@@ -45,8 +52,8 @@ class PSAlunosBuilder(Builder):
             if not answer_index and len(line) == 5:
                 block_report.append(
                     Question(
-                        question_number,
-                        AlphaAnswer.NOT_ANSWERED
+                            question_number,
+                            AlphaAnswer.NOT_ANSWERED
                         )
                     )
                 cont += 1
@@ -55,8 +62,8 @@ class PSAlunosBuilder(Builder):
             # Calculate the answer with the balls position
             block_report.append(
                 Question(
-                    question_number,
-                    AlphaAnswer(answer_index[0] + 1)
+                        question_number,
+                        AlphaAnswer(answer_index[0] + 1)
                     )
                 )
             cont += 1

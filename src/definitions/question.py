@@ -48,6 +48,9 @@ class Question:
     number : int
     answer : AlphaAnswer | NumericAnswer | BinaryAnswer | None = None
 
+    def __repr__(self):
+        return f'{self.number}: {self.answer}'
+
 
 class TestQuestions:
     """
@@ -72,46 +75,46 @@ class TestQuestions:
             raise NotImplementedError(f'Test type {test_type} not implemented')
 
     def __init__(self, test_type : TestType, owner_cpf = "XXXXXXXXXXX"):
-        self.__owner_student_cpf : str = owner_cpf
-        self.__test_type : TestType = test_type
-        self.answers = None
+        self._owner_student_cpf : str = owner_cpf
+        self._test_type : TestType = test_type
+        self._questions : list[AlphaAnswer | NumericAnswer | BinaryAnswer] = []
 
     def update_answers(self, questions : list[Question]) -> None:
         for question in questions:
-            self.answers[question.number - 1] = question.answer
+            self._questions[question.number - 1] = question
 
     def set_owner_cpf(self, cpf : str) -> None:
-        self.__owner_student_cpf = cpf
+        self._owner_student_cpf = cpf
     
     def get_owner_cpf(self) -> str:
-        return self.__owner_student_cpf
+        return self._owner_student_cpf
     
     def get_test_type(self) -> TestType:
-        return self.__test_type
+        return self._test_type
     
-    def get_answers(self) -> list[AlphaAnswer | NumericAnswer | BinaryAnswer]:
-        return self.answers
+    def get_questions(self) -> list[AlphaAnswer | NumericAnswer | BinaryAnswer]:
+        return self._questions
 
 
 class PsQuestions(TestQuestions):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.PS_ALUNOS, **kwargs)
-        self.questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 61)]
+        self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 61)]
 
 
 class SimulinhoQuestions(TestQuestions):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMULINHO, **kwargs)
-        self.questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 51)]
+        self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 51)]
 
 
 class SimufscQuestions(TestQuestions):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUFSC, **kwargs)
-        self.questions : list[NumericAnswer] = [NumericAnswer() for _ in range(1, 51)]
+        self._questions : list[NumericAnswer] = [NumericAnswer() for _ in range(1, 51)]
 
 
 class SimuenemQuestions(TestQuestions):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUENEM, **kwargs)
-        self.questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 181)]
+        self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 181)]

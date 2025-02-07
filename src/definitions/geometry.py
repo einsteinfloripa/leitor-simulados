@@ -94,6 +94,13 @@ class FloatBoundingBox():
         y_max = y_center + height / 2
         return cls.from_floats(x_min, y_min, x_max, y_max)
 
+    def __getitem__(self, index):
+        if index == 0:   return self.p_min.x
+        elif index == 1: return self.p_min.y
+        elif index == 2: return self.p_max.x
+        elif index == 3: return self.p_max.y
+        else: raise IndexError("Index out of range")
+
     def __iter__(self):
         return iter((*self.p_min, *self.p_max))
     
@@ -116,6 +123,13 @@ class IntBoundingBox():
             p_min = IntPoint(x_min, y_min),
             p_max = IntPoint(x_max, y_max),
         )
+
+    def __getitem__(self, index):
+        if index == 0:   return self.p_min.x
+        elif index == 1: return self.p_min.y
+        elif index == 2: return self.p_max.x
+        elif index == 3: return self.p_max.y
+        else: raise IndexError("Index out of range")
 
     def __iter__(self):
         return iter((*self.p_min, *self.p_max))

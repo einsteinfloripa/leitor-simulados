@@ -8,7 +8,7 @@ from definitions import Stage, TestType
 from utils.filehandler import FileHandler
 
 from api.caching import Cache
-from api.builder import Builder
+from api.builder import BuilderApi
 
 class CoreApi():
     def __init__(self):
@@ -18,7 +18,7 @@ class CoreApi():
         self.__rgb_image_raw : np.ndarray = None
         self.__number_of_images : int = None
         self.__cache : Cache = Cache(0)
-        self.__builder : Builder = None
+        self.__builder : BuilderApi = None
         self.__last_builder_type : TestType = TestType.NULL
         # Models
         self.__fs_model : DetectionModel = None
@@ -49,9 +49,9 @@ class CoreApi():
     def get_cache(self) -> Cache:
         return self.__cache
     # Builder
-    def get_builder(self, test_type : TestType) -> Builder:
+    def get_builder(self, test_type : TestType) -> BuilderApi:
         if self.__last_builder_type != test_type:
-            self.__builder = Builder.from_test_type(test_type)
+            self.__builder = BuilderApi(self, test_type)
         return self.__builder
     
     # Models

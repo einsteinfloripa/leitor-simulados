@@ -69,8 +69,14 @@ class Builder(ABC):
         if cpf_block.root_detection is not Detection.Type.CPF_BLOCK:
             raise ValueError('Must be a cpf block')
         # Get the max values of each number detection on the cpf block
-        detections = cpf_block.container.get_detections()
-        lines = get_lines(detections, Axis.VERTICAL, 0.05)
+        detections = cpf_block.container.get_by_type(
+            [
+                Detection.Type.SELECTED_BALL,
+                Detection.Type.UNSELECTED_BALL
+            ],
+            to_list = True
+        )
+        lines = get_lines(detections, 0.05)
         # If the cpf block has not 10 lines, return a invalid cpf
         if len(lines) != 10:
             return "XXXXXXXXXXX"
@@ -81,9 +87,9 @@ class Builder(ABC):
             ) for line in lines
         ]
 
-        columns = get_columns(Axis.HORIZONTAL, 0.02, cpf_block.detections)
+        columns = get_columns(detections, 0.02)
         # Filter fake columns TODO: implement a better solution
-        columns = [column for column in columns if len(column) > 2]
+        columns = [column for column in columns if len(column) > 1]
         # If the cpf block has not 11 columns, return a invalid cpf
         if len(columns) != 11:
             return "XXXXXXXXXXX"

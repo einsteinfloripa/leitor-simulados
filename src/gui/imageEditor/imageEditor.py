@@ -3,11 +3,14 @@ import tkinter as tk
 import cv2
 
 from core.detection import Detection, DetectionContainer
+from core.builder.data_structs import TestBlocks
+from definitions.question import TestQuestions
+
+from api.data_structs import ImageCacheStruct
+from api.builder import BuilderApi
 
 from gui.imageEditor.canvas import ImgCanvas
 from gui.imageEditor.sidePanel import SidePanel
-
-from api.data_structs import ImageCacheStruct
 from gui import api_instance
 
 
@@ -58,10 +61,12 @@ class ImageEditorApp(tk.Frame):
 
     def __init__(self, root):
         super().__init__(root, width=800, height=600, bg="white")
+        self.root = root
         # Operation variables
         self.current_image_index = 0
         self.current_drawn_detections : dict[Detection.Type : list[Detection]] = None
-        
+        self.current_answers = None
+
         # Make the frame responsive
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -79,6 +84,7 @@ class ImageEditorApp(tk.Frame):
             root.footer, self._load_previous_image, self._load_next_image
             )
         self.footerButtons.pack()
+
 
     def display_image(self, image_index = None):
         # get the current image index if none is provided
@@ -107,8 +113,20 @@ class ImageEditorApp(tk.Frame):
         else:
             self.current_drawn_detections = {}
         self.Canvas.display_image()
-
-
+    
+    def update_answers(self):
+        test_type = self.root.modelsSideBar.get_pipeline()['test']
+        builder : BuilderApi = api_instance.get_builder(test_type)
+        cache : ImageCacheStruct = api_instance.get_cache().from_index(
+            self.current_image_index
+        )
+        if cache is not None:
+            test_blocks : TestBlocks = cache.blocks
+            answers : TestQuestions = builder.resolve_test(test_blocks)
+            self.current_answers = answers
+            cache.questions = answers        
+        
+        
     ## Event Handlers ##   
     def _load_next_image(self):
         """Load the next image in the list."""

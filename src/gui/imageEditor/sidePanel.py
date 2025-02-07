@@ -2,7 +2,7 @@ import tkinter as tk
 
 from core.detection.base import Detection
 
-from gui import folder_loaded_callback
+from gui import folder_loaded_callback, api_instance
 
 ## AUXILIARY WIDGETS ##
 
@@ -99,6 +99,19 @@ class _showDetectionsBox(tk.Frame):
         self.buttonList.qb_button.config(state=tk.NORMAL)
 
 
+class _builderPanel(tk.Frame):
+    def __init__(self, sidepanel, imgApp):
+        super().__init__(sidepanel, imgApp)
+        self.sidepanel = sidepanel
+        self.imgApp = imgApp
+
+        self.update_button = tk.Button(self, text="Get Answers", command=self.update)
+        self.update_button.pack()
+
+    def update(self):
+        self.imgApp.update_answers()
+
+
 #### MAIN WIDGET ####
 
 class SidePanel(tk.Frame):
@@ -115,6 +128,10 @@ class SidePanel(tk.Frame):
             imgApp
         )
         self.showDetectionsBox.pack(fill="x")
+        # Builder Panel
+        self.builder_panel = _builderPanel(self, imgApp)
+        self.builder_panel.pack()
+
 
     def get_show_detection_values(self):
         return self.showDetectionsBox.buttonList.get_info()
