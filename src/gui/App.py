@@ -93,5 +93,5 @@ class WindowApplication(tk.Tk):
             # Make the detections cache
             api_instance.get_cache().cache_image(i, image)
         
-        self.imgEditor.update_detections()
+        self.imgEditor.update_detections(display=False)
         self.imgEditor.display_image(self.imgEditor.current_image_index)

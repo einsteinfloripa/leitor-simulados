@@ -22,7 +22,7 @@ class Builder(ABC):
     @classmethod
     @abstractmethod
     def from_test_type(cls, test_type : TestType) -> Builder:
-        if test_type == TestType.PS_ALUNOS:
+        if test_type == TestType.PS_ALUNOS or test_type == TestType.SIMULINHO:
             from core.builder.ps_alunos_builder import PSAlunosBuilder
             return PSAlunosBuilder
         else:

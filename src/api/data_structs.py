@@ -10,6 +10,6 @@ from definitions.question import TestQuestions
 class ImageCacheStruct:
     container : DetectionContainer
     crops : list[Image]
-    blocks : TestBlocks
-    questions : TestQuestions
+    blocks : TestBlocks = None
+    questions : TestQuestions = None
 

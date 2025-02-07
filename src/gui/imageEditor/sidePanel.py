@@ -134,7 +134,7 @@ class _builderPanel(tk.Frame):
         folder_loaded_callback.bind(self.activate_update_button)
 
     def update(self):
-        self.imgApp.update_questions_answers()
+        self.imgApp.update_questions_answers(build=True)
     
     def get_show_answers(self):
         return self.show_answers_var.get()

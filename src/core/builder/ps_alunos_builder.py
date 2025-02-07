@@ -44,8 +44,8 @@ class PSAlunosBuilder(Builder):
             if len(line) == 5:
                 last_ball : Detection = line[-1]
                 global_pixels : IntBoundingBox = last_ball.to_global_pixels()
-                # Offset so is not on top of the ball detections
-                offset_x = last_ball.pixel_width // 2
+                # Add offset so is not on top of the ball detections
+                offset_x = last_ball.pixel_width
                 offset_y = last_ball.pixel_height // 2
                 last_ball_ne_point = IntPoint(
                     global_pixels.p_max.x + offset_x,

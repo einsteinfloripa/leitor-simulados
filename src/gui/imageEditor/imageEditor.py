@@ -91,7 +91,7 @@ class ImageEditorApp(tk.Frame):
         self.Canvas.center_image()
         self.footerButtons.update(image_index + 1, api_instance.get_number_of_images())
     
-    def update_detections(self):
+    def update_detections(self, display = True):
         # Get the selected values for the detections
         detections_selected : dict[Detection.Type, bool]\
               = self.sidePanel.get_show_detection_values()
@@ -110,20 +110,30 @@ class ImageEditorApp(tk.Frame):
             self.current_drawn_detections = filtered_detections
         else:
             self.current_drawn_detections = {}
-        self.Canvas.display_image()
+
+        if display:
+            self.Canvas.display_image()
     
 
-    def update_questions_answers(self):
+    def update_questions_answers(self, build=False, display = True):
         test_type = self.root.modelsSideBar.get_pipeline()['test']
         builder : BuilderApi = api_instance.get_builder(test_type)
         cache : ImageCacheStruct = api_instance.get_cache().from_index(
             self.current_image_index
         )
-        if cache is not None:
+
+        if cache is not None and build:
             test_blocks : TestBlocks = cache.blocks
             test_report : TestQuestions = builder.resolve_test(test_blocks)
-            cache.questions = test_report   
+            cache.questions = test_report
             self.test_report = test_report
+        else:
+            try:
+                self.test_report = cache.questions
+            except:
+                self.test_report = None
+
+        if display:
             self.Canvas.display_image()
         
         
@@ -138,7 +148,9 @@ class ImageEditorApp(tk.Frame):
         # Set the new index
         self.current_image_index = new_index
         # Update the detections
-        self.update_detections()
+        self.update_detections(display=False)
+        # Update answers
+        self.update_questions_answers(display=False)
         # Make draw call
         self.display_image(new_index)
 
@@ -151,6 +163,8 @@ class ImageEditorApp(tk.Frame):
         # Set the new index
         self.current_image_index = new_index
         # Update the detections
-        self.update_detections()
+        self.update_detections(display=False)
+        # Update answers
+        self.update_questions_answers(display=False)
         # Make draw call
         self.display_image(new_index)

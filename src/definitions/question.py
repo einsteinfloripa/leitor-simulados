@@ -8,8 +8,8 @@ from definitions import TestType
 from definitions.geometry import IntPoint
 
 class AlphaAnswer(Enum):
-    NOT_ANSWERED = -1
-    NULL = 0
+    NULL = -1
+    NOT_ANSWERED = 0
     A = 1
     B = 2
     C = 3
@@ -17,14 +17,14 @@ class AlphaAnswer(Enum):
     E = 5
 
 class BinaryAnswer(Enum):
-    NOT_ANSWERED = -1
-    NULL = 0
+    NULL = -1
+    NOT_ANSWERED = 0
     TRUE = 1
     FALSE = 2
 
 class NumericAnswer:
-    NOT_ANSWERD = -1
-    NULL = 0
+    NULL = -1
+    NOT_ANSWERD = 0
 
     def __init__(self, value : int = -1):
         if value == -1: self.set_null()
@@ -39,6 +39,16 @@ class NumericAnswer:
         if value > 99:
             raise ValueError("Numeric answer must be less than 100.")
         self.value = value
+        self.name = str(value)
+    
+    def set_null(self):
+        self.value = -1
+        self.name = "NULL"
+
+    def set_not_answered(self):
+        self.value = 0
+        self.name = "NOT_ANSWERED"
+
 
 @dataclass
 class Question:
@@ -112,7 +122,7 @@ class SimulinhoQuestions(TestQuestions):
 class SimufscQuestions(TestQuestions):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUFSC, **kwargs)
-        self._questions : list[NumericAnswer] = [NumericAnswer() for _ in range(1, 51)]
+        self._questions : list[NumericAnswer] = [NumericAnswer(0) for _ in range(1, 51)]
 
 
 class SimuenemQuestions(TestQuestions):
