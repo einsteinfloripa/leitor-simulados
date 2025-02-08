@@ -111,7 +111,7 @@ class _builderPanel(tk.Frame):
 
         self.top_label = tk.Label(
             self, text="Respostas", pady=5, font=title_font
-        ).pack()
+        ).grid(row=0, column=0, columnspan=2)
 
         self.show_answers_var = tk.BooleanVar()
         self.show_answers_checkbox = tk.Checkbutton(
@@ -121,20 +121,32 @@ class _builderPanel(tk.Frame):
             command=sidepanel.imgApp.Canvas.display_image,
             state=tk.DISABLED
         )
-        self.show_answers_checkbox.pack()
-
+        self.show_answers_checkbox.grid(row=1, column=0, columnspan=2)
+        # Update button
         self.update_button = tk.Button(
             self,
             text="Procurar",
             command=self.update,
             state=tk.DISABLED
         )
-        self.update_button.pack()
+        self.update_button.grid(row=2, column=0, columnspan=1)
+        # Update all checkbox
+        self.update_all_var = tk.BooleanVar()
+        self.update_all_checkbox = tk.Checkbutton(
+            self,
+            text="Todas",
+            variable=self.update_all_var,
+            state=tk.DISABLED
+        )
+        self.update_all_checkbox.grid(row=2, column=1, columnspan=1)
 
         folder_loaded_callback.bind(self.activate_update_button)
 
     def update(self):
-        self.imgApp.update_questions_answers(build=True)
+        self.imgApp.update_questions_answers(
+            build=True,
+            to_all=self.update_all_var.get()
+        )
     
     def get_show_answers(self):
         return self.show_answers_var.get()
@@ -142,6 +154,7 @@ class _builderPanel(tk.Frame):
     def activate_update_button(self):
         self.update_button.config(state=tk.NORMAL)
         self.show_answers_checkbox.config(state=tk.NORMAL)
+        self.update_all_checkbox.config(state=tk.NORMAL)
         
 
 

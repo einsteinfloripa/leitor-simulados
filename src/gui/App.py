@@ -7,13 +7,11 @@ from core.detection import (
 )
 from core.model import EFScanAlgoModel
 from definitions.question import TestType
-
 from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
 from gui.modelsSidebar import PipelineSideBar
-
+from gui.progress_popup import ProgressPopup
 from gui import api_instance, folder_loaded_callback
-
 
 class WindowApplication(tk.Tk):
 
@@ -43,7 +41,8 @@ class WindowApplication(tk.Tk):
 
         self.imgEditor = ImageEditorApp(self)
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
-    
+
+
     def open_folder(self, path : str):
         open = api_instance.open_folder(path)
         if open:
@@ -69,13 +68,56 @@ class WindowApplication(tk.Tk):
             ss_model.init(test)
         # Select the relevant images
         if to_all:
-            indexes = range(api_instance.get_number_of_images())
+            popup = ProgressPopup(
+                self,
+                self.__apply_to_all,
+                [fs_model, ss_model, fs_config, ss_config]
+            )
         else:
-            indexes = [self.imgEditor.current_image_index]
+            index = self.imgEditor.current_image_index
+            api_instance.load_image(index, do_cache=False)
+            image = api_instance.get_image()
+            # First stage
+            Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
+            image.make_detections_with_model(
+                fs_model, fs_config['st']
+            )
+            # Crop image in the detected areas
+            image.make_cropped()
+            # Second stage
+            Detection.set_label_map(DEFAULT_SECOND_STAGE_LABEL_MAP)
+            for crop in image.crops:
+                crop.make_detections_with_model(
+                    ss_model, ss_config['st']
+                )
+
+            # Make the detections cache
+            api_instance.get_cache().cache_image(index, image)
+        
+        # Load the image selected again
+        api_instance.load_image(self.imgEditor.current_image_index)
+        # Update the UI
+        self.imgEditor.update_detections(display=False)
+        self.imgEditor.update_questions_answers(build=False)
+        self.imgEditor.display_image(self.imgEditor.current_image_index)
+    
+
+    def __apply_to_all(self,
+                popup : ProgressPopup,
+                fs_model,
+                ss_model,
+                fs_config,
+                ss_config
+            ):        
+        indexes = range(api_instance.get_number_of_images())
         # Apply the model to the images
         for i in indexes:
+            if not popup.running:
+                break
             api_instance.load_image(i, do_cache=False)
             image = api_instance.get_image()
+            # Update UI popup
+            popup.update_progress(image.name, i / len(indexes) * 100)
             # First stage
             Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
             image.make_detections_with_model(
@@ -93,5 +135,11 @@ class WindowApplication(tk.Tk):
             # Make the detections cache
             api_instance.get_cache().cache_image(i, image)
         
+        # Load the image selected again
+        api_instance.load_image(self.imgEditor.current_image_index)
+        # Update the UI
         self.imgEditor.update_detections(display=False)
+        self.imgEditor.update_questions_answers(build=False)
         self.imgEditor.display_image(self.imgEditor.current_image_index)
+
+    

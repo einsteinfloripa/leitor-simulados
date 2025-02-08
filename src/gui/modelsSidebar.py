@@ -162,7 +162,7 @@ class _modelFrame(tk.Frame):
         }
 
     def model_success_status(self):
-        self.model_path_label.config(bg="aquamarine2")
+        self.model_path_label.config(bg="dark sea green")
 
     def model_error_status(self):
         self.model_path_label.config(bg="indian red")
@@ -193,11 +193,20 @@ class PipelineSideBar(tk.Frame):
         # Apply button
         self.apply_button = tk.Button(
             self,
-            text="Run Pipeline",
-            command=self.root.apply_model,
+            text="Rodar Pipeline",
+            command=lambda: self.root.apply_model(to_all = self.apply_to_all.get()),
             state=tk.DISABLED
         )
         self.apply_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
+        # Apply to all checkbox
+        self.apply_to_all = tk.BooleanVar(value=False)
+        self.apply_to_all_check = tk.Checkbutton(
+            self,
+            text="Aplicar a todas as imagens",
+            variable=self.apply_to_all,
+            state=tk.DISABLED
+        )
+        self.apply_to_all_check.grid(row=5, column=0, padx=5, pady=5, sticky="nsew")
 
         folder_loaded_callback.bind(self.on_folder_loaded)
 
@@ -222,3 +231,4 @@ class PipelineSideBar(tk.Frame):
 
     def on_folder_loaded(self):
         self.apply_button.config(state=tk.NORMAL)
+        self.apply_to_all_check.config(state=tk.NORMAL)

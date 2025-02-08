@@ -63,7 +63,7 @@ class ImageEditorApp(tk.Frame):
         # Operation variables
         self.current_image_index = 0
         self.current_drawn_detections : dict[Detection.Type : list[Detection]] = None
-        self.test_report : TestQuestions = None
+        self.test_questions_report : TestQuestions = None
 
         # Make the frame responsive
         self.grid_rowconfigure(0, weight=1)
@@ -84,6 +84,7 @@ class ImageEditorApp(tk.Frame):
         self.footerButtons.pack()
 
 
+
     def display_image(self, image_index = None):
         # get the current image index if none is provided
         if image_index is None:
@@ -91,6 +92,7 @@ class ImageEditorApp(tk.Frame):
         self.Canvas.center_image()
         self.footerButtons.update(image_index + 1, api_instance.get_number_of_images())
     
+
     def update_detections(self, display = True):
         # Get the selected values for the detections
         detections_selected : dict[Detection.Type, bool]\
@@ -112,29 +114,36 @@ class ImageEditorApp(tk.Frame):
             self.current_drawn_detections = {}
 
         if display:
-            self.Canvas.display_image()
+            self.display_image()
     
 
-    def update_questions_answers(self, build=False, display = True):
+    def update_questions_answers(self, build=False, display = True, to_all = False):
         test_type = self.root.modelsSideBar.get_pipeline()['test']
         builder : BuilderApi = api_instance.get_builder(test_type)
-        cache : ImageCacheStruct = api_instance.get_cache().from_index(
-            self.current_image_index
-        )
-
-        if cache is not None and build:
-            test_blocks : TestBlocks = cache.blocks
-            test_report : TestQuestions = builder.resolve_test(test_blocks)
-            cache.questions = test_report
-            self.test_report = test_report
+        if to_all:
+            indices = range(api_instance.get_number_of_images())
         else:
-            try:
-                self.test_report = cache.questions
-            except:
-                self.test_report = None
+            indices = [self.current_image_index]
+        for index in indices:
+            cache : ImageCacheStruct = api_instance.get_cache().from_index(
+                index
+            )
+            if cache is not None and build:
+                test_blocks : TestBlocks = cache.blocks
+                test_questions_report : TestQuestions = builder.resolve_test(test_blocks)
+                cache.questions = test_questions_report
+        # Get the cache for the image on screen if to all was set
+        if to_all:
+            cache = api_instance.get_cache().from_index(self.current_image_index)
+            test_questions_report = cache.questions
+        # Update the current questions report
+        try:
+            self.test_questions_report = cache.questions
+        except:
+            self.test_questions_report = None
 
         if display:
-            self.Canvas.display_image()
+            self.display_image()
         
         
         

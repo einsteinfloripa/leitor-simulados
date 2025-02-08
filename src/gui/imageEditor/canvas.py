@@ -98,7 +98,7 @@ class ImgCanvas(tk.Canvas):
             self.__draw_detections()
         # Draw questions
         show_answers = self.imgEditor.sidePanel.get_show_answers()
-        if self.imgEditor.test_report and show_answers:
+        if self.imgEditor.test_questions_report and show_answers:
             self.__draw_questions()
             self.__draw_cpf()
 
@@ -162,7 +162,7 @@ class ImgCanvas(tk.Canvas):
                 # )
 
     def __draw_questions(self):
-        questions : list[Question] = self.imgEditor.test_report.get_questions()
+        questions : list[Question] = self.imgEditor.test_questions_report.get_questions()
         for question in questions:
             if question.position is None:
                 continue
@@ -187,7 +187,7 @@ class ImgCanvas(tk.Canvas):
             )
 
     def __draw_cpf(self):
-        cpf = self.imgEditor.test_report.get_owner_cpf()
+        cpf = self.imgEditor.test_questions_report.get_owner_cpf()
         if cpf is None:
             return
         # Get the position of the CPF and add an offset to the right
