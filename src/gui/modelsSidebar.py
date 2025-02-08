@@ -204,7 +204,7 @@ class PipelineSideBar(tk.Frame):
 
     def get_pipeline(self):
         test_map = {
-            "PS": TestType.PS_ALUNOS,
+            "PS_ALUNOS": TestType.PS_ALUNOS,
             "SIMULINHO": TestType.SIMULINHO,
             "SIMUFSC": TestType.SIMUFSC,
             "SIMUENEM": TestType.SIMUENEM

@@ -11,9 +11,9 @@ class Block:
     - order: The order of the block in the test (0 is the top left most block).
     - detections: Contains the detections inside of the block.
     """
-    root_detection: Detection.Type = field(default=Detection.Type.NULL)
+    root_detection : Detection = field(default=None)
     order: int = field(default=None)
-    container: DetectionContainer = None
+    container: DetectionContainer = field(default=None)
 
 
 @dataclass

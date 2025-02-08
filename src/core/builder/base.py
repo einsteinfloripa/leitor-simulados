@@ -66,7 +66,7 @@ class Builder(ABC):
             cpf_block : Block
         ):
         # Check if the block is a cpf block
-        if cpf_block.root_detection is not Detection.Type.CPF_BLOCK:
+        if cpf_block.root_detection.class_type is not Detection.Type.CPF_BLOCK:
             raise ValueError('Must be a cpf block')
         # Get the max values of each number detection on the cpf block
         detections = cpf_block.container.get_by_type(

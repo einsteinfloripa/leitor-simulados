@@ -153,7 +153,7 @@ class Image():
         # if not return a block
         if self.cropped_from:
             return Block(
-                root_detection = self.cropped_from_detection.class_type,
+                root_detection = self.cropped_from_detection,
                 order = self.order,
                 container = DetectionContainer(self.detections)
             )
@@ -162,7 +162,7 @@ class Image():
         questions_blocks = []
         for crop in self.crops:
             block = crop.to_block()
-            if block.root_detection == Detection.Type.CPF_BLOCK:
+            if block.root_detection.class_type == Detection.Type.CPF_BLOCK:
                 cpf_block = block
             else:
                 questions_blocks.append(block)

@@ -5,8 +5,10 @@ from PIL import Image, ImageTk
 
 from core.detection.base import Detection
 
+from api.data_structs import ImageCacheStruct
+
 from definitions.question import Question
-from definitions.geometry import IntBoundingBox
+from definitions.geometry import IntBoundingBox, IntPoint
 
 from gui import api_instance, folder_loaded_callback
 
@@ -98,6 +100,7 @@ class ImgCanvas(tk.Canvas):
         show_answers = self.imgEditor.sidePanel.get_show_answers()
         if self.imgEditor.test_report and show_answers:
             self.__draw_questions()
+            self.__draw_cpf()
 
     def center_image(self):
         """Center the image and scale it to fit within the canvas."""
@@ -182,6 +185,31 @@ class ImgCanvas(tk.Canvas):
                 fill="indian red",
                 font=("Helvetica", 12, "bold")
             )
+
+    def __draw_cpf(self):
+        cpf = self.imgEditor.test_report.get_owner_cpf()
+        if cpf is None:
+            return
+        # Get the position of the CPF and add an offset to the right
+        cache_engine = api_instance.get_cache()
+        cache : ImageCacheStruct = cache_engine.from_index(
+            self.imgEditor.current_image_index
+        )
+        cpf_detection : Detection = cache.blocks.cpf_block.root_detection
+        middle_point : IntPoint = cpf_detection.pixel_middle_point
+        offset_x = cpf_detection.pixel_width
+        x = middle_point.x + offset_x
+        y = middle_point.y
+        # Scale and offset the coordinates
+        scaled_x = self.offset_x + x * self.zoom_factor
+        scaled_y = self.offset_y + y * self.zoom_factor
+
+        self.create_text(
+            scaled_x, scaled_y,
+            text=f"CPF: {cpf}",
+            fill="indian red",
+            font=("Helvetica", 12, "bold")
+        )
 
     # Event handlers
     def _zoom_in(self):

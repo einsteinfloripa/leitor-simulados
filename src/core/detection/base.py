@@ -92,6 +92,13 @@ class Detection:
             (self.bounding_box.p_min.x + self.bounding_box.p_max.x) / 2,
             (self.bounding_box.p_min.y + self.bounding_box.p_max.y) / 2,
         )
+    
+    @property
+    def pixel_middle_point(self) -> IntPoint:
+        return IntPoint(
+            int(self.middle_point.x * self.img_width),
+            int(self.middle_point.y * self.img_height)
+        )
 
     @property
     def width(self) -> float:
