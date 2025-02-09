@@ -5,6 +5,7 @@ if TYPE_CHECKING:
 
 import math
 from enum import Enum
+from utils.memory import cache_readonly_property    
 
 from definitions.geometry import (
     FloatBoundingBox,
@@ -86,45 +87,45 @@ class Detection:
         return cls.__label_map
 
     # Properties
-    @property
+    @cache_readonly_property
     def middle_point(self) -> FloatPoint:
         return FloatPoint(
             (self.bounding_box.p_min.x + self.bounding_box.p_max.x) / 2,
             (self.bounding_box.p_min.y + self.bounding_box.p_max.y) / 2,
         )
     
-    @property
+    @cache_readonly_property
     def pixel_middle_point(self) -> IntPoint:
         return IntPoint(
             int(self.middle_point.x * self.img_width),
             int(self.middle_point.y * self.img_height)
         )
 
-    @property
+    @cache_readonly_property
     def width(self) -> float:
         return self.bounding_box.p_max.x - self.bounding_box.p_min.x
 
-    @property
+    @cache_readonly_property
     def height(self) -> float:
         return self.bounding_box.p_max.y - self.bounding_box.p_min.y
     
-    @property
+    @cache_readonly_property
     def pixel_width(self) -> int:
         return int(self.width * self.img_width)
     
-    @property
+    @cache_readonly_property
     def pixel_height(self) -> int:
         return int(self.height * self.img_height)
 
-    @property
+    @cache_readonly_property
     def xyxy(self) -> tuple[float]:
         return (self.bounding_box.p_min, self.bounding_box.p_max)
 
-    @property
+    @cache_readonly_property
     def xywh(self) -> tuple[FloatPoint,float,float]:
         return (*self.middle_point, self.width, self.height)
 
-    @property
+    @cache_readonly_property
     def aspect_ratio(self) -> float:
         return (
             ((self.bounding_box.p_max.y - self.bounding_box.p_min.y) * self.img_height) /
@@ -234,6 +235,17 @@ class Detection:
         return "{}_{:.2f}-{:.2f}-{:.2f}-{:.2f}".format(
             self.class_type.name.lower(), *[x for x in self.bounding_box]
         )
+    # Reset the cache when the detection is modified
+    def free_cache(self):
+        """
+        Delete all the cached properties of the detection
+
+        *The _cached_properties attribute is created by the cache_readonly_property
+        in the __get__ method. See the utils/memory.py for more information.
+        """
+        if hasattr(self, "_cached_properties"):
+            for prop in self._cached_properties:
+                prop.invalidate(self)
 
 
 
