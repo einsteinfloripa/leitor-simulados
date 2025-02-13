@@ -1,102 +1,145 @@
-from abc import ABC, abstractmethod
+__all__ = ["QuestionAnswerPanel"]
 
 import tkinter as tk
 from tkinter import ttk
 
-from definitions import TestType
 from definitions.question import (
     TestQuestions,
     Question,
-    AlphaAnswer,
     NumericAnswer,
+    AlphaAnswer
+)
+from api.data_structs import ImageCacheStruct
+
+
+from gui import (
+    Config,
+    regular_font,
+    title_font
 )
 
-class QuestionAnswerPanel(tk.Frame, ABC):
-    """Base class for a scrollable question-answer panel."""
-    def __init__(self, parent, questions, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-        self.questions : TestQuestions = questions 
 
+# SECTION: Private auxiliary widget
+
+class _innerPanel(tk.Frame):
+
+
+    ## Initialization ##
+    def __init__(self, parent, bind_index, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+
+        ## Tkinter boilerplate ##        
         self.canvas = tk.Canvas(self)
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollbar = ttk.Scrollbar(
+            self, orient="vertical", command=self.canvas.yview
+        )
         self.inner_frame = tk.Frame(self.canvas)
 
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.pack(side="right", fill="y")
         self.canvas.pack(side="left", fill="both", expand=True)
 
-        self.inner_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
+        self.inner_window = self.canvas.create_window(
+            (0, 0), window=self.inner_frame, anchor="nw"
+        )
         self.inner_frame.bind("<Configure>", self.on_frame_configure)
 
+
+        ## Data widgets configuration and api coupling ##
+        
+        # Varibles
         self.answer_vars = {}  # Store answer variables
-        self.populate_questions()
+        self.input_widgets = {}  # Store input widgets (Combobox or Entry)
 
-    @abstractmethod
-    def populate_questions(self):
-        """To be implemented by subclasses."""
-        pass
+        # Api coupling
+        self.img_data : ImageCacheStruct = \
+            Config.api.get_cache().from_index(bind_index)
+        self.test_questions : TestQuestions = self.img_data.questions
+        self.questions : list[Question] = self.test_questions.get_questions()
+        self.answer_type : NumericAnswer | AlphaAnswer = \
+            self.questions[0].answer.__class__
+        if self.answer_type is AlphaAnswer:
+            self.use_combobox = True
+            self.answer_options = [ans.name for ans in AlphaAnswer]
+        else:
+            self.use_combobox = False
+            self.answer_options = None
 
-    def on_frame_configure(self, event=None):
+        # Widgets creation
+        for i, question in enumerate(self.questions):
+            tk.Label(
+                self.inner_frame,
+                text=f"Q{question.number}:",
+                font=regular_font
+            ).grid(row=i, column=0, padx=10, pady=5, sticky="w")
+
+            answer_var = tk.StringVar(value=question.answer.name)
+            self.answer_vars[i] = answer_var
+            self.answer_vars[i].trace_add(
+                "write", lambda *args, idx=i: self.on_update_answer(idx, *args)
+            )
+            
+            if self.use_combobox:
+                widget = ttk.Combobox(
+                    self.inner_frame,
+                    textvariable=answer_var,
+                    values=self.answer_options,
+                    state="readonly",
+                )
+                widget.current(question.answer.value)
+            else:
+                widget = tk.Entry(self.inner_frame, textvariable=answer_var)
+
+            widget.grid(row=i, column=1, padx=10, pady=5)
+            self.input_widgets[i] = widget  # Store for reference
+            
+
+    ## Event handlers ##
+    def on_frame_configure(self):
         """Update scrollable region."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-    def get_answers(self):
-        """Retrieve updated answers from the input fields."""
-        return [(q_num, self.answer_vars[q_num].get()) for q_num, _ in self.questions]
+    def on_update_answer(self, index, *args):
+        # Get the updated answer and update the question
+        updateted_answer = self.answer_vars[index].get()
+        question : Question = self.questions[index]
+        question.answer = self.answer_type[updateted_answer]
+        question.updated = True
+
+        # Save in the cache
+        self.test_questions.update_answer(question)
+        
 
 
-class AlphaQuestionAnswerPanel(QuestionAnswerPanel):
-    """Version using a dropdown Combobox for selecting answers."""
-    def __init__(self, parent, test_type : TestType, *args, **kwargs):
-        questions = TestQuestions.from_test_type(test_type)
-        super().__init__(parent, questions, *args, **kwargs)
+# SECTION: Pubic parent widget
 
-    def populate_questions(self):
-        for i, (q_num, answer) in enumerate(self.questions):
-            tk.Label(self.inner_frame, text=f"Q{q_num}:", font=("Arial", 12, "bold")).grid(row=i, column=0, padx=10, pady=5, sticky="w")
+class QuestionAnswerPanel(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, border=5, relief=tk.RIDGE)
 
-            answer_var = tk.StringVar(value=answer)
-            self.answer_vars[q_num] = answer_var
+        # Placeholder panel
+        self.inner_panel = ttk.Frame(self)
+        self.inner_panel.pack(fill="both", expand=True)
 
-            combobox = ttk.Combobox(self.inner_frame, textvariable=answer_var, values=self.answer_options, state="readonly")
-            combobox.grid(row=i, column=1, padx=10, pady=5)
-            combobox.current(self.answer_options.index(answer))
+        # Callbacks
+        Config.detection_updated_callback.bind(
+            lambda : self.show_questions(0)
+        )
 
 
-class NumericQuestionAnswerPanel(QuestionAnswerPanel):
-    """Version using a standard Entry field for typing answers."""
-    def populate_questions(self):
-        for i, (q_num, answer) in enumerate(self.questions):
-            tk.Label(self.inner_frame, text=f"Q{q_num}:", font=("Arial", 12, "bold")).grid(row=i, column=0, padx=10, pady=5, sticky="w")
 
-            answer_var = tk.StringVar(value=answer)
-            self.answer_vars[q_num] = answer_var
+    def show_questions(self, bind_index):
+        # Check if the image has questions
+        cache : ImageCacheStruct = Config.api.get_cache().from_index(bind_index)
+        if not cache.questions:
+            return
+        self.inner_panel.destroy()
+        self.inner_panel = _innerPanel(self, bind_index)
+        self.inner_panel.pack(fill="both", expand=True)
 
-            entry = tk.Entry(self.inner_frame, textvariable=answer_var)
-            entry.grid(row=i, column=1, padx=10, pady=5)
+    def hide_questions(self):
+        self.inner_panel.destroy()
+        self.inner_panel = ttk.Frame(self)
+        self.inner_panel.pack(fill="both", expand=True)
 
-
-# Sample questions and initial answers
-questions_data = [(1, "A"), (2, "B"), (3, "C"), (4, "D"), (5, "A"), (6, "C"), (7, "B"), (8, "D")]
-answer_choices = ["A", "B", "C", "D"]
-
-# Create main window
-root = tk.Tk()
-root.title("Question-Answer Panel")
-
-# Frame with Combobox selection
-panel_combo = AlphaQuestionAnswerPanel(root, questions_data, answer_choices, width=250, height=400)
-panel_combo.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-
-# Frame with Entry field
-panel_entry = NumericQuestionAnswerPanel(root, questions_data, width=250, height=400)
-panel_entry.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-
-# Button to print answers
-def show_answers():
-    print("ComboBox Answers:", panel_combo.get_answers())
-    print("Entry Field Answers:", panel_entry.get_answers())
-
-ttk.Button(root, text="Get Answers", command=show_answers).pack(pady=10)
-
-root.mainloop()

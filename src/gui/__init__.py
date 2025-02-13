@@ -7,7 +7,7 @@ from definitions.test_defs import TestType
 
 title_font = ("Helvetica", 13, "bold")
 semititle_font = ("Helvetica", 11, "bold")
-
+regular_font = ("Helvetica", 11)
 
 
 # SECTION: auxiliary classes
@@ -33,7 +33,8 @@ class Config:
 
     # Callbacks
     folder_loaded_callback = Callback()
-    
+    detection_updated_callback = Callback()
+
     # Non static global variables
     selected_test_type : TestType = TestType.PS_ALUNOS
     

@@ -58,6 +58,7 @@ class Question:
     number : int
     answer : AlphaAnswer | NumericAnswer | BinaryAnswer | None = None
     position : IntPoint | None = None
+    updated : bool = False
 
     def __repr__(self):
         return f'{self.number}: {self.answer}'
@@ -90,9 +91,14 @@ class TestQuestions:
         self._test_type : TestType = test_type
         self._questions : list[AlphaAnswer | NumericAnswer | BinaryAnswer] = []
 
-    def update_answers(self, questions : list[Question]) -> None:
+    def update_answer(self, question : Question, updated=False) -> None:
+        self._questions[question.number - 1] = question.answer
+        question.updated = updated
+    
+    def update_answers(self, questions : list[Question], updated=False) -> None:
         for question in questions:
             self._questions[question.number - 1] = question
+            question.updated = updated
 
     def set_owner_cpf(self, cpf : str) -> None:
         self._owner_student_cpf = cpf

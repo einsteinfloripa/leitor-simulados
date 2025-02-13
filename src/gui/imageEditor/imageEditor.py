@@ -7,10 +7,10 @@ from definitions.question import TestQuestions
 from api.data_structs import ImageCacheStruct
 from api.builder import BuilderApi
 
-from gui.imageEditor.canvas import ImgCanvas
-from gui.imageEditor.sidePanel import SidePanel
 from gui import Config
 
+from .canvas import ImgCanvas
+from .sidePanel import SidePanel
 
 
 
@@ -75,7 +75,9 @@ class ImageEditorApp(tk.Frame):
         self.Canvas.grid(row=0, column=0, sticky="nswe") 
         # Side panel configuration
         self.sidePanel = SidePanel(self, root, bg="lightgray", width=200, height=500)
-        self.sidePanel.place(relx=1, rely=0, x=-5, y=+5, anchor=tk.NE, width=200, height=500)
+        self.sidePanel.place(
+            relx=1, rely=0, x=-5, y=+5, anchor=tk.NE, width=200, relheight=.9
+        )
 
         # Footer buttons
         self.footerButtons = _footerButtons(

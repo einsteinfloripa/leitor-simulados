@@ -1,3 +1,5 @@
+__all__ = ["SidePanel"]
+
 import tkinter as tk
 
 from core.detection.base import Detection
@@ -6,6 +8,8 @@ from gui import (
     Config,
     title_font
 )
+
+from .question_list import QuestionAnswerPanel
 
 ## AUXILIARY WIDGETS ##
 
@@ -164,9 +168,11 @@ class SidePanel(tk.Frame):
 
     def __init__(self, imgApp, root, *args, **kwargs):
         super().__init__(imgApp, *args, **kwargs)
+        
         # Save the parent reference
         self.imgApp = imgApp
         self.root = root
+        
         # Create widgets
         self.showDetectionsBox = _showDetectionsBox(
             self,
@@ -174,9 +180,15 @@ class SidePanel(tk.Frame):
             imgApp
         )
         self.showDetectionsBox.pack(fill=tk.X, pady=2, padx=2)
+        
         # Builder Panel
         self.builder_panel = _builderPanel(self, imgApp)
         self.builder_panel.pack(fill=tk.X, pady=2, padx=2)
+
+        # QuestionAnswerPanel
+        self.question_panel = QuestionAnswerPanel(self)
+        self.question_panel.pack(fill=tk.BOTH, expand=True, pady=2, padx=2)
+
 
 
     def get_show_detection_values(self):
