@@ -1,5 +1,4 @@
-from utils.filehandler import FileHandler
-from gui.App import WindowApplication
+from gui.app import WindowApplication
 
 
 

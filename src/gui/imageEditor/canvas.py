@@ -10,7 +10,7 @@ from api.data_structs import ImageCacheStruct
 from definitions.question import Question
 from definitions.geometry import IntBoundingBox, IntPoint
 
-from gui import api_instance, folder_loaded_callback
+from gui import Config
 
 ## AUXILIARY WIDGETS ##
 class _zoomButtons(tk.Frame):
@@ -39,7 +39,7 @@ class _zoomButtons(tk.Frame):
             )
         self.zoom_in_button.pack(side=tk.RIGHT)
 
-        folder_loaded_callback.bind(self.activate)
+        Config.folder_loaded_callback.bind(self.activate)
 
     def activate(self):
         self.zoom_out_button.config(state=tk.NORMAL)
@@ -77,12 +77,12 @@ class ImgCanvas(tk.Canvas):
     def display_image(self):
         """Display the current image on the canvas."""
         # Resize the image based on the zoom factor
-        image = api_instance.get_image()
+        image = Config.api.get_image()
         height, width, _ = image.raw.shape
         new_width = int(width * self.zoom_factor)
         new_height = int(height * self.zoom_factor)
         self.display_image_cv = cv2.resize(
-            api_instance.get_rbg_image_raw(),
+            Config.api.get_rbg_image_raw(),
             (new_width, new_height),
             interpolation=cv2.INTER_LINEAR
         )
@@ -105,7 +105,7 @@ class ImgCanvas(tk.Canvas):
     def center_image(self):
         """Center the image and scale it to fit within the canvas."""
         # Get the image's size and the canvas's size
-        img_height, img_width, _ = api_instance.get_rbg_image_raw().shape
+        img_height, img_width, _ = Config.api.get_rbg_image_raw().shape
         canvas_width = self.winfo_width()
         canvas_height = self.winfo_height()
 
@@ -191,7 +191,7 @@ class ImgCanvas(tk.Canvas):
         if cpf is None:
             return
         # Get the position of the CPF and add an offset to the right
-        cache_engine = api_instance.get_cache()
+        cache_engine = Config.api.get_cache()
         cache : ImageCacheStruct = cache_engine.from_index(
             self.imgEditor.current_image_index
         )

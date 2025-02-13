@@ -10,8 +10,8 @@ from definitions.question import TestType
 from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
 from gui.modelsSidebar import PipelineSideBar
-from gui.progress_popup import ProgressPopup
-from gui import api_instance, folder_loaded_callback
+from gui.popups import ProgressPopup
+from gui import Config
 
 class WindowApplication(tk.Tk):
 
@@ -43,14 +43,17 @@ class WindowApplication(tk.Tk):
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
 
 
+
+    # SECTION: Public methods
+
     def open_folder(self, path : str):
-        open = api_instance.open_folder(path)
+        open = Config.api.get_io().open_folder(path)
         if open:
             self.imgEditor.current_image_index = 0
-            api_instance.load_image(0)
+            Config.api.load_image(0)
             self.imgEditor.update_detections()
             self.imgEditor.display_image(self.imgEditor.current_image_index)
-            folder_loaded_callback.call()
+            Config.folder_loaded_callback.call()
 
 
     def apply_model(self, to_all=False):
@@ -59,8 +62,8 @@ class WindowApplication(tk.Tk):
         test : TestType = info['test']
         fs_config = info['fs']
         ss_config = info['ss']
-        fs_model = api_instance.get_fs_model()
-        ss_model = api_instance.get_ss_model()
+        fs_model = Config.api.get_fs_model()
+        ss_model = Config.api.get_ss_model()
         # Lazy init EFscanAlgo if needed
         if isinstance(fs_model, EFScanAlgoModel):
             fs_model.init(test)
@@ -75,8 +78,8 @@ class WindowApplication(tk.Tk):
             )
         else:
             index = self.imgEditor.current_image_index
-            api_instance.load_image(index, do_cache=False)
-            image = api_instance.get_image()
+            Config.api.load_image(index, do_cache=False)
+            image = Config.api.get_image()
             # First stage
             Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
             image.make_detections_with_model(
@@ -92,15 +95,24 @@ class WindowApplication(tk.Tk):
                 )
 
             # Make the detections cache
-            api_instance.get_cache().cache_image(index, image)
+            Config.api.get_cache().cache_image(index, image)
         
         # Load the image selected again
-        api_instance.load_image(self.imgEditor.current_image_index)
+        Config.api.load_image(self.imgEditor.current_image_index)
         # Update the UI
         self.imgEditor.update_detections(display=False)
         self.imgEditor.update_questions_answers(build=False)
         self.imgEditor.display_image(self.imgEditor.current_image_index)
     
+
+    def save_as(self, fullpath : str, exporter_name : str):
+        Config.api.get_io().save_report(
+            Config.selected_test_type,
+            fullpath,
+            exporter_name
+        )
+
+    # SECTION: Private auxiliary methods
 
     def __apply_to_all(self,
                 popup : ProgressPopup,
@@ -109,15 +121,15 @@ class WindowApplication(tk.Tk):
                 fs_config,
                 ss_config
             ):        
-        indexes = range(api_instance.get_number_of_images())
+        indexes = range(Config.api.get_number_of_images())
         # Apply the model to the images
         for i in indexes:
             if not popup.running:
                 break
-            api_instance.load_image(i, do_cache=False)
-            image = api_instance.get_image()
+            Config.api.load_image(i, do_cache=False)
+            image = Config.api.get_image()
             # Update UI popup
-            popup.update_progress(image.name, i / len(indexes) * 100)
+            popup.update_progress(image.name, (i+1) / len(indexes) * 100)
             # First stage
             Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
             image.make_detections_with_model(
@@ -133,10 +145,10 @@ class WindowApplication(tk.Tk):
                 )
 
             # Make the detections cache
-            api_instance.get_cache().cache_image(i, image)
+            Config.api.get_cache().cache_image(i, image)
         
         # Load the image selected again
-        api_instance.load_image(self.imgEditor.current_image_index)
+        Config.api.load_image(self.imgEditor.current_image_index)
         # Update the UI
         self.imgEditor.update_detections(display=False)
         self.imgEditor.update_questions_answers(build=False)

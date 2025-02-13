@@ -8,6 +8,7 @@ from definitions.question import TestQuestions
 
 @dataclass
 class ImageCacheStruct:
+    img_name : str
     container : DetectionContainer
     crops : list[Image]
     blocks : TestBlocks = None

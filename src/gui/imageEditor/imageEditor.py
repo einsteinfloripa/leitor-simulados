@@ -9,7 +9,7 @@ from api.builder import BuilderApi
 
 from gui.imageEditor.canvas import ImgCanvas
 from gui.imageEditor.sidePanel import SidePanel
-from gui import api_instance
+from gui import Config
 
 
 
@@ -90,7 +90,7 @@ class ImageEditorApp(tk.Frame):
         if image_index is None:
             image_index = self.current_image_index
         self.Canvas.center_image()
-        self.footerButtons.update(image_index + 1, api_instance.get_number_of_images())
+        self.footerButtons.update(image_index + 1, Config.api.get_number_of_images())
     
 
     def update_detections(self, display = True):
@@ -98,7 +98,7 @@ class ImageEditorApp(tk.Frame):
         detections_selected : dict[Detection.Type, bool]\
               = self.sidePanel.get_show_detection_values()
         # Get the cache
-        cache : ImageCacheStruct = api_instance.get_cache().from_index(
+        cache : ImageCacheStruct = Config.api.get_cache().from_index(
             self.current_image_index
         )
 
@@ -119,13 +119,13 @@ class ImageEditorApp(tk.Frame):
 
     def update_questions_answers(self, build=False, display = True, to_all = False):
         test_type = self.root.modelsSideBar.get_pipeline()['test']
-        builder : BuilderApi = api_instance.get_builder(test_type)
+        builder : BuilderApi = Config.api.get_builder(test_type)
         if to_all:
-            indices = range(api_instance.get_number_of_images())
+            indices = range(Config.api.get_number_of_images())
         else:
             indices = [self.current_image_index]
         for index in indices:
-            cache : ImageCacheStruct = api_instance.get_cache().from_index(
+            cache : ImageCacheStruct = Config.api.get_cache().from_index(
                 index
             )
             if cache is not None and build:
@@ -134,7 +134,7 @@ class ImageEditorApp(tk.Frame):
                 cache.questions = test_questions_report
         # Get the cache for the image on screen if to all was set
         if to_all:
-            cache = api_instance.get_cache().from_index(self.current_image_index)
+            cache = Config.api.get_cache().from_index(self.current_image_index)
             test_questions_report = cache.questions
         # Update the current questions report
         try:
@@ -151,9 +151,9 @@ class ImageEditorApp(tk.Frame):
     def _load_next_image(self):
         """Load the next image in the list."""
         # Get the new index
-        new_index = (self.current_image_index + 1) % api_instance.get_number_of_images()
+        new_index = (self.current_image_index + 1) % Config.api.get_number_of_images()
         # Load and set all the relevant data
-        api_instance.load_image(new_index, do_cache=False)
+        Config.api.load_image(new_index, do_cache=False)
         # Set the new index
         self.current_image_index = new_index
         # Update the detections
@@ -166,9 +166,9 @@ class ImageEditorApp(tk.Frame):
     def _load_previous_image(self):
         """Load the previous image in the list."""
         # Get the new index
-        new_index = (self.current_image_index - 1) % api_instance.get_number_of_images()
+        new_index = (self.current_image_index - 1) % Config.api.get_number_of_images()
         # Load and set all the relevant data
-        api_instance.load_image(new_index, do_cache=False)
+        Config.api.load_image(new_index, do_cache=False)
         # Set the new index
         self.current_image_index = new_index
         # Update the detections

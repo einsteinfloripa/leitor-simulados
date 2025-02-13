@@ -1,16 +1,19 @@
 import numpy as np
-import cv2
+
 
 from core.image import Image
-from core.model import load_model, DetectionModel
-from definitions import Stage, TestType
+from core.model import DetectionModel
+from definitions import TestType
 
-from utils.filehandler import FileHandler
+from .caching import Cache
+from .builder import BuilderApi
+from .IO import IOApi
 
-from api.caching import Cache
-from api.builder import BuilderApi
+# SECTION: CoreApi class
 
 class CoreApi():
+
+    ## Initialization ##
     def __init__(self):
         # Image
         self.__image_files : list[str] = None
@@ -18,11 +21,13 @@ class CoreApi():
         self.__rgb_image_raw : np.ndarray = None
         self.__number_of_images : int = None
         self.__cache : Cache = Cache(0)
+        self.__io : IOApi = IOApi(self)
         self.__builder : BuilderApi = None
         self.__last_builder_type : TestType = TestType.NULL
         # Models
         self.__fs_model : DetectionModel = None
         self.__ss_model : DetectionModel = None
+
 
     ## Getters && Setters ##
     # Image
@@ -48,11 +53,18 @@ class CoreApi():
     # Cache
     def get_cache(self) -> Cache:
         return self.__cache
+    def set_cache(self, size : int):
+        self.__cache = Cache(size)
     # Builder
     def get_builder(self, test_type : TestType) -> BuilderApi:
         if self.__last_builder_type != test_type:
             self.__builder = BuilderApi(self, test_type)
         return self.__builder
+    # IO
+    def get_io(self):
+        return self.__io
+    def set_io(self, io):
+        self.__io = io
     
     # Models
     # fs_model
@@ -72,34 +84,9 @@ class CoreApi():
         if index < 0 or index >= self.__number_of_images or not self.__image_files[index]:
             return False
         # Load the image at the given index
-        self.__image = Image.from_path(self.__image_files[index])
-        self.__rgb_image_raw = cv2.cvtColor(self.__image.raw, cv2.COLOR_BGR2RGB)
-        # Cache the image if needed
-        if do_cache:
-            self.__cache.cache_image(index, self.__image)
-        return True
-
-    def open_folder(self, folder_path : str) -> bool:
-        files = FileHandler.find_image_files(folder_path)
-        if files:
-            # Save the image paths
-            self.__image_files = files
-            # Set the cache list
-            self.__number_of_images = len(files)
-            self.__cache = Cache(self.__number_of_images)
+        if self.__io.load_image(index):
+            # Cache the image if needed
+            if do_cache:
+                self.__cache.cache_image(index, self.__image)
             return True
         return False
-
-    def load_model(
-            self,
-            model_path : str,
-            stage : Stage = Stage.NULL
-            ) -> bool:
-        model = load_model(model_path, stage)
-        if not model:
-            return False
-        if stage == Stage.FIRST:
-            self.__fs_model = model
-        else:
-            self.__ss_model = model
-        return True

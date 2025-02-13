@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import Menu, filedialog
 
+from .popups import SaveAsPopup
+
 class TopMenu(tk.Menu):
     def __init__(self, root):
         super().__init__(root, bg="lightblue")
@@ -9,6 +11,9 @@ class TopMenu(tk.Menu):
         # Menu Arquivo
         menu_arquivo = Menu(self, tearoff=0)
         menu_arquivo.add_command(label="Abrir Pasta", command=self.open_folder)
+        menu_arquivo.add_command(
+            label="Salvar respostas", command=self.sabe_report
+            )
         self.add_cascade(label="Arquivo", menu=menu_arquivo)
 
         # Menu Ferramentas
@@ -25,3 +30,7 @@ class TopMenu(tk.Menu):
     def open_folder(self):
         file = filedialog.askdirectory()
         self.root.open_folder(file)
+    
+    def sabe_report(self):
+        pop = SaveAsPopup(self.root)
+        pop.mainloop()

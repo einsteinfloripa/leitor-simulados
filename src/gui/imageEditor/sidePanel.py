@@ -3,8 +3,7 @@ import tkinter as tk
 from core.detection.base import Detection
 
 from gui import (
-    folder_loaded_callback,
-    api_instance,
+    Config,
     title_font
 )
 
@@ -93,7 +92,7 @@ class _showDetectionsBox(tk.Frame):
         self.buttonList = self._buttonList(self, imgApp)
         self.buttonList.pack(expand=True, fill=tk.X)
         # Register the activate event
-        folder_loaded_callback.bind(self.on_activate)
+        Config.folder_loaded_callback.bind(self.on_activate)
 
 
     def on_activate(self):
@@ -140,7 +139,7 @@ class _builderPanel(tk.Frame):
         )
         self.update_all_checkbox.grid(row=2, column=1, columnspan=1)
 
-        folder_loaded_callback.bind(self.activate_update_button)
+        Config.folder_loaded_callback.bind(self.activate_update_button)
 
     def update(self):
         self.imgApp.update_questions_answers(

@@ -6,7 +6,7 @@ from core.detection import DetectionContainer
 class Cache:
 
     def __init__(self, number_of_images : int):
-        self.data : list[ImageCacheStruct | None] = [None] * number_of_images
+        self.__data : list[ImageCacheStruct | None] = [None] * number_of_images
 
     def cache_image(self, index : int, image : Image):
         """
@@ -28,7 +28,8 @@ class Cache:
         # Build blocks structure
         blocks : TestBlocks = image.to_block()
         # Save the data
-        self.data[index] = ImageCacheStruct(
+        self.__data[index] = ImageCacheStruct(
+            image.name,
             container,
             crops,
             blocks,
@@ -36,4 +37,7 @@ class Cache:
         )
     
     def from_index(self, index : int) -> ImageCacheStruct:
-        return self.data[index]
+        return self.__data[index]
+
+    def get_all(self) -> list[ImageCacheStruct | None]:
+        return self.__data

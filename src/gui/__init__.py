@@ -1,14 +1,17 @@
 from api import CoreApi
 from definitions.test_defs import TestType
 
-# Global variables
-selected_test_type : TestType = TestType.PS_ALUNOS
 
-# Fonts
+
+# SECTION: Static constants
+
 title_font = ("Helvetica", 13, "bold")
 semititle_font = ("Helvetica", 11, "bold")
 
-# Callback class
+
+
+# SECTION: auxiliary classes
+
 class Callback():
     def __init__(self):
         self.__callbacks = []
@@ -21,5 +24,18 @@ class Callback():
         self.__callbacks.append(callback)
 
 
-folder_loaded_callback = Callback()
-api_instance : CoreApi = CoreApi()
+# SECTION: Config class
+
+class Config:
+
+    # Api instance
+    api : CoreApi = CoreApi()
+
+    # Callbacks
+    folder_loaded_callback = Callback()
+    
+    # Non static global variables
+    selected_test_type : TestType = TestType.PS_ALUNOS
+    
+
+

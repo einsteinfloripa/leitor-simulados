@@ -6,9 +6,7 @@ from definitions.question import TestType
 from definitions import Stage
 
 from gui import (
-    selected_test_type,
-    api_instance,
-    folder_loaded_callback,
+    Config,
     title_font,
     semititle_font
 )
@@ -57,9 +55,8 @@ class _testFrame(tk.Frame):
         self.test_name.set(test_path.split("/")[-1])
 
     def set_global_test_type(self):
-        global selected_test_type
         test_type_str = self.test_name.get()
-        selected_test_type = TestType[test_type_str]
+        Config.selected_test_type = TestType[test_type_str]
         for rb in self.radio_buttons:
             if rb.cget("value") == test_type_str:
                 rb.config(bg="dark sea green")
@@ -135,7 +132,7 @@ class _modelFrame(tk.Frame):
         # Get the relative path
         self.model_path.set(model_path)
         # Try to load the model to context
-        loaded = api_instance.load_model(
+        loaded = Config.api.get_io().load_model(
             model_path, stage=self.stage
         )
         self.activate_panel()
@@ -208,7 +205,7 @@ class PipelineSideBar(tk.Frame):
         )
         self.apply_to_all_check.grid(row=5, column=0, padx=5, pady=5, sticky="nsew")
 
-        folder_loaded_callback.bind(self.on_folder_loaded)
+        Config.folder_loaded_callback.bind(self.on_folder_loaded)
 
 
     def get_pipeline(self):
