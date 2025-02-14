@@ -122,11 +122,6 @@ class QuestionAnswerPanel(tk.Frame):
         self.inner_panel = ttk.Frame(self)
         self.inner_panel.pack(fill="both", expand=True)
 
-        # Callbacks
-        Config.detection_updated_callback.bind(
-            lambda : self.show_questions(0)
-        )
-
 
 
     def show_questions(self, bind_index):

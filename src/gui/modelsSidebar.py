@@ -7,10 +7,13 @@ from definitions import Stage
 
 from gui import (
     Config,
+    EventBus,
     title_font,
     semititle_font
 )
 
+ 
+ # SECTION: Pipeline Sidebar Widgets
 
 class _testFrame(tk.Frame):
     def __init__(self, sidebar):
@@ -38,8 +41,6 @@ class _testFrame(tk.Frame):
             self.radio_buttons.append(bt)
         self.radio_buttons[0].config(bg="dark sea green")
 
-    def get_info(self):
-        return {'test_name' : self.test_name.get()}
 
     def set_test(self):
         test_path = filedialog.askopenfilename(
@@ -62,7 +63,6 @@ class _testFrame(tk.Frame):
                 rb.config(bg="dark sea green")
             else:
                 rb.config(bg="lightgray")
-
 
     def activate_buttons(self):
         self.load_button.config(state=tk.NORMAL)
@@ -135,16 +135,26 @@ class _modelFrame(tk.Frame):
         loaded = Config.api.get_io().load_model(
             model_path, stage=self.stage
         )
-        self.activate_panel()
+        self.__activate_panel()
         if loaded:
-            self.model_success_status()
+            self.__model_success_status()
         else:
-            self.model_error_status()
+            self.__model_error_status()
 
 
-    # Event handlers
+    ## Getters && Setters ##
 
-    def activate_panel(self):
+    def get_info(self):
+
+        return {
+            "model_path": self.model_path.get(),
+            "st": self.score_threshold.get(),
+        }
+
+
+    ## Internal event handlers ##
+
+    def __activate_panel(self):
         # Activate the buttons
         self.score_threshold_scale.config(state=tk.NORMAL)
         # Activate the labels
@@ -152,25 +162,25 @@ class _modelFrame(tk.Frame):
         self.score_threshold_label.config(fg="black")
         self.score_threshold.set(0.5)
 
-    def get_info(self):
-        return {
-            "model_path": self.model_path.get(),
-            "st": self.score_threshold.get(),
-        }
-
-    def model_success_status(self):
+    def __model_success_status(self):
         self.model_path_label.config(bg="dark sea green")
 
-    def model_error_status(self):
+    def __model_error_status(self):
         self.model_path_label.config(bg="indian red")
+
+
+
+# SECTION: Pipeline Sidebar Main Widget
 
 class PipelineSideBar(tk.Frame):
     
     def __init__(self, root):
         super().__init__(root)
         self.columnconfigure(0, weight=1)
+
         # Save the parent reference
         self.root = root
+
         # Create widgets
         # Test selection Frame
         self.test_frame = _testFrame(self)
@@ -180,9 +190,11 @@ class PipelineSideBar(tk.Frame):
         tk.Label(self, text="Pipeline", font=title_font, bg='light salmon').grid(
             row=1, column=0, padx=5, pady=5, sticky="nsew"
         )
+
         # First Stage Model
         self.first_stage = _modelFrame(self, Stage.FIRST, None)
         self.first_stage.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
+
         # Second Stage Model
         self.second_stage = _modelFrame(self, Stage.SECOND, None)
         self.second_stage.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
@@ -191,10 +203,11 @@ class PipelineSideBar(tk.Frame):
         self.apply_button = tk.Button(
             self,
             text="Rodar Pipeline",
-            command=lambda: self.root.apply_model(to_all = self.apply_to_all.get()),
+            command=self.publish,
             state=tk.DISABLED
         )
         self.apply_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
+
         # Apply to all checkbox
         self.apply_to_all = tk.BooleanVar(value=False)
         self.apply_to_all_check = tk.Checkbutton(
@@ -205,18 +218,14 @@ class PipelineSideBar(tk.Frame):
         )
         self.apply_to_all_check.grid(row=5, column=0, padx=5, pady=5, sticky="nsew")
 
-        Config.folder_loaded_callback.bind(self.on_folder_loaded)
+        # Subscribe to events
+        EventBus.subscribe(self.on_folder_loaded, "<<folder_loaded>>")
 
+
+    ## Getters && Setters ##
 
     def get_pipeline(self):
-        test_map = {
-            "PS_ALUNOS": TestType.PS_ALUNOS,
-            "SIMULINHO": TestType.SIMULINHO,
-            "SIMUFSC": TestType.SIMUFSC,
-            "SIMUENEM": TestType.SIMUENEM
-        }
-        test = self.test_frame.get_info()
-        test = test_map[test['test_name']]
+        test = Config.selected_test_type
         fs = self.first_stage.get_info()
         ss = self.second_stage.get_info()
         
@@ -226,6 +235,16 @@ class PipelineSideBar(tk.Frame):
             'ss': ss
         }
 
-    def on_folder_loaded(self):
+
+    ## Event handlers ##
+
+    def publish(self):
+        if self.apply_to_all.get():
+            EventBus.publish("<<apply_model_to_all>>")
+        else:
+            EventBus.publish("<<apply_model>>")
+
+
+    def on_folder_loaded(self, event):
         self.apply_button.config(state=tk.NORMAL)
         self.apply_to_all_check.config(state=tk.NORMAL)

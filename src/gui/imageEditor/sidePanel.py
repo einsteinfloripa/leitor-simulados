@@ -6,6 +6,7 @@ from core.detection.base import Detection
 
 from gui import (
     Config,
+    EventBus,
     title_font
 )
 
@@ -15,6 +16,7 @@ from .question_list import QuestionAnswerPanel
 
 
 class _showDetectionsBox(tk.Frame):
+
     class _buttonList(tk.Frame):
 
         sb_var = None
@@ -40,7 +42,7 @@ class _showDetectionsBox(tk.Frame):
                 text="Selected Balls",
                 state=tk.DISABLED,
                 variable=self.sb_var,
-                command=self.update_detections
+                command=self.publish_event
             )
             self.sb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
             self.ub_button = tk.Checkbutton(
@@ -48,7 +50,7 @@ class _showDetectionsBox(tk.Frame):
                 text="Unselected Balls",
                 state=tk.DISABLED,
                 variable=self.ub_var,
-                command=self.update_detections
+                command=self.publish_event
             )
             self.ub_button.pack(anchor=tk.W, expand=True, fill=tk.X)
             self.cb_button = tk.Checkbutton(
@@ -56,7 +58,7 @@ class _showDetectionsBox(tk.Frame):
                 text="Cpf Blocks",
                 state=tk.DISABLED,
                 variable=self.cb_var,
-                command=self.update_detections
+                command=self.publish_event
             )
             self.cb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
             self.qb_button = tk.Checkbutton(
@@ -64,12 +66,13 @@ class _showDetectionsBox(tk.Frame):
                 text="Question Blocks",
                 state=tk.DISABLED,
                 variable=self.qb_var,
-                command=self.update_detections
+                command=self.publish_event
             )
             self.qb_button.pack(anchor=tk.W, expand=True, fill=tk.X)
 
-        def update_detections(self):
-            self.imgApp.update_detections()
+        def publish_event(self):
+            EventBus.publish("<<detection_checkbox_clicked>>")
+            EventBus.publish("<<draw_call>>")
         
         def get_info(self):
             values = {
@@ -95,11 +98,10 @@ class _showDetectionsBox(tk.Frame):
         # Button list
         self.buttonList = self._buttonList(self, imgApp)
         self.buttonList.pack(expand=True, fill=tk.X)
-        # Register the activate event
-        Config.folder_loaded_callback.bind(self.on_activate)
+        EventBus.subscribe(self.on_activate, "<<folder_loaded>>")
 
 
-    def on_activate(self):
+    def on_activate(self, event):
         self.buttonList.sb_button.config(state=tk.NORMAL)
         self.buttonList.ub_button.config(state=tk.NORMAL)
         self.buttonList.cb_button.config(state=tk.NORMAL)
@@ -129,7 +131,7 @@ class _builderPanel(tk.Frame):
         self.update_button = tk.Button(
             self,
             text="Procurar",
-            command=self.update,
+            command=self.publish,
             state=tk.DISABLED
         )
         self.update_button.grid(row=2, column=0, columnspan=1)
@@ -143,18 +145,22 @@ class _builderPanel(tk.Frame):
         )
         self.update_all_checkbox.grid(row=2, column=1, columnspan=1)
 
-        Config.folder_loaded_callback.bind(self.activate_update_button)
+        # Subscribe to events
+        EventBus.subscribe(self.activate_update_button, "<<folder_loaded>>")  
 
-    def update(self):
-        self.imgApp.update_questions_answers(
-            build=True,
-            to_all=self.update_all_var.get()
-        )
+
+    def publish(self):
+        to_all = self.update_all_var.get()
+        if to_all:
+            EventBus.publish("<<build_all_answers>>")
+        else:
+            EventBus.publish("<<build_answers>>")
+        EventBus.publish("<<draw_call>>")
     
     def get_show_answers(self):
         return self.show_answers_var.get()
-    
-    def activate_update_button(self):
+
+    def activate_update_button(self, event):
         self.update_button.config(state=tk.NORMAL)
         self.show_answers_checkbox.config(state=tk.NORMAL)
         self.update_all_checkbox.config(state=tk.NORMAL)

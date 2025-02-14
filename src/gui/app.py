@@ -11,7 +11,10 @@ from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
 from gui.modelsSidebar import PipelineSideBar
 from gui.popups import ProgressPopup
-from gui import Config
+from gui import Config, EventBus
+
+
+# SECTION: Main Application class
 
 class WindowApplication(tk.Tk):
 
@@ -42,21 +45,29 @@ class WindowApplication(tk.Tk):
         self.imgEditor = ImageEditorApp(self)
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
 
+        EventBus.subscribe(self.open_folder, "<<open_folder>>")
+        EventBus.subscribe(
+            self.apply_model,
+            "<<apply_model>>",
+            "<<apply_model_to_all>>",
+        )
 
 
     # SECTION: Public methods
-
-    def open_folder(self, path : str):
+    def open_folder(self, event : str, path : str):
         open = Config.api.get_io().open_folder(path)
         if open:
+            EventBus.publish("<<clear_img_app>>")
             self.imgEditor.current_image_index = 0
             Config.api.load_image(0)
-            self.imgEditor.update_detections()
-            self.imgEditor.display_image(self.imgEditor.current_image_index)
-            Config.folder_loaded_callback.call()
+            EventBus.publish("<<folder_loaded>>")
+            EventBus.publish("<<center_draw_call>>")
 
 
-    def apply_model(self, to_all=False):
+    def apply_model(self, event):
+        # Check if the model should be applied to all images
+        to_all = event == "<<apply_model_to_all>>"
+
         # Get the current pipeline configuration
         info = self.modelsSideBar.get_pipeline()
         test : TestType = info['test']
@@ -64,29 +75,34 @@ class WindowApplication(tk.Tk):
         ss_config = info['ss']
         fs_model = Config.api.get_fs_model()
         ss_model = Config.api.get_ss_model()
+
         # Lazy init EFscanAlgo if needed
         if isinstance(fs_model, EFScanAlgoModel):
             fs_model.init(test)
         if isinstance(ss_model, EFScanAlgoModel):
             ss_model.init(test)
+
         # Select the relevant images
         if to_all:
-            popup = ProgressPopup(
+            ProgressPopup(
                 self,
-                self.__apply_to_all,
+                self._thread_apply_to_all,
                 [fs_model, ss_model, fs_config, ss_config]
-            )
+            ).mainloop()
         else:
             index = self.imgEditor.current_image_index
             Config.api.load_image(index, do_cache=False)
             image = Config.api.get_image()
+
             # First stage
             Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)        
             image.make_detections_with_model(
                 fs_model, fs_config['st']
             )
+
             # Crop image in the detected areas
             image.make_cropped()
+
             # Second stage
             Detection.set_label_map(DEFAULT_SECOND_STAGE_LABEL_MAP)
             for crop in image.crops:
@@ -99,22 +115,17 @@ class WindowApplication(tk.Tk):
         
         # Load the image selected again
         Config.api.load_image(self.imgEditor.current_image_index)
-        # Update the UI
-        self.imgEditor.update_detections(display=False)
-        self.imgEditor.update_questions_answers(build=False)
-        self.imgEditor.display_image(self.imgEditor.current_image_index)
-    
 
-    def save_as(self, fullpath : str, exporter_name : str):
-        Config.api.get_io().save_report(
-            Config.selected_test_type,
-            fullpath,
-            exporter_name
-        )
+        # Update the UI
+        EventBus.publish("<<update_all>>")
+        EventBus.publish("<<center_draw_call>>")
+
+
+
 
     # SECTION: Private auxiliary methods
 
-    def __apply_to_all(self,
+    def _thread_apply_to_all(self,
                 popup : ProgressPopup,
                 fs_model,
                 ss_model,
@@ -150,8 +161,7 @@ class WindowApplication(tk.Tk):
         # Load the image selected again
         Config.api.load_image(self.imgEditor.current_image_index)
         # Update the UI
-        self.imgEditor.update_detections(display=False)
-        self.imgEditor.update_questions_answers(build=False)
-        self.imgEditor.display_image(self.imgEditor.current_image_index)
-
+        EventBus.publish("<<update_all>>")
+        EventBus.publish("<<center_draw_call>>")
+        
     

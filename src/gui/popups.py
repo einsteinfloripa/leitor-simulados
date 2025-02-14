@@ -38,18 +38,23 @@ class SaveAsPopup(tk.Toplevel):
 
     def save_as(self):
         """ Opens file dialog and saves data in the selected format. """
-        name : str = self.format_type_var.get()
-        format : FileExtension = self.formats_dict[name]
+        exporter_name : str = self.format_type_var.get()
+        format : FileExtension = self.formats_dict[exporter_name]
         filetypes = [
-            (name, '*' + format.value)
+            (exporter_name, '*' + format.value)
         ]
-        file_path = filedialog.asksaveasfilename(
+        fullpaht = filedialog.asksaveasfilename(
             defaultextension="", filetypes=filetypes
         )
 
-        if not file_path:
+        if not fullpaht:
             return
-        self.root.save_as(file_path, self.format_type_var.get())
+              
+        Config.api.get_io().save_report(
+            Config.selected_test_type,
+            fullpaht,
+            exporter_name
+        )
         
 
 

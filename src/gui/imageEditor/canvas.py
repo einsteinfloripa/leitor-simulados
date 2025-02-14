@@ -10,7 +10,7 @@ from api.data_structs import ImageCacheStruct
 from definitions.question import Question
 from definitions.geometry import IntBoundingBox, IntPoint
 
-from gui import Config
+from gui import Config, EventBus
 
 ## AUXILIARY WIDGETS ##
 class _zoomButtons(tk.Frame):
@@ -39,9 +39,9 @@ class _zoomButtons(tk.Frame):
             )
         self.zoom_in_button.pack(side=tk.RIGHT)
 
-        Config.folder_loaded_callback.bind(self.activate)
+        EventBus.subscribe(self.activate, "<<folder_loaded>>")
 
-    def activate(self):
+    def activate(self, event):
         self.zoom_out_button.config(state=tk.NORMAL)
         self.zoom_in_button.config(state=tk.NORMAL)
 
@@ -73,8 +73,12 @@ class ImgCanvas(tk.Canvas):
         self.bind("<ButtonRelease-3>", self._stop_drag)  # Release right mouse button to stop dragging
         self.bind("<MouseWheel>", self._mouse_zoom)  # Zoom using mouse scroll
 
+        EventBus.subscribe(self.display_image, "<<draw_call>>")
+        EventBus.subscribe(self.center_image, "<<center_draw_call>>")
 
-    def display_image(self):
+
+
+    def display_image(self, event=None):
         """Display the current image on the canvas."""
         # Resize the image based on the zoom factor
         image = Config.api.get_image()
@@ -101,8 +105,8 @@ class ImgCanvas(tk.Canvas):
         if self.imgEditor.test_questions_report and show_answers:
             self.__draw_questions()
             self.__draw_cpf()
-
-    def center_image(self):
+    
+    def center_image(self, event=None):
         """Center the image and scale it to fit within the canvas."""
         # Get the image's size and the canvas's size
         img_height, img_width, _ = Config.api.get_rbg_image_raw().shape

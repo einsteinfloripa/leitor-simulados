@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import Menu, filedialog
 
+from . import EventBus
 from .popups import SaveAsPopup
 
 class TopMenu(tk.Menu):
@@ -29,7 +30,7 @@ class TopMenu(tk.Menu):
 
     def open_folder(self):
         file = filedialog.askdirectory()
-        self.root.open_folder(file)
+        EventBus.publish("<<open_folder>>", file)
     
     def sabe_report(self):
         pop = SaveAsPopup(self.root)
