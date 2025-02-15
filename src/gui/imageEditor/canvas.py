@@ -182,11 +182,12 @@ class ImgCanvas(tk.Canvas):
                 text = "NAO DETECTADO"
             else:
                 text = f"{question.number} : {question.answer.name}"
-                
+            
+            color = "indian red" if not question.updated else "orange2"
             self.create_text(
                 scaled_x, scaled_y,
                 text=text,
-                fill="indian red",
+                fill=color,
                 font=("Helvetica", 12, "bold")
             )
 
@@ -197,7 +198,7 @@ class ImgCanvas(tk.Canvas):
         # Get the position of the CPF and add an offset to the right
         cache_engine = Config.api.get_cache()
         cache : ImageCacheStruct = cache_engine.from_index(
-            self.imgEditor.current_image_index
+            Config.current_image_index
         )
         cpf_detection : Detection = cache.blocks.cpf_block.root_detection
         middle_point : IntPoint = cpf_detection.pixel_middle_point

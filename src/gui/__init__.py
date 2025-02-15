@@ -42,6 +42,6 @@ class Config:
 
     # Non static global variables
     selected_test_type : TestType = TestType.PS_ALUNOS
-    
+    current_image_index : int = 0
 
 

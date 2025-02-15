@@ -52,7 +52,7 @@ class _footerButtons(tk.Frame):
         
 
     def update_footer_label(self, event=None):
-        current = self.root.imgEditor.current_image_index + 1
+        current = Config.current_image_index + 1
         total = Config.api.get_number_of_images()
         """Update the label with the current image index and total number."""
         self.image_label.config(text=f"{current}/{total}")
@@ -75,7 +75,6 @@ class ImageEditorApp(tk.Frame):
         super().__init__(root, width=800, height=600, bg="white")
         self.root = root
         # Operation variables
-        self.current_image_index = 0
         self.current_drawn_detections : dict[Detection.Type : list[Detection]] = None
         self.test_questions_report : TestQuestions = None
 
@@ -121,7 +120,7 @@ class ImageEditorApp(tk.Frame):
               = self.sidePanel.get_show_detection_values()
         # Get the cache
         cache : ImageCacheStruct = Config.api.get_cache().from_index(
-            self.current_image_index
+            Config.current_image_index
         )
 
         if cache is not None:
@@ -143,7 +142,7 @@ class ImageEditorApp(tk.Frame):
         if to_all:
             indices = range(Config.api.get_number_of_images())
         else:
-            indices = [self.current_image_index]
+            indices = [Config.current_image_index]
         for index in indices:
             cache : ImageCacheStruct = Config.api.get_cache().from_index(
                 index
@@ -154,22 +153,24 @@ class ImageEditorApp(tk.Frame):
                 cache.questions = test_questions_report
         # Get the cache for the image on screen if to all was set
         if to_all:
-            cache = Config.api.get_cache().from_index(self.current_image_index)
+            cache = Config.api.get_cache().from_index(Config.current_image_index)
             test_questions_report = cache.questions
         # Update the current questions report
         try:
             self.test_questions_report = cache.questions
         except:
             self.test_questions_report = None
+        EventBus.publish("<<update_question_panel>>")
     
     def load_next_image(self, event=None):
         """Load the next image in the list."""
         # Get the new index
-        new_index = (self.current_image_index + 1) % Config.api.get_number_of_images()
+        index = Config.current_image_index
+        new_index = (index + 1) % Config.api.get_number_of_images()
         # Load and set all the relevant data
         Config.api.load_image(new_index, do_cache=False)
         # Set the new index
-        self.current_image_index = new_index
+        Config.current_image_index = new_index
         # Update all widgets and data
         EventBus.publish("<<update_all>>")
         # Make draw call
@@ -178,11 +179,12 @@ class ImageEditorApp(tk.Frame):
     def load_previous_image(self, event=None):
         """Load the previous image in the list."""
         # Get the new index
-        new_index = (self.current_image_index - 1) % Config.api.get_number_of_images()
+        index = Config.current_image_index
+        new_index = (index - 1) % Config.api.get_number_of_images()
         # Load and set all the relevant data
         Config.api.load_image(new_index, do_cache=False)
         # Set the new index
-        self.current_image_index = new_index
+        Config.current_image_index = new_index
         # Update the detections
         EventBus.publish("<<update_all>>")
         # Make draw call

@@ -92,7 +92,7 @@ class TestQuestions:
         self._questions : list[AlphaAnswer | NumericAnswer | BinaryAnswer] = []
 
     def update_answer(self, question : Question, updated=False) -> None:
-        self._questions[question.number - 1] = question.answer
+        self._questions[question.number - 1].answer = question.answer
         question.updated = updated
     
     def update_answers(self, questions : list[Question], updated=False) -> None:

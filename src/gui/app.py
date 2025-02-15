@@ -58,7 +58,7 @@ class WindowApplication(tk.Tk):
         open = Config.api.get_io().open_folder(path)
         if open:
             EventBus.publish("<<clear_img_app>>")
-            self.imgEditor.current_image_index = 0
+            Config.current_image_index = 0
             Config.api.load_image(0)
             EventBus.publish("<<folder_loaded>>")
             EventBus.publish("<<center_draw_call>>")
@@ -90,7 +90,7 @@ class WindowApplication(tk.Tk):
                 [fs_model, ss_model, fs_config, ss_config]
             ).mainloop()
         else:
-            index = self.imgEditor.current_image_index
+            index = Config.current_image_index
             Config.api.load_image(index, do_cache=False)
             image = Config.api.get_image()
 
@@ -114,7 +114,8 @@ class WindowApplication(tk.Tk):
             Config.api.get_cache().cache_image(index, image)
         
         # Load the image selected again
-        Config.api.load_image(self.imgEditor.current_image_index)
+        index = Config.current_image_index
+        Config.api.load_image(index)
 
         # Update the UI
         EventBus.publish("<<update_all>>")
@@ -159,7 +160,8 @@ class WindowApplication(tk.Tk):
             Config.api.get_cache().cache_image(i, image)
         
         # Load the image selected again
-        Config.api.load_image(self.imgEditor.current_image_index)
+        index = Config.current_image_index
+        Config.api.load_image(index)
         # Update the UI
         EventBus.publish("<<update_all>>")
         EventBus.publish("<<center_draw_call>>")
