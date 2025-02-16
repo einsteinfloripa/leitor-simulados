@@ -23,9 +23,9 @@ class DetectionContainer:
 
     def get_by_type(
             self,
-            class_types : list[Detection.Type],
+            class_types : list[Detection.Type] | Detection.Type,
             to_list : bool = False
-        ) -> dict[Detection.Type, list[Detection]]:
+        ) -> dict[Detection.Type, list[Detection]] | list[Detection]:
         if isinstance(class_types, Detection.Type):
             class_types = [class_types]
         if to_list:

@@ -7,11 +7,12 @@ if TYPE_CHECKING:
 from pathlib import Path
 import cv2
 
-from definitions import Stage, TestType
+from definitions import Stage, TestType, PATH_SEPARATOR
 from core.model import load_model
 from core.image import Image
 from core.IO import Importer, FileExtension
 from core.IO.report import ReportIO, ReportData
+from core.IO.export_yolo import DetectionsExportData, YOLOExporter
 
 from .data_structs import ImageCacheStruct
 
@@ -75,12 +76,43 @@ class IOApi:
         # Call the exporter
         exporter.write(formated_data, fullpath=fullpath)
 
+        
+    ## Detections Export ##
+
+    def export_yolo(self, fullpath : str, save_images : bool = False):
+        # Get the data
+        cache = self._core.get_cache()
+        data : list[ImageCacheStruct] = cache.get_all()
+        formated_data : DetectionsExportData = DetectionsExportData(
+            names = [],
+            test_blocks = []
+        )
+        for img_cache in data:
+            if img_cache:
+                formated_data.names.append(img_cache.img_name)
+                formated_data.test_blocks.append(img_cache.blocks)
+            else:
+                formated_data.names.append(None)
+                formated_data.test_blocks.append(None)
+
+        # Call the exporter
+        exporter = YOLOExporter()
+        success = exporter.export(formated_data, fullpath=fullpath)
+        # Save the images if needed
+        if success and save_images:
+            files = self._core.get_image_files()
+            for file in files:
+                img = Image.from_path(file)
+                img.save(fullpath + PATH_SEPARATOR + img.name)            
+
 
 
     # SECTION: Getters && Setters
     
     def get_report_output_formats(self) -> list[(str, FileExtension)]:
         return ReportIO.get_available_formats()
+
+
     
     # SECTION: Auxiliar Methods
 

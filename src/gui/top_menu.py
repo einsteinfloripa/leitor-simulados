@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import Menu, filedialog
 
 from . import EventBus
-from .popups import SaveAsPopup
+from .popups import SaveAsPopup, ExportYoloPopup
 
 class TopMenu(tk.Menu):
     def __init__(self, root):
@@ -24,14 +24,22 @@ class TopMenu(tk.Menu):
 
         # Menu Detecções
         menu_deteccoes = Menu(self, tearoff=0)
-        menu_deteccoes.add_command(label="Importar")
-        menu_deteccoes.add_command(label="Exportar")
+        menu_deteccoes.add_command(
+            label="Exportar YOLO",
+            command=self.export_yolo
+        )
         self.add_cascade(label="Detecções", menu=menu_deteccoes)
 
     def open_folder(self):
         file = filedialog.askdirectory()
-        EventBus.publish("<<open_folder>>", file)
+        if file:
+            EventBus.publish("<<open_folder>>", file)
     
     def sabe_report(self):
         pop = SaveAsPopup(self.root)
+        pop.mainloop()
+    
+    def export_yolo(self):
+        # Iterate over all images
+        pop = ExportYoloPopup(self.root)
         pop.mainloop()

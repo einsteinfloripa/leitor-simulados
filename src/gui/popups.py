@@ -1,10 +1,103 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
 import threading
+
+from definitions import PATH_SEPARATOR
+
 from core.IO import FileExtension
-from gui import Config
+
+from gui import (
+    Config,
+    semititle_font
+)
 
 
+class ExportYoloPopup(tk.Toplevel):
+    def __init__(self, root):
+        super().__init__(root)
+        self.root = root
+        self.title("Exportar YOLO")
+        self.geometry("350x200")
+        self.resizable(False, False)
+        self.transient(root)
+        self.grab_set()
+        
+        # Label
+        tk.Label(
+            self,
+            text="Selecione a pasta de destino:",
+            font=semititle_font
+        ).grid(row=0, column=0, columnspan=2, pady=5)
+
+        # Label to show the selected folder
+        self.base_folder_var = tk.StringVar()
+        self.base_folder_var.set("Nenhuma pasta selecionada")
+        self.folder_label = tk.Label(self, textvariable=self.base_folder_var)
+        self.folder_label.grid(row=1, column=0, columnspan=2, pady=5)
+
+        # Button
+        tk.Button(
+            self,
+            text="Procurar",
+            command=self.select_base_folder
+        ).grid(row=2, column=0, pady=5, padx=5)
+
+        # Save images checkbox
+        self.save_images_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(
+            self,
+            text="Salvar imagens",
+            variable=self.save_images_var
+        ).grid(row=2, column=1, pady=5, padx=5)
+
+        # Folder name label
+        tk.Label(
+            self,
+            text="Nome da pasta:",
+            font=semititle_font
+        ).grid(row=3, column=0, pady=5, padx=5)
+
+        # Entry for folder name
+        self.folder_name_var = tk.StringVar()
+        self.folder_name_var.set("detections")
+        tk.Entry(
+            self,
+            textvariable=self.folder_name_var
+        ).grid(row=3, column=1, pady=5, padx=5)
+
+
+        # Confirm button
+        tk.Button(
+            self,
+            text="Exportar",
+            command=self.export_yolo,
+            width=25
+        ).grid(row=4, columnspan=2, column=0, pady=5)
+
+
+
+    def select_base_folder(self):
+        """ Opens file dialog and saves data in the selected format. """
+        base_folder = filedialog.askdirectory()
+        if not base_folder:
+            self.base_folder_var.set("Nenhuma pasta selecionada")
+            return
+        self.base_folder_var.set(base_folder)
+
+    def export_yolo(self):
+        """ Opens file dialog and saves data in the selected format. """
+        base_folder = self.base_folder_var.get()
+        if base_folder == "Nenhuma pasta selecionada":
+            return
+        folder_name = self.folder_name_var.get()
+        save_images = self.save_images_var.get()
+        fullpath = base_folder + PATH_SEPARATOR + folder_name
+        Config.api.get_io().export_yolo(
+            fullpath,
+            save_images
+        )
+        self.destroy()
+    
 
 class SaveAsPopup(tk.Toplevel):
     def __init__(self, root):

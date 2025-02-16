@@ -37,6 +37,7 @@ class Image():
         raw : np.ndarray = cv2.imread(path)
         detections : list[Detection] | None = None
         return cls(name, raw, detections)
+    
 
     colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (0,255,255), (255,0,255), (0,0,0)]
 
@@ -128,7 +129,7 @@ class Image():
             cv2.rectangle(self.raw, (xmin, ymin), (xmax, ymax), self.colors[detection.class_id], 3)
 
     def save(self, path : str) -> None:      
-        cv2.imwrite(path, self.raw)
+        cv2.imwrite(path + self.name, self.raw)
     
     def to_json(self, only_ball_detections=True) -> list:
         if only_ball_detections:
@@ -174,27 +175,10 @@ class Image():
             questions_blocks = questions_blocks
         )
         
-    def to_cache(self) -> dict:
-        """
-        This method saves the current state of the image detection and its
-        cropped subregions
-        """
-        # If there are no detections, return None
-        if not self.detections:
-            return None
-        # Dereference the main image reference as it is likely to be deleted
-        for crop in self.crops:
-            crop.raw = None
-            self.cropped_from = None
-        return {
-                "detections" : self.detections,
-                "crops" : self.crops
-            }
-
-    def from_cache(self, cache : dict) -> None:
-        """
-        This method restores the image state from a cache
-        """
-        pass
-        
-        
+    def update_from_cache(
+            self,
+            crops : list[Image],
+            detections : list[Detection]
+        ) -> None:
+        self.crops = crops
+        self.detections = detections
