@@ -123,7 +123,7 @@ class IOApi:
             for name in formated_data.names:
                 out_folder = fullpath + PATH_SEPARATOR + name.split('.')[0]
                 dest.append(out_folder)
-        Exporter.save_images(dest, imgs)
+        Exporter.save_images(dest, imgs, formated_data.test_blocks)
 
         return success
 

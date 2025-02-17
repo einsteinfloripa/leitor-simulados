@@ -117,11 +117,11 @@ class CoreImage():
             return False
         cropped = []
         # the detections are sorted by top left to bottom right
-        cont = 0
+        cont = 1
         current_class = self.detections[0].class_type
         for detection in self.detections:
             if detection.class_type != current_class:
-                cont = 0
+                cont = 1
                 current_class = detection.class_type
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cropped.append(
@@ -186,6 +186,42 @@ class CoreImage():
             questions_blocks = questions_blocks
         )
     
+    ## Import fucntion ##
+
+    def import_blocks(self, blocks : TestBlocks | Block) -> None:
+        
+        # Case where is a root image
+        if not self.cropped_from:
+            if not isinstance(blocks, TestBlocks):
+                raise Exception(
+                    "Blocks must be a TestBlocks object for a root image"
+                )
+            
+            # Get the first stage detections
+            self.detections = [block.root_detection for block in blocks.questions_blocks]
+            
+            # Make the cropped images
+            self.make_cropped()
+
+            # Sort the question blocks
+            ordered_blocks = sorted(blocks.questions_blocks, key=lambda b: b.order)
+            # Recursively call the function for the cropped images
+            for crop in self.crops:
+                if crop.cropped_from_detection.class_type == Detection.Type.CPF_BLOCK:
+                    crop.import_blocks(blocks.cpf_block)
+                else:
+                    order = crop.order
+                    crop.import_blocks(ordered_blocks[order - 1]) 
+                    # -1 because the order starts at 1
+        
+        # Case where is a cropped image
+        else:
+            if not isinstance(blocks, Block):
+                raise Exception(
+                    "Blocks must be a Block object for a cropped image"
+                )
+            self.detections = blocks.container.get_detections()
+                    
 
     ## Saving fuction ## 
 

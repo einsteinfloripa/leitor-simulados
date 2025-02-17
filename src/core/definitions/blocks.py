@@ -31,3 +31,4 @@ class TestBlocks:
     name: str = field(default='')
     cpf_block: Block = field(default=None)
     questions_blocks: list[Block] = field(default_factory=list)
+

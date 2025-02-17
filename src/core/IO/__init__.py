@@ -7,6 +7,7 @@ from functools import wraps
 from pathlib import Path
 from enum import Enum
 
+from core.definitions.blocks import TestBlocks
 from core.image import CoreImage
 
 # SECTION: Variable definitions
@@ -126,11 +127,13 @@ class Exporter(ABC):
     @staticmethod
     def save_images(
             destination : list[str],
-            images : Generator[CoreImage, None, None]
+            images : Generator[CoreImage, None, None],
+            blocks : list[TestBlocks]
         ):
-        for dest, img in zip(destination, images):
+        for dest, img, block in zip(destination, images, blocks):
             if not os.path.exists(dest):
                 os.makedirs(dest)
+            img.import_blocks(block)
             img.save(dest)
             for crop in img.crops:
                 crop.save(dest)
