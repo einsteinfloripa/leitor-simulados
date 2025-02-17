@@ -3,24 +3,33 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from api import CoreApi
 
+from core.definitions.test_defs import TestType
+from core.definitions.question import TestQuestions
+from core.definitions.blocks import TestBlocks
+from core.builder import Builder
 
 from api.data_structs import ImageCacheStruct
 
-from core.builder.data_structs import TestBlocks
-from core.builder import Builder
-from definitions.test_defs import TestType
-from definitions.question import TestQuestions
 
 
 class BuilderApi:
     """
-    Class that operates on Blocks to build the answer of each question.
+    Class responsible for the communication between the api and the core builder.
+
+    Attributes:
+    - coreApi: CoreApi
+        The core api object.
+    - test_type: TestType
+        The type of test that will be resolved.
+    - builder: Builder
+        The builder object that will resolve the test.
     """
     
     def __init__(self, coreApi : CoreApi, test_type : TestType):
-        self.coreApi = coreApi
-        self.test_type = test_type
-        self.builder = Builder.from_test_type(test_type)
+        self.coreApi : CoreApi = coreApi
+        self.test_type : TestType = test_type
+        self.builder : Builder = Builder.from_test_type(test_type)
+
 
     def resolve_from_cache(self, index : int) -> TestQuestions:
         """
@@ -28,13 +37,14 @@ class BuilderApi:
         stores the results in the cache.
         """
         # Get the cache
-        cache : ImageCacheStruct | None = self.coreApi.get_cache().from_index(index)
+        cache : ImageCacheStruct | None = self.coreApi.cache.from_index(index)
         blocks : TestBlocks = cache.blocks
         # Build the result
         result = self.resolve_test(blocks)
         # Cache the detections
         cache.questions = result
         return result
+
 
     def resolve_test(self, test_blocks : TestBlocks) -> TestQuestions:
         """

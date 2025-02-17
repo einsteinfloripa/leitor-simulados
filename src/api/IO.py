@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
 if TYPE_CHECKING:
     from .api import CoreApi
 
@@ -7,12 +7,12 @@ if TYPE_CHECKING:
 from pathlib import Path
 import cv2
 
-from definitions import Stage, TestType, PATH_SEPARATOR
+from core.definitions import Stage, TestType, PATH_SEPARATOR
 from core.model import load_model
-from core.image import Image
-from core.IO import Importer, FileExtension
+from core.image import CoreImage
+from core.IO import Importer, FileExtension, Exporter
 from core.IO.report import ReportIO, ReportData
-from core.IO.export_yolo import DetectionsExportData, YOLOExporter
+from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
 
 from .data_structs import ImageCacheStruct
 
@@ -23,20 +23,24 @@ class IOApi:
 
     ## Initialization ##
     def __init__(self, core : CoreApi):
-        self._core  = core
+        self.core  = core
+
 
 
     # SECTION: Input Output Methods
+
+
+    ## Import Methods ##
 
     def open_folder(self, folder_path : str) -> bool:
         files = Importer.Find.image_files(folder_path)
         if files:
             # Save the image paths
-            self._core.set_image_files(files)
+            self.core.set_image_files(files)
             # Set the cache list
             number_of_images = len(files)
-            self._core.set_number_of_images(number_of_images)
-            self._core.set_cache(number_of_images)
+            self.core.set_number_of_images(number_of_images)
+            self.core.set_cache(number_of_images)
             return True
         return False
 
@@ -49,61 +53,79 @@ class IOApi:
         if not model:
             return False
         if stage == Stage.FIRST:
-            self._core.set_fs_model(model)
+            self.core.set_fs_model(model)
         else:
-            self._core.set_ss_model(model)
+            self.core.set_ss_model(model)
         return True
+
+
+    ## Export Methods ##
+
+    # Report Export
 
     def save_report(
             self,
             test_type : TestType,
-            fullpath : str | Path,
+            fullpath : str,
             exporter_name : str = "DefaultJSON",
         ):
-        # Convert the file_path to a Path object if needed
         # Get the exporter
-        cache = self._core.get_cache()
         exporter : ReportIO = ReportIO.get_by_name(exporter_name)
+        
         # Get the data
-        data : list[ImageCacheStruct] = cache.get_all()
+        data : list[ImageCacheStruct] = self.core.cache.get_all()
+        
         # Format the data for saving
         formated_data : ReportData = ReportData(
             test_type=test_type,
         )
         for img_cache in data:
-            formated_data.names.append(img_cache.img_name)
-            formated_data.test_questions.append(img_cache.questions)        
+            if img_cache:
+                formated_data.names.append(img_cache.img_name)
+                formated_data.test_questions.append(img_cache.questions)
+        
         # Call the exporter
         exporter.write(formated_data, fullpath=fullpath)
 
-        
-    ## Detections Export ##
 
-    def export_yolo(self, fullpath : str, save_images : bool = False):
+    # Detection Export
+    
+    def export_yolo(
+            self,
+            fullpath : str,
+            save_images : bool = False
+        ) -> bool:
+        
         # Get the data
-        cache = self._core.get_cache()
+        cache = self.core.cache
         data : list[ImageCacheStruct] = cache.get_all()
         formated_data : DetectionsExportData = DetectionsExportData(
             names = [],
             test_blocks = []
         )
+
+        # Format the data for saving
         for img_cache in data:
             if img_cache:
                 formated_data.names.append(img_cache.img_name)
                 formated_data.test_blocks.append(img_cache.blocks)
-            else:
-                formated_data.names.append(None)
-                formated_data.test_blocks.append(None)
 
         # Call the exporter
         exporter = YOLOExporter()
         success = exporter.export(formated_data, fullpath=fullpath)
+        
         # Save the images if needed
+        dest = []
+        imgs : Generator[CoreImage, None, None] = CoreImage.from_paths(
+            self.core.get_image_files()
+        )
         if success and save_images:
-            files = self._core.get_image_files()
-            for file in files:
-                img = Image.from_path(file)
-                img.save(fullpath + PATH_SEPARATOR + img.name)            
+            for name in formated_data.names:
+                out_folder = fullpath + PATH_SEPARATOR + name.split('.')[0]
+                dest.append(out_folder)
+        Exporter.save_images(dest, imgs)
+
+        return success
 
 
 
@@ -117,9 +139,9 @@ class IOApi:
     # SECTION: Auxiliar Methods
 
     def load_image(self, index : int) -> bool:
-        img = Image.from_path(self._core.get_image_files()[index])
-        self._core.set_image(img)
-        self._core.set_rbg_image_raw(
+        img = CoreImage.from_path(self.core.get_image_files()[index])
+        self.core.set_image(img)
+        self.core.set_rbg_image_raw(
             cv2.cvtColor(img.raw, cv2.COLOR_BGR2RGB)
         )
         return True

@@ -1,4 +1,4 @@
-from definitions.geometry import Axis
+from core.definitions.geometry import Axis
 
 from ..detection import Detection
 

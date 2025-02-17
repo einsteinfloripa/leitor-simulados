@@ -36,10 +36,9 @@ class TopMenu(tk.Menu):
             EventBus.publish("<<open_folder>>", file)
     
     def sabe_report(self):
-        pop = SaveAsPopup(self.root)
-        pop.mainloop()
+        SaveAsPopup(self.root)
+
     
     def export_yolo(self):
         # Iterate over all images
-        pop = ExportYoloPopup(self.root)
-        pop.mainloop()
+        ExportYoloPopup(self.root)

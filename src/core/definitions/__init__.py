@@ -1,3 +1,6 @@
+__all__ = ['PLATAFORM', 'PATH_SEPARATOR', 'Stage', 'TestType', 'Subject']
+
+
 import platform
 from enum import Enum
 
@@ -24,18 +27,3 @@ class Subject(Enum):
     CHEMISTRY = 2
     BIOLOGY = 3
     HISTORY = 4
-
-from definitions.question import (
-    AlphaAnswer,
-    BinaryAnswer,
-    NumericAnswer,
-    Question,
-    TestQuestions
-)
-
-from definitions.test_defs import (
-    PsAlunosDefinitions,
-    SimulinhoDefinitions,
-    SimufscDefinitions,
-    SimuenemDefinitions,
-)

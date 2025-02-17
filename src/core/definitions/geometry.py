@@ -1,5 +1,11 @@
+__all__ = ["Axis", "Line", "IntPoint", "FloatPoint", "FloatBoundingBox", "IntBoundingBox"]
+
 from dataclasses import dataclass, field
 from enum import Enum
+
+
+
+# SECTION: Other
 
 class Axis(Enum):
     NULL = -1
@@ -48,7 +54,10 @@ class Line():
 
     def __repr__(self):
         return f"({self.x1}-{self.y1})({self.x2}-{self.y2})"
-    
+
+
+
+# SECTION: Points
 
 @dataclass
 class IntPoint():
@@ -73,6 +82,9 @@ class FloatPoint():
     def __eq__(self, value):
         return self.x == value.x and self.y == value.y
 
+
+
+# SECTION: Bounding Boxes
 
 @dataclass
 class FloatBoundingBox():

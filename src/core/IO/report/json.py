@@ -7,7 +7,7 @@ from core.IO.report import (
     ReportData,
 ) 
 
-from definitions.question import (
+from core.definitions.question import (
     Question,
     AlphaAnswer,
     NumericAnswer
@@ -20,15 +20,20 @@ class DefaultJSON(ReportIO):
         return FileExtension.JSON
 
     @ReportIO.assert_data
-    def write(self, data: ReportData, fullpath : str | Path) -> None:
+    def write(self, data: ReportData, fullpath : str) -> None:
+        
         # fullpath must be a string
         if isinstance(fullpath, Path):
             fullpath = str(fullpath.resolve())
+
         # Create the output dictionary
         output_dict = {'data': {}}
         output_dict.update(self.get_config())
+        
         # Iterate over the data
         for name, test_questions in zip(data.names, data.test_questions):
+
+            # Create the student output
             student_output = {}
             student_output['owner_cpf'] = test_questions.get_owner_cpf()
             questions : list[Question] = test_questions.get_questions()
@@ -39,6 +44,7 @@ class DefaultJSON(ReportIO):
                     if isinstance(answer, AlphaAnswer) else str(answer.value)
                 student_output[str(number)] = txt_answer
             output_dict['data'][name] = student_output
+        
         # Write the output to a json file
         with open(fullpath, 'w') as f:
             json.dump(output_dict, f, indent=4)

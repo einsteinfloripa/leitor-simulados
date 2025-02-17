@@ -8,9 +8,9 @@ from EFScanAlgoCore.ef_utils import (
     DEBUG
 )
 from core.detection.base import Detection
-from core.image import Image
+from core.image import CoreImage
 from core.model import load_model
-from definitions.geometry import FloatBoundingBox
+from core.definitions.geometry import FloatBoundingBox
 
 
 
@@ -32,7 +32,7 @@ def init_pipeline(scanner : Scanner, config):
     })
 
 
-def detect(scanner : Scanner, img : Image) -> list[Detection]:
+def detect(scanner : Scanner, img : CoreImage) -> list[Detection]:
 
     # If is a CPF block use legacy model
     if 'cpf' in img.name:

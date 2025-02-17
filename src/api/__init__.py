@@ -6,3 +6,5 @@ so that i can easily switch out the frontend to a more advanced GUI if needed.
 """
 
 from .api import CoreApi
+
+__all__ = ['CoreApi']

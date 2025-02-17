@@ -3,7 +3,7 @@ __all__ = ["QuestionAnswerPanel"]
 import tkinter as tk
 from tkinter import ttk
 
-from definitions.question import (
+from core.definitions.question import (
     TestQuestions,
     Question,
     NumericAnswer,
@@ -15,8 +15,7 @@ from api.data_structs import ImageCacheStruct
 from gui import (
     Config,
     EventBus,
-    regular_font,
-    title_font
+    regular_font
 )
 
 
@@ -30,7 +29,8 @@ class _innerPanel(tk.Frame):
         super().__init__(parent, *args, **kwargs)
 
 
-        ## Tkinter boilerplate ##        
+        ## Tkinter boilerplate ##   
+             
         self.canvas = tk.Canvas(self)
         self.scrollbar = ttk.Scrollbar(
             self, orient="vertical", command=self.canvas.yview
@@ -56,7 +56,7 @@ class _innerPanel(tk.Frame):
         # Api coupling
         # Get relevant data from the cache
         self.img_data : ImageCacheStruct = \
-            Config.api.get_cache().from_index(bind_index)
+            Config.api.cache.from_index(bind_index)
         self.test_questions : TestQuestions = self.img_data.questions
         self.questions : list[Question] = self.test_questions.get_questions()
         
@@ -148,7 +148,7 @@ class QuestionAnswerPanel(tk.Frame):
 
     def update_panel(self, event):
         index = Config.current_image_index
-        cache : ImageCacheStruct = Config.api.get_cache().from_index(index)
+        cache : ImageCacheStruct = Config.api.cache.from_index(index)
         if not cache or not cache.questions:
             self.__hide_questions()
         else:
@@ -157,13 +157,22 @@ class QuestionAnswerPanel(tk.Frame):
         
 
     def __show_questions(self, bind_index):
-        # Check if the image has questions
-        self.inner_panel.destroy()
+
+        # Chec if the inner panel exists, destroy it.
+        if self.inner_panel.winfo_exists():
+            self.inner_panel.destroy()
+        
+        # Create the inner panel
         self.inner_panel = _innerPanel(self, bind_index)
         self.inner_panel.pack(fill="both", expand=True)
 
     def __hide_questions(self):
-        self.inner_panel.destroy()
+        
+        # Chec if the inner panel exists, destroy it.
+        if self.inner_panel.winfo_exists():
+            self.inner_panel.destroy()
+
+        # Create a placeholder panel
         self.inner_panel = ttk.Frame(self)
         self.inner_panel.pack(fill="both", expand=True)
 

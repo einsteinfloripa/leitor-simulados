@@ -1,3 +1,4 @@
+from typing import Generator
 import os
 import shutil
 from abc import ABC, abstractmethod
@@ -6,15 +7,17 @@ from functools import wraps
 from pathlib import Path
 from enum import Enum
 
+from core.image import CoreImage
+
 # SECTION: Variable definitions
 
-# Images
+# CoreImages
 ACCEPTED_IMAGE_EXTENTIONS = {'.png', '.jpg', '.jpeg'}
 ACCEPTED_MODELS_EXTENTIONS = {'.tflite', '.py', '.pb'}
-# Models
-ROOT_PATH = Path(__file__).parent.parent.parent
+# Paths
+ROOT_PATH = Path(__file__).parent.parent.parent.parent # Tataravo raiz
 MODELS_PATH = ROOT_PATH / 'models'
-
+EXEMPLES_PATH = ROOT_PATH / 'exemple_images'
 
 # SECTION: Enum classes definitions
 
@@ -100,10 +103,10 @@ class Exporter(ABC):
             try:
                 status = func(self, *args, **kwargs)
                 if not status:
+                    Exporter.clear_folder(fullpath)
                     return False
             except Exception as e:
                 Exporter.clear_folder(fullpath)
-                fullpath.rmdir()
                 return False
             return True
 
@@ -117,3 +120,20 @@ class Exporter(ABC):
                 os.remove(item_path)  # Remove files and symlinks
             elif os.path.isdir(item_path):
                 shutil.rmtree(item_path)  # Remove subdirectories and their contents
+        folder_path.rmdir()  # Remove the directory itself
+    
+    
+    @staticmethod
+    def save_images(
+            destination : list[str],
+            images : Generator[CoreImage, None, None]
+        ):
+        for dest, img in zip(destination, images):
+            if not os.path.exists(dest):
+                os.makedirs(dest)
+            img.save(dest)
+            for crop in img.crops:
+                crop.save(dest)
+
+            
+            

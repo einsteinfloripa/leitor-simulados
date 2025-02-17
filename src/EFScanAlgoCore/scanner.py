@@ -8,14 +8,30 @@ from EFScanAlgoCore.ef_defs import (
     SimulinhoData, 
     PSData
 )
-from EFScanAlgoCore.ef_defs import Config
 
+
+
+# SECTION: Import Config
+
+from dataclasses import dataclass
+@dataclass
+class Config:
+    model_name : str
+    test : str
+    stage : str
+
+
+
+# SECTION: Scanner base class
 
 class Scanner:
     
     def get_test_data(self, key):
         return self.__test_data.__dict__.get(key)
     
+
+    ## Initialization ##
+
     def __init__(self, config : Config):
         # Set configs
         self.config = config
@@ -60,7 +76,9 @@ class Scanner:
         self.logger.info(f"Scanner initialized with pipeline: {config.model_name}")
             
 
-    def detect(self, image : Image):
+    ## Main detect function ## 
+
+    def detect(self, image : CoreImage):
         self.logger.info(f"Detecting on image {image.name}")
 
         try:

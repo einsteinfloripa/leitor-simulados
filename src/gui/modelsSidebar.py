@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import filedialog
 
-from utils.filehandler import FileHandler
-from definitions.question import TestType
-from definitions import Stage
+from core.definitions.question import TestType
+from core.definitions import Stage
+from core.IO import MODELS_PATH
 
 from gui import (
     Config,
@@ -42,18 +42,7 @@ class _testFrame(tk.Frame):
         self.radio_buttons[0].config(bg="dark sea green")
 
 
-    def set_test(self):
-        test_path = filedialog.askopenfilename(
-            filetypes=[("Test files", "*.py *.pt *.tflite")],
-            initialdir=FileHandler.TESTS_PATH
-        )
-        if not test_path:
-            return
-        # Get the relative path
-        cropped_path = test_path.split("/tests")[-1]
-        self.test_path.set(cropped_path)
-        # Update the test name in the label
-        self.test_name.set(test_path.split("/")[-1])
+    ## Event handlers ##
 
     def set_global_test_type(self):
         test_type_str = self.test_name.get()
@@ -125,14 +114,14 @@ class _modelFrame(tk.Frame):
     def load_model(self):
         model_path = filedialog.askopenfilename(
             filetypes=[("Model files", "*.py *.pt *.tflite")],
-            initialdir=FileHandler.MODELS_PATH
+            initialdir=MODELS_PATH
         )
         if not model_path:
             return
         # Get the relative path
         self.model_path.set(model_path)
         # Try to load the model to context
-        loaded = Config.api.get_io().load_model(
+        loaded = Config.api.io.load_model(
             model_path, stage=self.stage
         )
         self.__activate_panel()

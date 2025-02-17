@@ -7,8 +7,8 @@ from core.IO.report import (
     ReportData,
 ) 
 
-from definitions import TestType
-from definitions.question import (
+from core.definitions import TestType
+from core.definitions.question import (
     Question,
     AlphaAnswer,
     NumericAnswer
@@ -21,20 +21,26 @@ class DefaultCSV(ReportIO):
         return FileExtension.CSV
 
     @ReportIO.assert_data
-    def write(self, data: ReportData, fullpath : str | Path) -> None:
+    def write(self, data: ReportData, fullpath : str) -> None:
+        
+        # Convert to Path
         if isinstance(fullpath, Path):
             fullpath = str(fullpath.resolve())
+        
         # Create header list
         header = _get_header(data.test_type)
         config_dict : dict = self.get_config()['config']
         config_header = config_dict.keys()
         header = list(config_header) + header
+        
         # Iterate over the data making the data lists
         config_values = list(config_dict.values())
         output_data = []
         for name, test_questions in zip(data.names, data.test_questions):
+
             # Cpf
             student_data = config_values + [test_questions.get_owner_cpf()]
+            
             # Answers
             questions : list[Question] = test_questions.get_questions()
             for question in questions:
@@ -44,6 +50,7 @@ class DefaultCSV(ReportIO):
                     if isinstance(answer, AlphaAnswer) else str(answer.value)
                 student_data.append(txt_answer)
             output_data.append(student_data)
+        
         # Write the output to a csv file
         with open(fullpath, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)

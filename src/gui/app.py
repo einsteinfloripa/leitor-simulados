@@ -1,12 +1,12 @@
 import tkinter as tk
 
+from core.definitions.question import TestType
 from core.detection import (
     Detection,
     DEFAULT_FIRST_STAGE_LABEL_MAP,
     DEFAULT_SECOND_STAGE_LABEL_MAP
 )
 from core.model import EFScanAlgoModel
-from definitions.question import TestType
 from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
 from gui.modelsSidebar import PipelineSideBar
@@ -55,7 +55,7 @@ class WindowApplication(tk.Tk):
 
     # SECTION: Public methods
     def open_folder(self, event : str, path : str):
-        open = Config.api.get_io().open_folder(path)
+        open = Config.api.io.open_folder(path)
         if open:
             EventBus.publish("<<clear_img_app>>")
             Config.current_image_index = 0
@@ -88,7 +88,7 @@ class WindowApplication(tk.Tk):
                 self,
                 self._thread_apply_to_all,
                 [fs_model, ss_model, fs_config, ss_config]
-            ).mainloop()
+            )
         else:
             index = Config.current_image_index
             Config.api.load_image(index, do_cache=False)
@@ -111,7 +111,7 @@ class WindowApplication(tk.Tk):
                 )
 
             # Make the detections cache
-            Config.api.get_cache().cache_image(index, image)
+            Config.api.cache.cache_image(index, image)
         
         # Load the image selected again
         index = Config.current_image_index
@@ -157,7 +157,7 @@ class WindowApplication(tk.Tk):
                 )
 
             # Make the detections cache
-            Config.api.get_cache().cache_image(i, image)
+            Config.api.cache.cache_image(i, image)
         
         # Load the image selected again
         index = Config.current_image_index

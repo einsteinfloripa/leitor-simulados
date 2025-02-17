@@ -1,5 +1,5 @@
 from api import CoreApi
-from definitions.test_defs import TestType
+from core.definitions.test_defs import TestType
 
 
 # SECTION: Static constants

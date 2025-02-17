@@ -3,8 +3,8 @@ from __future__ import annotations
 import cv2
 import math
 
-from definitions.geometry import Axis, Line
-from core.image import Image
+from core.definitions.geometry import Axis, Line
+from core.image import CoreImage
 
 ### HELPER FUNCTIONS ###
 
@@ -80,7 +80,7 @@ def ef_group_lines(
 
     return groups
 
-def ef_avg_group_distance(groups : list[list[Line]], axis : Axis, img : Image) -> float:
+def ef_avg_group_distance(groups : list[list[Line]], axis : Axis, img : CoreImage) -> float:
     '''Receive a list of groups of lines and returns the average distance between the groups.'''
     avg = 0
     for i in range(1, len(groups)):
@@ -95,7 +95,7 @@ def ef_unpack_groups(groups : list[list[Line]], axis : Axis, sorted=False) -> li
         lines.sort(key=lambda x: x[axis.value])
     return lines
 
-def ef_avg_lines(lines : list[Line], axis : Axis, img : Image) -> Line:
+def ef_avg_lines(lines : list[Line], axis : Axis, img : CoreImage) -> Line:
     '''Receive a list of lines and returns a line with average values on the chosen axis.'''
     # Get the lenght of the image in the desired axis
     lenght = img.shape[axis.value]

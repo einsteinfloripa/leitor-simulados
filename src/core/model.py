@@ -6,13 +6,18 @@ import numpy as np
 from ultralytics import YOLO
 import tflite_runtime.interpreter as tflite
 
+from core.image import CoreImage
 from core.detection.base import Detection
-from core.image import Image
-from definitions.question import TestType
-from definitions import PATH_SEPARATOR, Stage
-from definitions.geometry import FloatBoundingBox
+
+from core.definitions import PATH_SEPARATOR, Stage
+from core.definitions.question import TestType
+from core.definitions.geometry import FloatBoundingBox
+
+from core.IO import MODELS_PATH
+
 from utils.misc import normalize_image
-from utils.filehandler import FileHandler
+
+
 
 def load_model(model_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
     """
@@ -51,7 +56,7 @@ class DetectionModel(ABC):
         self.model_type = model_type
 
     @abstractmethod
-    def detect(self, img : Image) -> list[Detection]:
+    def detect(self, img : CoreImage) -> list[Detection]:
         pass        
 
 
@@ -62,7 +67,7 @@ class YOLOModel(DetectionModel):
         super().__init__(ModelType.YOLOV8)
         self.engine = engine
 
-    def detect(self, img : Image) -> list[Detection]:
+    def detect(self, img : CoreImage) -> list[Detection]:
         result = self.engine.predict(img.raw, verbose=False)[0]
         detections = []
         boxes = result.boxes.xyxyn.tolist()
@@ -94,7 +99,7 @@ class LegacyModel(DetectionModel):
         self.input_width = input_details[2]
 
 
-    def detect(self, img : Image) -> list[Detection]:
+    def detect(self, img : CoreImage) -> list[Detection]:
         normalized_img = normalize_image(
             img.raw, self.input_height, self.input_width
         )
@@ -184,7 +189,7 @@ class EFScanAlgoModel(DetectionModel):
         self.__lazy_initialized = True
         
 
-    def detect(self, img : Image) -> list[Detection]:
+    def detect(self, img : CoreImage) -> list[Detection]:
         return self.__scanner.detect(img)
         
 
@@ -194,5 +199,5 @@ class EFScanAlgoModel(DetectionModel):
         # Include the path to the sys tracked directories
         # ../leinor-simulados/models
         # Include path to models EFscanAlgo
-        sys.path.append(str(FileHandler.MODELS_PATH))
+        sys.path.append(ModelType)
         self.__initialized = True

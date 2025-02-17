@@ -1,18 +1,20 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
-from core.builder.data_structs import TestBlocks, Block
+from typing import Generator
 
 import cv2
 import numpy as np
 
+from core.definitions import PATH_SEPARATOR
+from core.definitions.blocks import TestBlocks, Block
+from core.definitions.geometry import IntPoint
 from core.detection import Detection, DetectionContainer
-from definitions.geometry import IntPoint
 
 
 
-class Image():
+class CoreImage():
     """
-    Image class is used to represent an image with its detections and cropped subregions.
+    CoreImage class is used to represent an image with its detections and cropped subregions.
 
     Attributes:
     - raw: The raw image data.
@@ -29,9 +31,22 @@ class Image():
     """
     
     @classmethod
+    def from_paths(cls, paths : list[str]) -> Generator[CoreImage, None, None]:
+        """
+        Constructor that creates a generator of CoreImage objects from
+        a list of file paths.
+        """
+        for path in paths:
+            name : str = path.split("/")[-1]
+            raw : np.ndarray = cv2.imread(path)
+            detections : list[Detection] | None = None
+            yield cls(name, raw, detections)
+       
+
+    @classmethod
     def from_path(cls, path : str):
         """
-        Constructor that creates an Image object from a file path.
+        Constructor that creates an CoreImage object from a file path.
         """
         name : str = path.split("/")[-1]
         raw : np.ndarray = cv2.imread(path)
@@ -56,24 +71,27 @@ class Image():
         self.detections : list[Detection] = detections
         self.height : int = raw.shape[0]
         self.width : int = raw.shape[1]
-        self.crops : list[Image] = []
+        self.crops : list[CoreImage] = []
         # Those variable are for the cropped images
-        self.cropped_from : Image = cropped_from
+        self.cropped_from : CoreImage = cropped_from
         self.cropped_from_detection : Detection = cropped_from_detection
         self.anchored_at : IntPoint = anchored_at
         self.order : int = order
-        # Flags
-        self.BOUNDING_BOXES_DRAWN = False
 
     
+    ## Aux decoration functions ##
+
     def _has_detections(func):
         def wrapper(self, *args, **kwargs):
             if self.detections is None:
-                raise Exception("Image detections not set")
+                raise Exception("CoreImage detections not set")
             else:
                 return func(self, *args, **kwargs)
         return wrapper
     
+
+    ## Detection functions ##
+
     def make_detections_with_model(self, model, score_threshold) -> None:
         detections = model.detect(self)
         # Filter detections by score
@@ -94,7 +112,7 @@ class Image():
         self.BOUNDING_BOXES_DRAWN = False
     
     @_has_detections
-    def make_cropped(self) -> list[Image]:
+    def make_cropped(self) -> list[CoreImage]:
         if not self.detections:
             return False
         cropped = []
@@ -107,7 +125,7 @@ class Image():
                 current_class = detection.class_type
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cropped.append(
-                Image(
+                CoreImage(
                     f"{self.name[:-4]}_{detection.class_type.name.lower()}_{cont:02}.jpg",
                     self.raw[ymin:ymax, xmin:xmax],
                     None,
@@ -121,15 +139,8 @@ class Image():
         self.crops = cropped
         return True
             
-    @_has_detections
-    def draw_bounding_boxes(self) -> None:
-        if self.BOUNDING_BOXES_DRAWN: return
-        for detection in self.detections:
-            xmin, ymin, xmax, ymax = detection.to_pixels()
-            cv2.rectangle(self.raw, (xmin, ymin), (xmax, ymax), self.colors[detection.class_id], 3)
 
-    def save(self, path : str) -> None:      
-        cv2.imwrite(path + self.name, self.raw)
+    ## Exporting functions ##
     
     def to_json(self, only_ball_detections=True) -> list:
         if only_ball_detections:
@@ -174,11 +185,9 @@ class Image():
             cpf_block = cpf_block,
             questions_blocks = questions_blocks
         )
-        
-    def update_from_cache(
-            self,
-            crops : list[Image],
-            detections : list[Detection]
-        ) -> None:
-        self.crops = crops
-        self.detections = detections
+    
+
+    ## Saving fuction ## 
+
+    def save(self, path : str) -> None:      
+        cv2.imwrite(path + PATH_SEPARATOR + self.name, self.raw)

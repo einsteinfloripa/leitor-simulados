@@ -1,11 +1,4 @@
 
-### FOR IMPORTS ###
-from dataclasses import dataclass
-@dataclass
-class Config:
-    model_name : str
-    test : str
-    stage : str
 
 ### EINSTEIN FLORIPA TEST IMAGES DATA AND DEFINITIONS ###
 

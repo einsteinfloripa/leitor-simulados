@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
 import threading
+from time import sleep
 
-from definitions import PATH_SEPARATOR
+from core.definitions import PATH_SEPARATOR
 
 from core.IO import FileExtension
 
@@ -11,6 +12,55 @@ from gui import (
     semititle_font
 )
 
+
+# SECTION: Time popups
+
+class TimeBombPopup(tk.Toplevel):
+
+    def __init__(
+            self,
+            root,
+            parent,
+            title,
+            message,
+            timer=3,
+            destroy_parent=False
+        ):
+        super().__init__(root)
+        self.title(title)
+        self.destroy_parent = destroy_parent
+        self.timer = timer
+        self.parent = parent
+        self.root = root
+        self.title("Success")
+        self.geometry("200x100")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        # Label
+        tk.Label(self, text=message).pack(pady=10)
+
+        # Confirm button
+        tk.Button(
+            self,
+            text="OK",
+            command=self.destroy
+        ).pack(pady=10)
+
+        # Start the timer
+        self.after(timer*1000, self.destroy)
+
+
+    def destroy(self):
+        super().destroy()
+        if self.destroy_parent:
+            self.parent.destroy()
+
+
+
+
+# SECTION: Export popup
 
 class ExportYoloPopup(tk.Toplevel):
     def __init__(self, root):
@@ -43,7 +93,7 @@ class ExportYoloPopup(tk.Toplevel):
         ).grid(row=2, column=0, pady=5, padx=5)
 
         # Save images checkbox
-        self.save_images_var = tk.BooleanVar(value=True)
+        self.save_images_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
             self,
             text="Salvar imagens",
@@ -92,12 +142,32 @@ class ExportYoloPopup(tk.Toplevel):
         folder_name = self.folder_name_var.get()
         save_images = self.save_images_var.get()
         fullpath = base_folder + PATH_SEPARATOR + folder_name
-        Config.api.get_io().export_yolo(
+        success = Config.api.io.export_yolo(
             fullpath,
             save_images
         )
-        self.destroy()
+        if success:
+            TimeBombPopup(
+                self.root,
+                self,
+                "Success",
+                message="Success!",
+                destroy_parent=True
+            )
+        else:
+            TimeBombPopup(
+                self.root,
+                self,
+                "Error",
+                message="Erro ao exportar",
+                destroy_parent=False
+            )
+
+        
     
+
+
+# SECTION: Save as popup
 
 class SaveAsPopup(tk.Toplevel):
     def __init__(self, root):
@@ -113,7 +183,7 @@ class SaveAsPopup(tk.Toplevel):
         # Get the available formats from the API
         # list[(export style name, export extension)]
         self.formats_dict : dict[str, FileExtension] = \
-              Config.api.get_io().get_report_output_formats()
+              Config.api.io.get_report_output_formats()
         formats = list(self.formats_dict.keys())
         # Create the combobox
         self.format_type_var = tk.StringVar(value=formats[0])
@@ -145,13 +215,15 @@ class SaveAsPopup(tk.Toplevel):
         if not fullpaht:
             return
               
-        Config.api.get_io().save_report(
+        Config.api.io.save_report(
             Config.selected_test_type,
             fullpaht,
             exporter_name
         )
         
 
+
+# SECTION: Progress popup
 
 class ProgressPopup(tk.Toplevel):
     def __init__(self, root, thread_fuction, thread_args):

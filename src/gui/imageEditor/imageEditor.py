@@ -1,8 +1,8 @@
 import tkinter as tk
 
+from core.definitions.question import TestQuestions
+from core.definitions.blocks import TestBlocks
 from core.detection import Detection
-from core.builder.data_structs import TestBlocks
-from definitions.question import TestQuestions
 
 from api.data_structs import ImageCacheStruct
 from api.builder import BuilderApi
@@ -119,7 +119,7 @@ class ImageEditorApp(tk.Frame):
         detections_selected : dict[Detection.Type, bool]\
               = self.sidePanel.get_show_detection_values()
         # Get the cache
-        cache : ImageCacheStruct = Config.api.get_cache().from_index(
+        cache : ImageCacheStruct = Config.api.cache.from_index(
             Config.current_image_index
         )
 
@@ -144,7 +144,7 @@ class ImageEditorApp(tk.Frame):
         else:
             indices = [Config.current_image_index]
         for index in indices:
-            cache : ImageCacheStruct = Config.api.get_cache().from_index(
+            cache : ImageCacheStruct = Config.api.cache.from_index(
                 index
             )
             if cache is not None and do_build:
@@ -153,7 +153,7 @@ class ImageEditorApp(tk.Frame):
                 cache.questions = test_questions_report
         # Get the cache for the image on screen if to all was set
         if to_all:
-            cache = Config.api.get_cache().from_index(Config.current_image_index)
+            cache = Config.api.cache.from_index(Config.current_image_index)
             test_questions_report = cache.questions
         # Update the current questions report
         try:

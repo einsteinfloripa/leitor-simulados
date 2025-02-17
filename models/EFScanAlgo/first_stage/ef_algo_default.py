@@ -4,10 +4,10 @@ import math
 import cv2
 
 from core.detection.base import Detection
-from core.image import Image
+from core.image import CoreImage
 from core.model import load_model
-from definitions.geometry import FloatBoundingBox, Axis, Line
-from utils.filehandler import FileHandler
+from core.definitions.geometry import FloatBoundingBox, Axis, Line
+
 
 from EFScanAlgoCore import Scanner
 from EFScanAlgoCore.ef_utils import (
@@ -49,7 +49,7 @@ def init_pipeline(scanner : Scanner, config : Config) -> None:
     )
 
 
-def detect(scanner : Scanner, img : Image) -> list[Detection]:
+def detect(scanner : Scanner, img : CoreImage) -> list[Detection]:
     
     detections = list()
     detections.extend(__get_question_blocks(scanner, img.raw))

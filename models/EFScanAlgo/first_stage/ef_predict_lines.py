@@ -4,9 +4,9 @@ import math
 import cv2
 
 from core.detection.base import Detection
-from core.image import Image
+from core.image import CoreImage
 from core.model import load_model
-from definitions.geometry import FloatBoundingBox, Axis, Line
+from core.definitions.geometry import FloatBoundingBox, Axis, Line
 
 from EFScanAlgoCore import Scanner
 from EFScanAlgoCore.ef_utils import (
@@ -54,7 +54,7 @@ def init_pipeline(scanner : Scanner, config : dict) -> None:
         }
     })
 
-def detect(scanner : Scanner, img : Image) -> list[Detection]:
+def detect(scanner : Scanner, img : CoreImage) -> list[Detection]:
     
     img_raw = img.raw
     detections = list()
@@ -193,7 +193,7 @@ def __get_cpf_blocks(scanner, img):
             CPFBlocks.append(detection)
     return CPFBlocks
 
-def filter_groups(scanner : Scanner, groups : list[Line], axis : Axis, img : Image):
+def filter_groups(scanner : Scanner, groups : list[Line], axis : Axis, img : CoreImage):
 
     def new_group(axis, at, avg_dist, dir, single=False, side_line=False):
         dist = scanner.get_test_data('v_line_spacing') if axis == Axis.HORIZONTAL else scanner.get_test_data('h_line_spacing')

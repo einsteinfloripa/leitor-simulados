@@ -1,3 +1,5 @@
+__all__ = ['Block', 'TestBlocks']
+
 from dataclasses import dataclass, field
 from core.detection import DetectionContainer, Detection
 

@@ -12,8 +12,8 @@ from abc import abstractmethod
 from functools import wraps
 from pathlib import Path
 
-from definitions import TestType
-from definitions.question import TestQuestions
+from core.definitions import TestType
+from core.definitions.question import TestQuestions
 
 from .. import Exporter, FileExtension
 
@@ -89,7 +89,7 @@ class ReportIO(Exporter):
     @classmethod
     def assert_data(cls, func):
         @wraps(func)
-        def wrapper(self, data: ReportData, fullpath: str | Path):
+        def wrapper(self, data: ReportData, fullpath: str):
             # Assert right data structure
             assert isinstance(data, ReportData), \
                 "The data must be a ReportData object"
@@ -108,7 +108,7 @@ class ReportIO(Exporter):
             assert all(isinstance(questions, TestQuestions) for questions in data.test_questions), \
                 "All test questions must be TestQuestions objects"
             # Assert right fullpath
-            assert str(fullpath).endswith(self.extension.value), \
+            assert fullpath.endswith(self.extension.value), \
                 f"The fullpath must have the extension {self.extension}"
             return func(self, data, fullpath)
         return wrapper

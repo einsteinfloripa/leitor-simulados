@@ -4,8 +4,11 @@ from typing import Type
 
 from dataclasses import dataclass
 
-from definitions import TestType
-from definitions.geometry import IntPoint
+from core.definitions import TestType
+from core.definitions.geometry import IntPoint
+
+
+# SECTION: Answer types
 
 class AlphaAnswer(Enum):
     NULL = -1
@@ -50,6 +53,9 @@ class NumericAnswer:
         self.name = "NOT_ANSWERED"
 
 
+
+# SECTION: Question class
+
 @dataclass
 class Question:
     """
@@ -63,6 +69,9 @@ class Question:
     def __repr__(self):
         return f'{self.number}: {self.answer}'
 
+
+
+# SECTION: Question container class
 
 class TestQuestions:
     """

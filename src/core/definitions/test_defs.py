@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from definitions import TestType, Subject
-from definitions.question import (
+from core.definitions import TestType, Subject
+from core.definitions.question import (
     AlphaAnswer,
     BinaryAnswer,
     NumericAnswer,

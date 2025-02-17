@@ -1,9 +1,9 @@
-from definitions.geometry import Axis, IntPoint, IntBoundingBox
-from definitions.question import Question, AlphaAnswer
+from core.definitions.geometry import Axis, IntPoint, IntBoundingBox
+from core.definitions.question import Question, AlphaAnswer
+from core.definitions.blocks import Block
 from core.detection import Detection
 
 from .base import Builder
-from .data_structs import Block
 from .tools import get_lines, get_selected_balls_index, sort_axis
 
 

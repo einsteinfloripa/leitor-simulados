@@ -7,8 +7,8 @@ from core.detection.base import Detection
 
 from api.data_structs import ImageCacheStruct
 
-from definitions.question import Question
-from definitions.geometry import IntBoundingBox, IntPoint
+from core.definitions.question import Question
+from core.definitions.geometry import IntBoundingBox, IntPoint
 
 from gui import Config, EventBus
 
@@ -196,7 +196,7 @@ class ImgCanvas(tk.Canvas):
         if cpf is None:
             return
         # Get the position of the CPF and add an offset to the right
-        cache_engine = Config.api.get_cache()
+        cache_engine = Config.api.cache
         cache : ImageCacheStruct = cache_engine.from_index(
             Config.current_image_index
         )

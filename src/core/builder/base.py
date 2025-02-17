@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from definitions.test_defs import TestType
-from definitions.question import Question
+from core.definitions.test_defs import TestType
+from core.definitions.question import Question
+from core.definitions.blocks import Block
 
-from core.builder.data_structs import Block
-
-from definitions.geometry import Axis
 from core.detection import Detection
 
 from .tools import get_lines, get_columns, get_selected_balls_index

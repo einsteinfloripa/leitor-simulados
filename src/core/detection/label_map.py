@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from definitions import Stage
+from core.definitions import Stage
 from . import Detection
 
 ## Label maps ##
