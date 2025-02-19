@@ -24,7 +24,8 @@ class PSAlunosBuilder(Builder):
             ],
             to_list = True
         )
-        block_number = (block.order * 10) + 1 # Number of the Question Block
+        order_multiplier = block.order - 1
+        block_number = (order_multiplier * 10) + 1 # Number of the Question Block
         block_report : list[Question] = []    # Stores the answers of a single block
         # Get the lines of balls
         line_balls = get_lines(ball_detections, 0.05)

@@ -1,12 +1,7 @@
-__all__ = ['PLATAFORM', 'PATH_SEPARATOR', 'Stage', 'TestType', 'Subject']
+__all__ = ['Stage', 'TestType', 'Subject']
 
 
-import platform
 from enum import Enum
-
-# Sys constants
-PLATAFORM = platform.system()
-PATH_SEPARATOR = '\\' if PLATAFORM == 'Windows' else '/'
 
 class Stage(Enum):
     NULL = 0

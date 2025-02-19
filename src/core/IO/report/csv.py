@@ -21,11 +21,7 @@ class DefaultCSV(ReportIO):
         return FileExtension.CSV
 
     @ReportIO.assert_data
-    def write(self, data: ReportData, fullpath : str) -> None:
-        
-        # Convert to Path
-        if isinstance(fullpath, Path):
-            fullpath = str(fullpath.resolve())
+    def write(self, data: ReportData, fullpath : Path) -> None:
         
         # Create header list
         header = _get_header(data.test_type)

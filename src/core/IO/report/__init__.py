@@ -64,7 +64,7 @@ class ReportIO(Exporter):
 
     ## Main abstract method ##
     @abstractmethod
-    def write(self, data_struc: ReportData, fullpath='.') -> bool:
+    def write(self, data_struc : ReportData, fullpath : Path) -> bool:
         """
         Method that must be implemented by all exporters.
         
@@ -103,10 +103,6 @@ class ReportIO(Exporter):
                 "The names list must have at least one name"
             assert len(data.names) == len(data.test_questions), \
                 "The number of names and test questions must be the same"
-            assert all(isinstance(name, str) for name in data.names), \
-                "All names must be strings"
-            assert all(isinstance(questions, TestQuestions) for questions in data.test_questions), \
-                "All test questions must be TestQuestions objects"
             # Assert right fullpath
             assert fullpath.endswith(self.extension.value), \
                 f"The fullpath must have the extension {self.extension}"

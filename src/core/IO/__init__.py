@@ -82,39 +82,40 @@ class Exporter(ABC):
     def extension(self):
         self.extension
 
-    @staticmethod
+
     def folder_export(func : callable):
         @wraps(func)
-        def wrapper(self, *args, **kwargs):
+        def wrapper(*args, **kwargs):
+
             # Get an argument or kwarg named 'fullpath'
             fullpath = None
             sig = inspect.signature(func)
             bound_args = sig.bind_partial(*args, **kwargs)
             bound_args.apply_defaults()
-            for name, value in bound_args.arguments.items():
-                if name == 'fullpath':
-                    fullpath = value
-            # Convert to Path object if it is a string
-            if isinstance(fullpath, str):
-                fullpath = Path(fullpath)
+            fullpath = bound_args.arguments.get('fullpath')
+            
             # Make the directory
             # If the directory already exists, raise an error
             fullpath.mkdir()
+            
             # Call the actual function
             try:
-                status = func(self, *args, **kwargs)
+                status = func(*args, **kwargs)
                 if not status:
                     Exporter.clear_folder(fullpath)
                     return False
             except Exception as e:
                 Exporter.clear_folder(fullpath)
+                raise e
                 return False
             return True
 
         return wrapper
 
     @staticmethod
-    def clear_folder(folder_path):
+    def clear_folder(folder_path : str | Path):
+        if isinstance(folder_path, str):
+            folder_path = Path(folder_path)
         for item in os.listdir(folder_path):
             item_path = os.path.join(folder_path, item)
             if os.path.isfile(item_path) or os.path.islink(item_path):  
@@ -128,15 +129,23 @@ class Exporter(ABC):
     def save_images(
             destination : list[str],
             images : Generator[CoreImage, None, None],
-            blocks : list[TestBlocks]
+            blockss : list[TestBlocks]
         ):
-        for dest, img, block in zip(destination, images, blocks):
-            if not os.path.exists(dest):
-                os.makedirs(dest)
-            img.import_blocks(block)
-            img.save(dest)
-            for crop in img.crops:
-                crop.save(dest)
+        for dest, img, blocks in zip(destination, images, blockss):
+            Exporter.save_image(dest, img, blocks)
+
+    @staticmethod
+    def save_image(
+            dest : str,
+            image : CoreImage,
+            blocks : TestBlocks
+        ):
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+        image.import_blocks(blocks)
+        image.save(dest)
+        for crop in image.crops:
+            crop.save(dest)
 
             
             

@@ -2,8 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import threading
 from time import sleep
-
-from core.definitions import PATH_SEPARATOR
+from pathlib import Path
 
 from core.IO import FileExtension
 
@@ -141,7 +140,7 @@ class ExportYoloPopup(tk.Toplevel):
             return
         folder_name = self.folder_name_var.get()
         save_images = self.save_images_var.get()
-        fullpath = base_folder + PATH_SEPARATOR + folder_name
+        fullpath = Path(base_folder) / folder_name
         success = Config.api.io.export_yolo(
             fullpath,
             save_images

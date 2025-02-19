@@ -1,8 +1,9 @@
+from typing import Iterator, Generator
 from dataclasses import dataclass
 from pathlib import Path
 
-from core.detection import DetectionContainer, Detection
-from core.definitions.blocks import TestBlocks, Block
+from core.definitions.blocks import TestBlocks
+from core.detection import Detection
 
 from .. import (
     Exporter,
@@ -30,17 +31,14 @@ class YOLOExporter(Exporter):
     @Exporter.folder_export
     def export(
             self,
+            fullpath : Path,
             data : DetectionsExportData,
-            fullpath : Path = ROOT_PATH,
+            imgs : list | Iterator | Generator = None
         ) -> bool:
 
         # If no data is provided, return False
-        # if len(data.names) == 0 or len(data.test_blocks) == 0:
-        #     return False
-        
-        # Check if the fullpath is a Path object and convert it if needed
-        if not isinstance(fullpath, Path):
-            fullpath = Path(fullpath)
+        if len(data.names) == 0 or len(data.test_blocks) == 0:
+            return False
 
         # Main for loop
         for name, blocks in data.zip():
@@ -84,6 +82,14 @@ class YOLOExporter(Exporter):
                     for detection in detections:
                         text += detection.to_yolo() + '\n'
                     file.write(text)
+
+        if imgs:
+            names = data.names
+            blockss = data.test_blocks
+            dest = [fullpath / name.split('.')[0] for name in names]
+            self.save_images(dest, imgs, blockss)
+
+
         return True
 
 

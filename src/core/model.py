@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 import numpy as np
+from pathlib import Path
 
 from ultralytics import YOLO
 import tflite_runtime.interpreter as tflite
@@ -9,7 +10,7 @@ import tflite_runtime.interpreter as tflite
 from core.image import CoreImage
 from core.detection.base import Detection
 
-from core.definitions import PATH_SEPARATOR, Stage
+from core.definitions import Stage
 from core.definitions.question import TestType
 from core.definitions.geometry import FloatBoundingBox
 
@@ -23,20 +24,27 @@ def load_model(model_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
     """
     Load the model from the given path
     """
+    # Convert the path to a Path object
+    model_path : Path = Path(model_path)
+    
     # Get the model type
-    parts = list(model_path.split(PATH_SEPARATOR))
+    parts = model_path.parts
     model_name = parts[-1]
+    
     # Get the type of the model and load accordingly
     model_suffix = model_name.split('.')[-1]
+    
     # Legacy model
     if model_suffix == 'tflite':
         interpreter = tflite.Interpreter(
-            model_path
+            str(model_path)
         )
         return LegacyModel(interpreter)
+    
     # EFScanAlgo model
     elif model_suffix == 'py':
         return EFScanAlgoModel(model_name, stage)
+    
     # YOLOV8 model
     elif model_suffix == 'pt':
         engine = YOLO(
@@ -154,14 +162,18 @@ class EFScanAlgoModel(DetectionModel):
     __scanner = None
     def __init__(self, name : str, stage : Stage):
         super().__init__(ModelType.EFSCANALGO)
+        
         # Set path to import dynamically
         if not self.__initialized:
             self.__init_paths()
+        
         # Import the relevant classes to initialize the model
         from EFScanAlgoCore import Scanner, Config
+        
         # Initialize static variables
         self.name = name
         self.stage = stage
+        
         # Initialize dynamic variables
         self.test = None
     
@@ -173,10 +185,11 @@ class EFScanAlgoModel(DetectionModel):
         So only when the user selects a test and run the model it is actualy initialized.
         """
         from EFScanAlgoCore import Scanner, Config
+        
         # Check if the model is trying to be initialized twice with the same test
         if self.__lazy_initialized and self.test == test:
-            # No need to initialize again
             return
+        
         # Import the relevant classes to initialize the model
         config = Config(
             model_name = self.name,
@@ -184,6 +197,7 @@ class EFScanAlgoModel(DetectionModel):
             stage = self.stage
         )
         self.__scanner = Scanner(config)
+        
         # Stores the state of the model
         self.test = test
         self.__lazy_initialized = True
@@ -195,9 +209,10 @@ class EFScanAlgoModel(DetectionModel):
 
     # Initialization function
     def __init_paths(self):
-        import sys
+        
         # Include the path to the sys tracked directories
         # ../leinor-simulados/models
         # Include path to models EFscanAlgo
+        import sys
         sys.path.append(ModelType)
         self.__initialized = True

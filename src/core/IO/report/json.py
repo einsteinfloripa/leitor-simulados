@@ -20,11 +20,7 @@ class DefaultJSON(ReportIO):
         return FileExtension.JSON
 
     @ReportIO.assert_data
-    def write(self, data: ReportData, fullpath : str) -> None:
-        
-        # fullpath must be a string
-        if isinstance(fullpath, Path):
-            fullpath = str(fullpath.resolve())
+    def write(self, data: ReportData, fullpath : Path) -> None:
 
         # Create the output dictionary
         output_dict = {'data': {}}

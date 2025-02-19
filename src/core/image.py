@@ -1,11 +1,11 @@
 # for Image.get_cropped type hinting
 from __future__ import annotations
 from typing import Generator
+from pathlib import Path
 
 import cv2
 import numpy as np
 
-from core.definitions import PATH_SEPARATOR
 from core.definitions.blocks import TestBlocks, Block
 from core.definitions.geometry import IntPoint
 from core.detection import Detection, DetectionContainer
@@ -31,17 +31,29 @@ class CoreImage():
     """
     
     @classmethod
-    def from_paths(cls, paths : list[str]) -> Generator[CoreImage, None, None]:
+    def from_paths(
+            cls,
+            paths : list[str],
+            lazy = True
+        ) -> Generator[CoreImage, None, None]:
         """
         Constructor that creates a generator of CoreImage objects from
         a list of file paths.
+
+        Parameters:
+        - paths : list[str]
+            A list of file paths.
+        - lazy : Bool
+            A flag that indicates if the images should be loaded lazily.
         """
-        for path in paths:
-            name : str = path.split("/")[-1]
-            raw : np.ndarray = cv2.imread(path)
-            detections : list[Detection] | None = None
-            yield cls(name, raw, detections)
-       
+        if lazy:
+            for path in paths:
+                name : str = path.split("/")[-1]
+                raw : np.ndarray = cv2.imread(path)
+                detections : list[Detection] | None = None
+                yield cls(name, raw, detections)
+        else:
+            return [cls.from_path(path) for path in paths]
 
     @classmethod
     def from_path(cls, path : str):
@@ -225,5 +237,6 @@ class CoreImage():
 
     ## Saving fuction ## 
 
-    def save(self, path : str) -> None:      
-        cv2.imwrite(path + PATH_SEPARATOR + self.name, self.raw)
+    def save(self, path : Path) -> None:
+        out_path = path / self.name     
+        cv2.imwrite(str(out_path), self.raw)

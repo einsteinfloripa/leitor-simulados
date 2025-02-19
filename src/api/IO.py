@@ -3,14 +3,14 @@ from typing import TYPE_CHECKING, Generator
 if TYPE_CHECKING:
     from .api import CoreApi
 
-
 from pathlib import Path
+
 import cv2
 
-from core.definitions import Stage, TestType, PATH_SEPARATOR
+from core.definitions import Stage, TestType
 from core.model import load_model
 from core.image import CoreImage
-from core.IO import Importer, FileExtension, Exporter
+from core.IO import Importer, FileExtension
 from core.IO.report import ReportIO, ReportData
 from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
 
@@ -66,7 +66,7 @@ class IOApi:
     def save_report(
             self,
             test_type : TestType,
-            fullpath : str,
+            fullpath : Path,
             exporter_name : str = "DefaultJSON",
         ):
         # Get the exporter
@@ -76,25 +76,27 @@ class IOApi:
         data : list[ImageCacheStruct] = self.core.cache.get_all()
         
         # Format the data for saving
-        formated_data : ReportData = ReportData(
-            test_type=test_type,
-        )
+        formated_data : ReportData = ReportData(test_type=test_type)
         for img_cache in data:
             if img_cache:
                 formated_data.names.append(img_cache.img_name)
                 formated_data.test_questions.append(img_cache.questions)
         
         # Call the exporter
-        exporter.write(formated_data, fullpath=fullpath)
+        exporter.write(formated_data, fullpath)
 
 
     # Detection Export
     
     def export_yolo(
             self,
-            fullpath : str,
+            fullpath : str | Path,
             save_images : bool = False
         ) -> bool:
+
+        # Check if the path is a string, if so convert it to a Path object
+        if isinstance(fullpath, str):
+            fullpath = Path(fullpath)
         
         # Get the data
         cache = self.core.cache
@@ -110,20 +112,21 @@ class IOApi:
                 formated_data.names.append(img_cache.img_name)
                 formated_data.test_blocks.append(img_cache.blocks)
 
+        # Save the images
+        if save_images:
+            imgs : Generator[CoreImage, None, None] = CoreImage.from_paths(
+                self.core.get_image_files(), lazy=True
+            )
+        else:
+            imgs = None
+
         # Call the exporter
         exporter = YOLOExporter()
-        success = exporter.export(formated_data, fullpath=fullpath)
-        
-        # Save the images if needed
-        dest = []
-        imgs : Generator[CoreImage, None, None] = CoreImage.from_paths(
-            self.core.get_image_files()
+        success = exporter.export(
+            fullpath,
+            formated_data,
+            imgs = imgs
         )
-        if success and save_images:
-            for name in formated_data.names:
-                out_folder = fullpath + PATH_SEPARATOR + name.split('.')[0]
-                dest.append(out_folder)
-        Exporter.save_images(dest, imgs, formated_data.test_blocks)
 
         return success
 
