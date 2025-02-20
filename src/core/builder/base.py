@@ -86,8 +86,6 @@ class Builder(ABC):
         ]
 
         columns = get_columns(detections, 0.02)
-        # Filter fake columns TODO: implement a better solution
-        columns = [column for column in columns if len(column) > 1]
         # If the cpf block has not 11 columns, return a invalid cpf
         if len(columns) != 11:
             return "XXXXXXXXXXX"

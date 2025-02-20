@@ -59,7 +59,7 @@ class WindowApplication(tk.Tk):
         if open:
             EventBus.publish("<<clear_img_app>>")
             Config.current_image_index = 0
-            Config.api.load_image(0)
+            Config.api.select_image(0)
             EventBus.publish("<<folder_loaded>>")
             EventBus.publish("<<center_draw_call>>")
 
@@ -91,7 +91,7 @@ class WindowApplication(tk.Tk):
             )
         else:
             index = Config.current_image_index
-            Config.api.load_image(index, do_cache=False)
+            Config.api.select_image(index, do_cache=False)
             image = Config.api.get_image()
 
             # First stage
@@ -115,7 +115,7 @@ class WindowApplication(tk.Tk):
         
         # Load the image selected again
         index = Config.current_image_index
-        Config.api.load_image(index)
+        Config.api.select_image(index)
 
         # Update the UI
         EventBus.publish("<<update_all>>")
@@ -138,7 +138,7 @@ class WindowApplication(tk.Tk):
         for i in indexes:
             if not popup.running:
                 break
-            Config.api.load_image(i, do_cache=False)
+            Config.api.select_image(i, do_cache=False)
             image = Config.api.get_image()
             # Update UI popup
             popup.update_progress(image.name, (i+1) / len(indexes) * 100)
@@ -161,7 +161,7 @@ class WindowApplication(tk.Tk):
         
         # Load the image selected again
         index = Config.current_image_index
-        Config.api.load_image(index)
+        Config.api.select_image(index)
         # Update the UI
         EventBus.publish("<<update_all>>")
         EventBus.publish("<<center_draw_call>>")

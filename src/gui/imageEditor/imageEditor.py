@@ -168,7 +168,7 @@ class ImageEditorApp(tk.Frame):
         index = Config.current_image_index
         new_index = (index + 1) % Config.api.get_number_of_images()
         # Load and set all the relevant data
-        Config.api.load_image(new_index, do_cache=False)
+        Config.api.select_image(new_index, do_cache=False)
         # Set the new index
         Config.current_image_index = new_index
         # Update all widgets and data
@@ -182,7 +182,7 @@ class ImageEditorApp(tk.Frame):
         index = Config.current_image_index
         new_index = (index - 1) % Config.api.get_number_of_images()
         # Load and set all the relevant data
-        Config.api.load_image(new_index, do_cache=False)
+        Config.api.select_image(new_index, do_cache=False)
         # Set the new index
         Config.current_image_index = new_index
         # Update the detections

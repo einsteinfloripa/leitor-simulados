@@ -21,14 +21,18 @@ class CoreApi():
         self.__image_files : list[str] = None
         self.__image : CoreImage = None
         self.__rgb_image_raw : np.ndarray = None
-        self.__number_of_images : int = None
+
+        # Helpers
         self.__cache : Cache = Cache(0)
         self.__io : IOApi = IOApi(self)
         self.__builder : BuilderApi = None
-        self.__last_builder_type : TestType = TestType.NULL
-        # Models
+
+        # Context Variables
+        self.__number_of_images : int = None
         self.__fs_model : DetectionModel = None
         self.__ss_model : DetectionModel = None
+        self.__last_builder_type : TestType = TestType.NULL
+        self.__current_selected_image : int = None
 
 
     ## IO ##   
@@ -36,7 +40,6 @@ class CoreApi():
     @property
     def io(self):
         return self.__io
-
 
     # Cache
 
@@ -98,11 +101,20 @@ class CoreApi():
 
     ## Operation Functions ##
 
-    def load_image(self, index : int, do_cache = True) -> bool:
-        if index < 0 or index >= self.__number_of_images or not self.__image_files[index]:
+    def select_image(
+            self,
+            index : int,
+            do_cache = True
+        ) -> bool:
+        
+        # Check if the index is valid
+        if index < 0 or index >= self.__number_of_images \
+            or not self.__image_files[index]:
             return False
+        
         # Load the image at the given index
         if self.__io.load_image(index):
+            
             # Cache the image if needed
             if do_cache:
                 self.__cache.cache_image(index, self.__image)
