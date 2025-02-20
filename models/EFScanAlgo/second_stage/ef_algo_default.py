@@ -2,11 +2,19 @@ from __future__ import annotations
 
 import cv2
 
-from EFScanAlgoCore import Scanner
-from EFScanAlgoCore.ef_utils import ef_get_tilt
+from core.definitions import Stage
+from core.definitions.geometry import FloatBoundingBox
 from core.detection.base import Detection
 from core.image import CoreImage
-from core.definitions.geometry import FloatBoundingBox
+
+from EFScanAlgoCore import Scanner
+from EFScanAlgoCore.ef_utils import ef_get_tilt
+
+
+# SECTION: Stage definition
+TARGET_STAGE = Stage.SECOND
+SINGLE_STAGE = True
+
 
 def detect(scanner : Scanner, img : CoreImage) -> list[Detection]:
     # Get the tilt of the image, this must use the parent img (the full img)

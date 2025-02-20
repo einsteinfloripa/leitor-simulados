@@ -17,11 +17,11 @@ class BuilderApi:
     Class responsible for the communication between the api and the core builder.
 
     Attributes:
-    - coreApi: CoreApi
+    - coreApi : CoreApi
         The core api object.
-    - test_type: TestType
+    - test_type : TestType
         The type of test that will be resolved.
-    - builder: Builder
+    - builder : Builder
         The builder object that will resolve the test.
     """
     
@@ -35,6 +35,10 @@ class BuilderApi:
         """
         This function resolves the answers of the test from the cache and
         stores the results in the cache.
+        
+        Arguments:
+        - index : int
+            The index of the cache to resolve.
         """
         # Get the cache
         cache : ImageCacheStruct | None = self.coreApi.cache.from_index(index)
@@ -49,6 +53,10 @@ class BuilderApi:
     def resolve_test(self, test_blocks : TestBlocks) -> TestQuestions:
         """
         Gives the answers of the whole test, including the CPF value.
+        
+        Arguments:
+        - test_blocks : TestBlocks
+            TestBlocks object conteining the information of the test.
         """
         # Create the report object
         report = TestQuestions.from_test_type(self.test_type)

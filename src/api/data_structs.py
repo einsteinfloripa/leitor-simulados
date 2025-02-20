@@ -26,5 +26,4 @@ class ImageCacheStruct:
     container : DetectionContainer
     blocks : TestBlocks = None
     questions : TestQuestions = None
-    crops : list[CoreImage] = None
 

@@ -61,7 +61,6 @@ class Cache:
             container,
             blocks,
             questions=None,
-            crops=crops
         )
     
     def from_index(self, index : int) -> ImageCacheStruct:

@@ -69,9 +69,9 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     # Get the relevant points for the bounding boxes
     def get_blocks(intersec, img_):
         # Get the relevant constants
-        n_boxes = scanner.get_test_data('n_boxes')
-        boxes_per_row = scanner.get_test_data('n_boxes_per_row')
-        nv = scanner.get_test_data('n_v_lines')
+        n_boxes = scanner.test_data('n_boxes')
+        boxes_per_row = scanner.test_data('n_boxes_per_row')
+        nv = scanner.test_data('n_v_lines')
         # Break condition
         bc = 2*n_boxes + (n_boxes//boxes_per_row)*nv
 
@@ -162,11 +162,11 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     h_lines = ef_unpack_groups(h_groups, Axis.HORIZONTAL)
     v_lines = ef_unpack_groups(v_groups, Axis.VERTICAL)
     # Perform consistency check
-    assert len(h_groups) == scanner.get_test_data('n_rows') + 1, "Number of rows does not match with the expected value."
-    assert len(v_groups) == scanner.get_test_data('n_boxes_per_row') + 1, "Number of boxes per row does not match with the expected value."
+    assert len(h_groups) == scanner.test_data('n_rows') + 1, "Number of rows does not match with the expected value."
+    assert len(v_groups) == scanner.test_data('n_boxes_per_row') + 1, "Number of boxes per row does not match with the expected value."
     # Perform consistency check
-    assert len(h_lines) == scanner.get_test_data('n_h_lines'), "Number of horizontal lines does not match with the expected value."
-    assert len(v_lines) == scanner.get_test_data('n_v_lines'), "Number of vertical lines does not match with the expected value."
+    assert len(h_lines) == scanner.test_data('n_h_lines'), "Number of horizontal lines does not match with the expected value."
+    assert len(v_lines) == scanner.test_data('n_v_lines'), "Number of vertical lines does not match with the expected value."
     # find the intersection of the lines
     img_h, img_w = img.shape[:2]
     intersec = []
@@ -196,7 +196,7 @@ def __get_cpf_blocks(scanner, img):
 def filter_groups(scanner : Scanner, groups : list[Line], axis : Axis, img : CoreImage):
 
     def new_group(axis, at, avg_dist, dir, single=False, side_line=False):
-        dist = scanner.get_test_data('v_line_spacing') if axis == Axis.HORIZONTAL else scanner.get_test_data('h_line_spacing')
+        dist = scanner.test_data('v_line_spacing') if axis == Axis.HORIZONTAL else scanner.test_data('h_line_spacing')
         delta = img.shape[axis.counterAxis.value] * dist * dir / 2
         to = at + avg_dist*dir
 
@@ -224,15 +224,15 @@ def filter_groups(scanner : Scanner, groups : list[Line], axis : Axis, img : Cor
         if len(group) != 2:
             return False
         img_size = img.shape[axis.value]
-        emirical_mesure = scanner.get_test_data('h_line_spacing') if axis == Axis.HORIZONTAL else scanner.get_test_data('v_line_spacing')
+        emirical_mesure = scanner.test_data('h_line_spacing') if axis == Axis.HORIZONTAL else scanner.test_data('v_line_spacing')
         dist = abs(group[0][axis.value] - group[1][axis.value])
         return dist <= round(img_size*emirical_mesure*1.25)
 
 
     if axis == Axis.HORIZONTAL:
-        avg_dist_empirical = scanner.get_test_data('h_line_spacing')/2 + scanner.get_test_data('box_height')
+        avg_dist_empirical = scanner.test_data('h_line_spacing')/2 + scanner.test_data('box_height')
     else:
-        avg_dist_empirical = scanner.get_test_data('v_line_spacing')/2 + scanner.get_test_data('box_width')
+        avg_dist_empirical = scanner.test_data('v_line_spacing')/2 + scanner.test_data('box_width')
         
 
     avg_dist = avg_dist_empirical*img.shape[axis.counterAxis.value]
@@ -249,7 +249,7 @@ def filter_groups(scanner : Scanner, groups : list[Line], axis : Axis, img : Cor
         # TODO: Add another method to find the lines
         raise Exception("Unable to find a starting line.")
 
-    m = scanner.get_test_data('n_boxes_per_row') if axis == Axis.VERTICAL else scanner.get_test_data('n_rows')
+    m = scanner.test_data('n_boxes_per_row') if axis == Axis.VERTICAL else scanner.test_data('n_rows')
     new_groups = []
     p = 0
     q = 1

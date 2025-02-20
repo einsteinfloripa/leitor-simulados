@@ -136,7 +136,6 @@ class ImageEditorApp(tk.Frame):
 
     def update_questions_answers(self, event):
         test_type = Config.selected_test_type
-        builder : BuilderApi = Config.api.get_builder(test_type)
         do_build = True if event != "<<update_all>>" else False
         to_all = event == "<<build_all_answers>>"
         if to_all:
@@ -148,6 +147,7 @@ class ImageEditorApp(tk.Frame):
                 index
             )
             if cache is not None and do_build:
+                builder : BuilderApi = Config.api.get_builder(test_type)
                 test_blocks : TestBlocks = cache.blocks
                 test_questions_report : TestQuestions = builder.resolve_test(test_blocks)
                 cache.questions = test_questions_report

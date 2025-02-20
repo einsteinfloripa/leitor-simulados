@@ -1,23 +1,24 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-
-import numpy as np
+from enum import Enum
 from pathlib import Path
 
-from ultralytics import YOLO
+import numpy as np
 import tflite_runtime.interpreter as tflite
+from ultralytics import YOLO
 
 from core.image import CoreImage
 from core.detection.base import Detection
-
 from core.definitions import Stage
 from core.definitions.question import TestType
 from core.definitions.geometry import FloatBoundingBox
-
 from core.IO import MODELS_PATH
 
 from utils.misc import normalize_image
 
+
+
+# SECTION: Load function
 
 
 def load_model(model_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
@@ -53,22 +54,36 @@ def load_model(model_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
         return YOLOModel(engine)
 
 
-class ModelType:
+
+# SECTION: Model enum and base class
+
+class ModelType(Enum):
     YOLOV8 = 'YOLOV8'
     LEGACY = 'LEGACY'
     EFSCANALGO = 'EFSCANALGO'
 
 class DetectionModel(ABC):
 
-    def __init__(self, model_type : ModelType):
+    def __init__(
+            self,
+            model_type : ModelType,
+            target_stage : Stage = Stage.NULL
+        ):
         self.model_type = model_type
+        self.target_stage = target_stage
 
     @abstractmethod
     def detect(self, img : CoreImage) -> list[Detection]:
         pass        
 
 
-### YOLOV8 MODEL ###
+
+# SECTION: Model classes
+
+
+
+# SECTION: YOLOV8 MODEL
+
 
 class YOLOModel(DetectionModel):
     def __init__(self, engine : YOLO):
@@ -94,9 +109,11 @@ class YOLOModel(DetectionModel):
             )
         return detections
 
-### LEGACY MODEL ###
 
-# CLASSES
+
+# SECTION: LEGACY MODEL
+
+
 class LegacyModel(DetectionModel):
     def __init__(self, interpreter):
         super().__init__(ModelType.LEGACY)
@@ -153,7 +170,9 @@ class LegacyModel(DetectionModel):
         return tensor
 
 
-### NON AI MODEL ###
+
+# SECTION: EFSCANALGO MODEL (NO AI)
+
 
 class EFScanAlgoModel(DetectionModel):
     
@@ -168,7 +187,7 @@ class EFScanAlgoModel(DetectionModel):
             self.__init_paths()
         
         # Import the relevant classes to initialize the model
-        from EFScanAlgoCore import Scanner, Config
+        from EFScanAlgoCore import Scanner
         
         # Initialize static variables
         self.name = name
@@ -177,6 +196,9 @@ class EFScanAlgoModel(DetectionModel):
         # Initialize dynamic variables
         self.test = None
     
+
+    ## Lazy explicit initialization ##
+    
     def init(self, test : TestType):
         """
         Explicit lazy initialization of the EFScanAlgo model, this must heppen lazily
@@ -184,35 +206,45 @@ class EFScanAlgoModel(DetectionModel):
         as the user changes the test selected.
         So only when the user selects a test and run the model it is actualy initialized.
         """
-        from EFScanAlgoCore import Scanner, Config
+        from EFScanAlgoCore import Scanner
         
         # Check if the model is trying to be initialized twice with the same test
         if self.__lazy_initialized and self.test == test:
             return
         
         # Import the relevant classes to initialize the model
-        config = Config(
-            model_name = self.name,
-            test = test,
-            stage = self.stage
+        self.__scanner = Scanner(
+            self.name,
+            test,
+            self.stage
         )
-        self.__scanner = Scanner(config)
+        
+        # Check if the models target stage is correct
+        target_stage = self.__scanner.target_stage
+        if target_stage != self.stage:
+            raise ValueError(
+                f"Model {self.name} is not compatible with stage {self.stage}"
+            )
         
         # Stores the state of the model
         self.test = test
         self.__lazy_initialized = True
         
 
+    ## Detection function ##
+
     def detect(self, img : CoreImage) -> list[Detection]:
         return self.__scanner.detect(img)
         
 
-    # Initialization function
+    # Auxiliar initialization function
+    
     def __init_paths(self):
         
         # Include the path to the sys tracked directories
         # ../leinor-simulados/models
         # Include path to models EFscanAlgo
         import sys
-        sys.path.append(ModelType)
+        if not MODELS_PATH in sys.path:
+            sys.path.append(str(MODELS_PATH.resolve()))
         self.__initialized = True

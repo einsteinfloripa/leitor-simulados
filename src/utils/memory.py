@@ -11,9 +11,9 @@ class cache_readonly_property:
         instance.__dict__[self.name] = value
         # Update the tracking list in the instance
         if not hasattr(instance, "_cached_properties"):
-            instance._cached_properties = [self.name]
+            instance._cached_properties = [self]
         else:
-            instance._cached_properties.append(self.name)
+            instance._cached_properties.append(self)
         return value
     
     def __set__(self, instance, value):
@@ -21,5 +21,4 @@ class cache_readonly_property:
     
     def invalidate(self, instance):
         """Delete the cached value."""
-        if self.name in instance.__dict__:
-            del instance.__dict__[self.name]
+        del instance.__dict__[self.name]

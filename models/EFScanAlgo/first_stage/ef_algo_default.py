@@ -3,22 +3,27 @@ from __future__ import annotations
 import math
 import cv2
 
+from core.definitions import Stage
 from core.detection.base import Detection
 from core.image import CoreImage
 from core.model import load_model
 from core.definitions.geometry import FloatBoundingBox, Axis, Line
+from core.IO import MODELS_PATH
 
-
-from EFScanAlgoCore import Scanner
+from EFScanAlgoCore.scanner import Scanner, Config
 from EFScanAlgoCore.ef_utils import (
     ef_get_tilt,
     ef_get_axis_alling_lines,
     ef_merge_lines,
     ef_group_lines
 )
-from EFScanAlgoCore.ef_defs import Config
 
-class Configs:
+# SECTION: Stage definition
+TARGET_STAGE = Stage.FIRST
+SINGLE_STAGE = True
+
+
+class DinamicParams:
     DEBUG = False
 
     def getHoughLinesParams(img):
@@ -45,7 +50,7 @@ class Configs:
 
 def init_pipeline(scanner : Scanner, config : Config) -> None:
     scanner.yolo = load_model(
-        str((FileHandler.MODELS_PATH / 'YoloV8' / 'first_stage' / 'ps.pt').resolve()),
+        str((MODELS_PATH / 'YoloV8' / 'first_stage' / 'ps.pt').resolve()),
     )
 
 
@@ -62,9 +67,9 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     # Get the relevant points for the bounding boxes
     def get_blocks(intersec, img_):
         # Get the relevant constants
-        n_boxes = scanner.get_test_data('n_boxes')
-        boxes_per_row = scanner.get_test_data('n_boxes_per_row')
-        nv = scanner.get_test_data('n_v_lines')
+        n_boxes = scanner.test_data.n_boxes
+        boxes_per_row = scanner.test_data.n_boxes_per_row
+        nv = scanner.test_data.n_v_lines
         # Break condition
         bc = 2*n_boxes + (n_boxes//boxes_per_row)*nv
 
@@ -136,7 +141,7 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     # Use Canny to detect edges
     edges = cv2.Canny(gray, 50, 200, L2gradient=True)
     # Extract the lines
-    lines = [Line(l[0]) for l in cv2.HoughLinesP(edges, *Configs.getHoughLinesParams(img))]
+    lines = [Line(l[0]) for l in cv2.HoughLinesP(edges, *DinamicParams.getHoughLinesParams(img))]
     # Get the axis alling lines
     h_lines, v_lines = ef_get_axis_alling_lines(lines, img)
     # Merge the lines
@@ -146,14 +151,14 @@ def __get_question_blocks(scanner : Scanner, img_raw):
     h_groups = ef_group_lines(h_lines, Axis.HORIZONTAL, img, const=0.05)
     v_groups = ef_group_lines(v_lines, Axis.VERTICAL, img, const=0.01)
     # Perform consistency check
-    assert len(h_groups) == scanner.get_test_data('n_rows') + 1, "Number of rows does not match with the expected value."
-    assert len(v_groups) == scanner.get_test_data('n_boxes_per_row') + 1, "Number of boxes per row does not match with the expected value."
+    assert len(h_groups) == scanner.test_data.n_rows + 1, "Number of rows does not match with the expected value."
+    assert len(v_groups) == scanner.test_data.n_boxes_per_row + 1, "Number of boxes per row does not match with the expected value."
     # Remove the outer lines
     h_lines = strip_outer_lines(h_groups, Axis.HORIZONTAL, img)
     v_lines = strip_outer_lines(v_groups, Axis.VERTICAL, img)
     # Perform consistency check
-    assert len(h_lines) == scanner.get_test_data('n_h_lines'), "Number of horizontal lines does not match with the expected value."
-    assert len(v_lines) == scanner.get_test_data('n_v_lines'), "Number of vertical lines does not match with the expected value."
+    assert len(h_lines) == scanner.test_data.n_h_lines, "Number of horizontal lines does not match with the expected value."
+    assert len(v_lines) == scanner.test_data.n_v_lines, "Number of vertical lines does not match with the expected value."
     # find the intersection of the lines
     img_h, img_w = img.shape[:2]
     intersec = []

@@ -1,91 +1,107 @@
 import importlib
 
-from core.image import Image
-from utils.log import get_new_logger
-from EFScanAlgoCore.ef_defs import (
+from core.image import CoreImage
+from core.definitions import Stage
+from core.definitions.test_defs import TestType
+
+from .ef_defs import (
     SimuenemData, 
-    SimufscData, 
+    SimufscData,
     SimulinhoData, 
     PSData
 )
 
 
 
-# SECTION: Import Config
+# SECTION: Config information
 
 from dataclasses import dataclass
 @dataclass
 class Config:
     model_name : str
-    test : str
-    stage : str
+    test_type : TestType
+    stage : Stage
 
 
 
 # SECTION: Scanner base class
 
 class Scanner:
-    
-    def get_test_data(self, key):
-        return self.__test_data.__dict__.get(key)
-    
+
 
     ## Initialization ##
 
-    def __init__(self, config : Config):
+    def __init__(
+            self,
+            model_name : str,
+            test_type : TestType,
+            stage : Stage
+        ):
+        
         # Set configs
-        self.config = config
-        # Set the logger
-        self.logger = get_new_logger(f"EFscanAlgo({config.stage})")
+        self.config = Config(
+            model_name = model_name,
+            test_type = test_type,
+            stage = stage
+        )
+        
         # Import and set the correct pipline
-        import_string = f"EFScanAlgo.{config.stage.name.lower()}_stage.{config.model_name}".strip('.py')
+        import_string = f"""EFScanAlgo.{
+                stage.name.lower()
+            }_stage.{ 
+                model_name 
+            }""".strip('.py')
+        
+        # Try to import the module
         try:
             pipeline_module = importlib.import_module(import_string)
         except ImportError:
             import sys
             print(sys.path)
             raise ImportError(f"Could not import {import_string}")
+        
+        # Try to get the needed functions and definitions
         try:
+            var = "DETECT_FUNCTION"
             self.__detect_func = getattr(pipeline_module, "detect")
+            var = "INIT_PIPELINE_FUNCTION"
             init_pipeline_func = getattr(pipeline_module, "init_pipeline", None)
+            var = "TARGET_STAGE"
+            self.target_stage = getattr(pipeline_module, "TARGET_STAGE")
+            var = "SINGLE_STAGE"
+            self.single_stage = getattr(pipeline_module, "SINGLE_STAGE")
         except AttributeError:
-            raise AttributeError(f"Could not find detect function in {import_string}")   
+            raise AttributeError(f"Could not find {var} in {import_string}")   
 
         # Get the relevant data
-        test_type = config.test.name
-        if test_type.upper() == "SIMUFSC":
-            self.__test_data = SimufscData
-        elif test_type.upper() == "SIMUENEM":
+        if test_type == TestType.SIMUFSC:
+            self.test_data = SimufscData
+        elif test_type == TestType.SIMUENEM:
             raise NotImplementedError("SIMUENEM data not implemented yet")
-            self.__test_data = SimuenemData
-        elif test_type.upper() == "SIMULINHO":
+            self.test_data = SimuenemData
+        elif test_type == TestType.SIMULINHO:
             raise NotImplementedError("SIMULINHO data not implemented yet")
-            self.__test_data = SimulinhoData
-        elif test_type.upper() == "PS":
+            self.test_data = SimulinhoData
+        elif test_type == TestType.PS_ALUNOS:
             raise NotImplementedError("PS data not implemented yet")
-            self.__test_data = PSData
+            self.test_data = PSData
         else:
             raise ValueError("Invalid test type")
         
         # Calls init_pipeline if one exists
         if init_pipeline_func is not None:
             try:
-                init_pipeline_func(self, config)
+                init_pipeline_func(self, self.config)
             except Exception as e:
                 raise ValueError(f"Error while initializing pipeline: {e}")
-        self.logger.info(f"Scanner initialized with pipeline: {config.model_name}")
             
 
     ## Main detect function ## 
 
     def detect(self, image : CoreImage):
-        self.logger.info(f"Detecting on image {image.name}")
-
         try:
             detections = self.__detect_func(self, image)
         except Exception as e:
-            self.logger.error(f"[FALIED] {image.name} - {e}")
             raise e
         
-        self.logger.info(f"[Done!]")
         return detections

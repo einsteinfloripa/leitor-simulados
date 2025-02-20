@@ -105,8 +105,8 @@ def get_question_block(scanner, img_raw, name):
     second_col = []
     min_first_col_idx = 0
     min_second_col_idx = 0
-    rows = scanner.get_test_data('qb_rows')
-    cols = scanner.get_test_data('qb_cols')
+    rows = scanner.test_data('qb_rows')
+    cols = scanner.test_data('qb_cols')
     for j in range(cols):
         low_avg = 999
         for i in range(rows):

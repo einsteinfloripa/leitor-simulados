@@ -30,12 +30,16 @@ class CoreApi():
         self.__fs_model : DetectionModel = None
         self.__ss_model : DetectionModel = None
 
-    # IO    
+
+    ## IO ##   
+
     @property
     def io(self):
         return self.__io
 
+
     # Cache
+
     @property
     def cache(self):
         return self.__cache
