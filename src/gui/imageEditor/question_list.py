@@ -5,7 +5,7 @@ from tkinter import ttk
 
 from core.definitions.question import TestQuestions, Question, NumericAnswer, AlphaAnswer
 from api.data_structs import ImageCacheStruct
-from gui import Config, EventBus, regular_font
+from gui import Config, EventBus, regular_font, semititle_font
 
 
 class _InnerPanel(tk.Frame):
@@ -27,13 +27,14 @@ class _InnerPanel(tk.Frame):
         Additional keyword arguments for tk.Frame.
     """
 
-    def __init__(self, parent, bind_index, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+    def __init__(self, parent, bind_index):
+        super().__init__(parent)
+        self.parent : tk.Frame = parent
 
         # Tkinter boilerplate for scrollable frame
         self.canvas = tk.Canvas(self)
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.inner_frame = tk.Frame(self.canvas)
+        self.inner_frame = tk.Frame(self.canvas, width=50)
 
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.pack(side="right", fill="y")
@@ -43,13 +44,21 @@ class _InnerPanel(tk.Frame):
         self.inner_frame.bind("<Configure>", self.on_frame_configure)
 
         # Data widgets configuration and API coupling
+        
+        # Create variable holders for the cpf and answers
+        self.cpf_var = tk.StringVar(value="XXXXXXXXXXX")
         self.answer_vars = {}   # Stores answer variables (tk.StringVar)
         self.input_widgets = {}  # Stores input widgets (Combobox or Entry)
 
         # API coupling: retrieve data from the cache
         self.img_data: ImageCacheStruct = Config.api.cache.from_index(bind_index)
+        self.cpf_var.set(self.img_data.questions.get_owner_cpf())
         self.test_questions: TestQuestions = self.img_data.questions
         self.questions: list[Question] = self.test_questions.get_questions()
+        
+        # Save the original answers/cpf to compare with the updated ones
+        self.original_answers = [question.answer.name for question in self.questions]
+        self.original_cpf = self.img_data.questions.get_owner_cpf()
 
         # Determine the answer type and options based on the first question
         self.answer_type = self.questions[0].answer.__class__
@@ -60,7 +69,18 @@ class _InnerPanel(tk.Frame):
             self.use_combobox = False
             self.answer_options = None
 
-        self.original_answers = [question.answer.name for question in self.questions]
+
+        # Create widget for cpf
+        tk.Label(
+            self.inner_frame,
+            text="CPF:",
+            font=semititle_font
+        ).grid(row=0, column=0, columnspan=2, padx=10, pady=5)
+        tk.Entry(
+            self.inner_frame,
+            textvariable=self.cpf_var,
+            width=11
+        ).grid(row=1, column=0, columnspan=2, padx=10, pady=5)
 
         # Create widgets for each question
         for i, question in enumerate(self.questions):
@@ -69,7 +89,7 @@ class _InnerPanel(tk.Frame):
                 self.inner_frame,
                 text=f"Q{question.number}:",
                 font=regular_font
-            ).grid(row=i, column=0, padx=10, pady=5, sticky="w")
+            ).grid(row=i+2, column=0, padx=10, pady=5)
 
             # Create StringVar for answer
             answer_var = tk.StringVar(value=question.answer.name)
@@ -81,17 +101,26 @@ class _InnerPanel(tk.Frame):
                     self.inner_frame,
                     textvariable=answer_var,
                     values=self.answer_options,
-                    state="readonly"
+                    state="readonly",
+                    width=5
                 )
                 widget.current(question.answer.value + 1)
             else:
-                widget = tk.Entry(self.inner_frame, textvariable=answer_var)
+                widget = tk.Entry(
+                    self.inner_frame,
+                    textvariable=answer_var,
+                    width=5
+                )
 
-            widget.grid(row=i, column=1, padx=10, pady=5)
+            widget.grid(row=i+2, column=1, padx=10, pady=5)
             self.input_widgets[i] = widget
 
             # Trace changes to update the corresponding question answer
             self.answer_vars[i].trace_add("write", lambda *args, idx=i: self.on_update_answer(idx, *args))
+            self.cpf_var.trace_add("write", self.on_update_cpf)
+            # Add a control variable to not update the label on every key press
+            self.pending_update = None
+
 
     def on_frame_configure(self, event=None):
         """
@@ -122,6 +151,34 @@ class _InnerPanel(tk.Frame):
         # Determine if the answer has been updated compared to the original
         update = self.original_answers[index] != updated_answer
         self.test_questions.update_answer(question, updated=update)
+
+        # Trigger a redraw of the image
+        EventBus.publish("<<draw_call>>")
+
+    def on_update_cpf(self, *args):
+        """
+        Handle updates to the CPF and propagate changes to the data cache.
+
+        Parameters
+        ----------
+        *args : tuple
+            Additional arguments passed by the trace callback.
+        """
+        if self.pending_update:
+            self.parent.after_cancel(self.pending_update)
+        self.pending_update = self.parent.after(300, self.update_label)  # Wait 300ms
+
+    def update_label(self):
+        """
+        Update the CPF label and propagate changes to the data cache.
+        """
+
+        updated_cpf = self.cpf_var.get()
+        self.test_questions.set_owner_cpf(updated_cpf)
+
+        # Determine if the CPF has been updated compared to the original
+        update = self.original_cpf != updated_cpf
+        self.test_questions.set_owner_cpf(updated_cpf, updated=update)
 
         # Trigger a redraw of the image
         EventBus.publish("<<draw_call>>")

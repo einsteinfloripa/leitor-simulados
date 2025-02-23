@@ -96,7 +96,10 @@ class TestQuestions:
             raise NotImplementedError(f'Test type {test_type} not implemented')
 
     def __init__(self, test_type : TestType, owner_cpf = "XXXXXXXXXXX"):
+        # CPF
         self._owner_student_cpf : str = owner_cpf
+        self._cpf_updated : bool = False
+        # Test variables
         self._test_type : TestType = test_type
         self._questions : list[AlphaAnswer | NumericAnswer | BinaryAnswer] = []
 
@@ -109,8 +112,9 @@ class TestQuestions:
             self._questions[question.number - 1] = question
             question.updated = updated
 
-    def set_owner_cpf(self, cpf : str) -> None:
+    def set_owner_cpf(self, cpf : str, updated=False) -> None:
         self._owner_student_cpf = cpf
+        self._cpf_updated = updated
     
     def get_owner_cpf(self) -> str:
         return self._owner_student_cpf
@@ -120,6 +124,9 @@ class TestQuestions:
     
     def get_questions(self) -> list[AlphaAnswer | NumericAnswer | BinaryAnswer]:
         return self._questions
+    
+    def get_cpf_updated(self) -> bool:
+        return self._cpf_updated
 
 
 class PsQuestions(TestQuestions):

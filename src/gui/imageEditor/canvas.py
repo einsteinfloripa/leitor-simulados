@@ -255,10 +255,12 @@ class ImgCanvas(tk.Canvas):
         scaled_x = self.offset_x + x * self.zoom_factor
         scaled_y = self.offset_y + y * self.zoom_factor
 
+        updated = cache.questions.get_cpf_updated()
+        color = "indian red" if not updated else "orange2"
         self.create_text(
             scaled_x, scaled_y,
             text=f"CPF: {cpf}",
-            fill="indian red",
+            fill=color,
             font=("Helvetica", 12, "bold")
         )
 

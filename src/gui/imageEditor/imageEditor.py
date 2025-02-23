@@ -33,7 +33,7 @@ class _FooterButtons(tk.Frame):
         self.previous_button = tk.Button(
             self,
             text="<<",
-            command=lambda: EventBus.publish("<<previous_image>>"),
+            command=lambda: EventBus.publish("<<previous_image_button_clicked>>"),
             state=tk.DISABLED
         )
         self.previous_button.grid(row=0, column=0, padx=5, pady=5)
@@ -46,7 +46,7 @@ class _FooterButtons(tk.Frame):
         self.next_button = tk.Button(
             self,
             text=">>",
-            command=lambda: EventBus.publish("<<next_image>>"),
+            command=lambda: EventBus.publish("<<next_image_button_clicked>>"),
             state=tk.DISABLED
         )
         self.next_button.grid(row=0, column=2, padx=5, pady=5)
@@ -134,8 +134,8 @@ class ImageEditorApp(tk.Frame):
             "<<build_answers>>",
             "<<build_all_answers>>"
         )
-        EventBus.subscribe(self.load_next_image, "<<next_image>>")
-        EventBus.subscribe(self.load_previous_image, "<<previous_image>>")
+        EventBus.subscribe(self.load_next_image, "<<next_image_button_clicked>>")
+        EventBus.subscribe(self.load_previous_image, "<<previous_image_button_clicked>>")
         EventBus.subscribe(self.clear, "<<clear_img_app>>")
 
     def update_detections(self, event=None):

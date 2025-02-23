@@ -78,6 +78,7 @@ class WindowApplication(tk.Tk):
             EventBus.publish("<<folder_loaded>>")
             EventBus.publish("<<center_draw_call>>")
 
+
     def apply_model(self, event: str):
         """
         Applies the selected detection model to the current image or all images.
