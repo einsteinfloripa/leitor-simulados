@@ -2,107 +2,156 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from core.definitions.test_defs import TestType
+from core.definitions.enums import TestType
 from core.definitions.question import Question
 from core.definitions.blocks import Block
-
 from core.detection import Detection
 
 from .tools import get_lines, get_columns, get_selected_balls_index
 
 class Builder(ABC):
     """
-    The base class for the builders. It shows what methods must be implemented.
+    Abstract base class for builders, defining the required methods 
+    for processing CPF and question blocks.
     """
 
-    ## Dispacher Constructor ##
-    # Imports lazily to avoid circular imports
+    ## Dispatcher Constructor ##
     @classmethod
     @abstractmethod
-    def from_test_type(cls, test_type : TestType) -> Builder:
-        if test_type == TestType.PS_ALUNOS or test_type == TestType.SIMULINHO:
+    def from_test_type(cls, test_type: TestType) -> Builder:
+        """
+        Returns the appropriate Builder subclass based on the test type.
+
+        Parameters
+        ----------
+        test_type : TestType
+            The test type used to determine the builder.
+
+        Returns
+        -------
+        Builder
+            The corresponding Builder subclass.
+
+        Raises
+        ------
+        NotImplementedError
+            If the test type is not supported.
+        """
+        if test_type in {TestType.PS_ALUNOS, TestType.SIMULINHO}:
             from core.builder.ps_alunos_builder import PSAlunosBuilder
             return PSAlunosBuilder
         else:
-            raise NotImplementedError(f'Test type {test_type} not implemented')
+            raise NotImplementedError(f"Test type {test_type} not implemented")
 
     ## Main Virtual Functions ##
     @classmethod
     @abstractmethod
-    def resolve_cpf(
-            cls,
-            cpf_block : Block,
-            *args,
-            **kwargs
-        ) -> str:
+    def resolve_cpf(cls, cpf_block: Block, *args, **kwargs) -> str:
         """
-        This funciton must be implemented and must return the detected CPF value
-        for the given cpf block.
-        
-        *if no digit was detected, it must return 'X' in the place of the digit.
+        Resolves the CPF from the given block.
+
+        If no digit is detected, it must return 'X' in place of the missing digit.
+
+        Parameters
+        ----------
+        cpf_block : Block
+            The block containing CPF-related detections.
+
+        Returns
+        -------
+        str
+            The resolved CPF as a string of 11 characters.
+
+        Raises
+        ------
+        NotImplementedError
+            Must be implemented by subclasses.
         """
         pass
 
     @classmethod
     @abstractmethod
-    def resolve_question_block(
-            cls,
-            questions_block : Block,
-            *args,
-            **kwargs
-        ) -> list[Question]:
+    def resolve_question_block(cls, questions_block: Block, *args, **kwargs) -> list[Question]:
         """
-        This function must be implemented and must return the detected questions
-        in the given block.
+        Resolves the questions detected in the given block.
+
+        Parameters
+        ----------
+        questions_block : Block
+            The block containing detected questions.
+
+        Returns
+        -------
+        list[Question]
+            A list of detected questions.
+
+        Raises
+        ------
+        NotImplementedError
+            Must be implemented by subclasses.
         """
         pass
 
-
-    ## Standert Build function ##
+    ## Standard CPF Build Function ##
     @staticmethod
-    def STANDART_BUILD_CPF_FUNCTION(
-            cpf_block : Block
-        ):
-        # Check if the block is a cpf block
-        if cpf_block.root_detection.class_type is not Detection.Type.CPF_BLOCK:
-            raise ValueError('Must be a cpf block')
-        # Get the max values of each number detection on the cpf block
-        detections = cpf_block.container.get_by_type(
-            [
-                Detection.Type.SELECTED_BALL,
-                Detection.Type.UNSELECTED_BALL
-            ],
-            to_list = True
-        )
-        lines = get_lines(detections, 0.05)
-        # If the cpf block has not 10 lines, return a invalid cpf
-        if len(lines) != 10:
-            return "XXXXXXXXXXX"
-        # Get the max values of each line (i.e. the max y value of each detection in the line)
-        max_values = [
-            max(
-                [detection.bounding_box[3] for detection in line]
-            ) for line in lines
-        ]
+    def STANDARD_BUILD_CPF_FUNCTION(cpf_block: Block) -> str:
+        """
+        Standard method to resolve a CPF from a given block.
 
+        It processes the CPF block by detecting selected/unselected balls,
+        extracting the corresponding digits, and ensuring valid formatting.
+
+        Parameters
+        ----------
+        cpf_block : Block
+            The block containing CPF-related detections.
+
+        Returns
+        -------
+        str
+            The resolved CPF as an 11-character string.
+
+        Raises
+        ------
+        ValueError
+            If the provided block is not a CPF block.
+        """
+        if cpf_block.root_detection.class_type is not Detection.Type.CPF_BLOCK:
+            raise ValueError("The provided block must be a CPF block.")
+
+        # Get all number detections within the CPF block
+        detections = cpf_block.container.get_by_type(
+            [Detection.Type.SELECTED_BALL, Detection.Type.UNSELECTED_BALL],
+            to_list=True
+        )
+
+        # Group detections into lines and columns
+        lines = get_lines(detections, 0.05)
         columns = get_columns(detections, 0.02)
-        # If the cpf block has not 11 columns, return a invalid cpf
-        if len(columns) != 11:
-            return "XXXXXXXXXXX"
-        # Build the cpf
-        cpf = ''
-        for i, column in enumerate(columns):
-            selected_balls_indeces = get_selected_balls_index(column)
-            # More than one selected ball or no selected ball
-            if len(selected_balls_indeces) != 1 or not selected_balls_indeces:
-                cpf += 'X'
+
+        # Ensure the CPF block contains the correct structure (10 lines, 11 columns)
+        if len(lines) != 10 or len(columns) != 11:
+            return "XXXXXXXXXXX"  # Invalid CPF
+
+        # Get max Y-values of each line to determine digit placement
+        max_values = [max(d.bounding_box[3] for d in line) for line in lines]
+
+        # Construct CPF by detecting selected balls in each column
+        cpf = ""
+        for column in columns:
+            selected_indices = get_selected_balls_index(column)
+
+            # If there is more than one selected ball or none, mark as 'X'
+            if len(selected_indices) != 1:
+                cpf += "X"
                 continue
-            # Get the selected ball based on y value
+
+            selected_ball = column[selected_indices[0]]
+
+            # Determine the corresponding digit by comparing Y-values
             for i, val in enumerate(max_values):
-                selected_ball : Detection = column[selected_balls_indeces[0]]
                 if selected_ball.bounding_box[3] <= val:
                     cpf += str(i)
                     break
-        
+
         return cpf
-   

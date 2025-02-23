@@ -1,3 +1,5 @@
+__all__ = ["PipelineSideBar"]
+
 import tkinter as tk
 from tkinter import filedialog
 
@@ -12,180 +14,157 @@ from gui import (
     semititle_font
 )
 
- 
- # SECTION: Pipeline Sidebar Widgets
+class _TestFrame(tk.Frame):
+    """Frame for selecting the test type."""
 
-class _testFrame(tk.Frame):
     def __init__(self, sidebar):
+        """
+        Initialize the test type selection frame.
+
+        Parameters
+        ----------
+        sidebar : tk.Frame
+            Parent sidebar frame.
+        """
         super().__init__(sidebar, border=2, relief="groove")
         self.columnconfigure(0, weight=1)
 
-        # Config vars
         self.test_name = tk.StringVar(value="PS_ALUNOS")
         self.options = ["PS_ALUNOS", "SIMULINHO", "SIMUFSC", "SIMUENEM"]
 
-        # Create bullet buttons
         self.label = tk.Label(self, text="Tipo de Prova", font=title_font)
         self.label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
         self.radio_buttons = []
         for i, option in enumerate(self.options):
             bt = tk.Radiobutton(
-                    self,
-                    text=option,  # Displayed text
-                    value=option,  # Value to store when selected
-                    variable=self.test_name,  # Shared variable
-                    command=self.set_global_test_type
+                self, text=option, value=option, variable=self.test_name, 
+                command=self.set_global_test_type
             )
             bt.grid(row=i+1, column=0, sticky="ew")
             self.radio_buttons.append(bt)
         self.radio_buttons[0].config(bg="dark sea green")
 
-
-    ## Event handlers ##
-
     def set_global_test_type(self):
+        """
+        Update the global test type in the configuration.
+        """
         test_type_str = self.test_name.get()
         Config.selected_test_type = TestType[test_type_str]
         for rb in self.radio_buttons:
-            if rb.cget("value") == test_type_str:
-                rb.config(bg="dark sea green")
-            else:
-                rb.config(bg="lightgray")
-
-    def activate_buttons(self):
-        self.load_button.config(state=tk.NORMAL)
+            rb.config(bg="dark sea green" if rb.cget("value") == test_type_str else "lightgray")
 
 
-class _modelFrame(tk.Frame):
-    def __init__(self, sidebar, modelstage : Stage = Stage.NULL, load_callback=None):
+class _ModelFrame(tk.Frame):
+    """Frame for selecting and configuring a model."""
+
+    def __init__(self, sidebar, modelstage: Stage = Stage.NULL):
+        """
+        Initialize the model selection frame.
+
+        Parameters
+        ----------
+        sidebar : tk.Frame
+            Parent sidebar frame.
+        modelstage : Stage, optional
+            Stage of the model (FIRST or SECOND), by default Stage.NULL.
+        """
         super().__init__(sidebar, border=2, relief="groove")
         self.columnconfigure(0, weight=1)
-        self.load_callback = load_callback
         self.stage = modelstage
         
-        # Config vars
-        self.model_path = tk.StringVar(value="Nao selecionado")
+        self.model_path = tk.StringVar(value="Não selecionado")
         self.score_threshold = tk.DoubleVar(value=0)
 
-        # Create widgets
-        # Top label
         text = "Primeiro Estágio" if modelstage == Stage.FIRST else "Segundo Estágio"
-        self.label = tk.Label(self, text=text, font=semititle_font)
-        self.label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        # Row 1 - Model selection
+        tk.Label(self, text=text, font=semititle_font).grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        
         top_frame = tk.Frame(self, border=2, relief="groove")
         top_frame.columnconfigure(0, weight=1)
-        # Button
-        self.load_button = tk.Button(top_frame, text="Select Model", command=self.load_model)
-        self.load_button.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        # Model Name Label
-        self.model_path_label = tk.Label(
-            top_frame,
-            textvariable=self.model_path,
-            wraplength=200,
-            fg="gray",
-        )
+        tk.Button(top_frame, text="Select Model", command=self.load_model).grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.model_path_label = tk.Label(top_frame, textvariable=self.model_path, wraplength=200, fg="gray")
         self.model_path_label.grid(row=1, column=0, sticky="nsew")
         top_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
-        # Row 2 - Config widgets
-        # Score Threshold input
+        
         self.score_threshold_frame = tk.Frame(self, border=2, relief="groove")
         self.score_threshold_frame.columnconfigure(0, weight=1)
         self.score_threshold_frame.grid(row=2, column=0, padx=5, sticky="nsew")
-        # Label
-        self.score_threshold_label = tk.Label(
-            self.score_threshold_frame, text="Score Threshold", fg="gray"
-        )
+        
+        self.score_threshold_label = tk.Label(self.score_threshold_frame, text="Score Threshold", fg="gray")
         self.score_threshold_label.grid(row=0, column=0, sticky="nsew")
-        # Scale
         self.score_threshold_scale = tk.Scale(
-            self.score_threshold_frame,
-            from_=0,
-            to=1,
-            resolution=0.01,
-            orient=tk.HORIZONTAL,
-            variable=self.score_threshold,
-            state=tk.DISABLED
+            self.score_threshold_frame, from_=0, to=1, resolution=0.01, orient=tk.HORIZONTAL, 
+            variable=self.score_threshold, state=tk.DISABLED
         )
         self.score_threshold_scale.grid(row=1, column=0, sticky="nsew")
-
-
+    
     def load_model(self):
-        model_path = filedialog.askopenfilename(
-            filetypes=[("Model files", "*.py *.pt *.tflite")],
-            initialdir=MODELS_PATH
-        )
+        """
+        Open file dialog to select and load a model.
+        """
+        model_path = filedialog.askopenfilename(filetypes=[("Model files", "*.py *.pt *.tflite")], initialdir=MODELS_PATH)
         if not model_path:
             return
-        # Get the relative path
         self.model_path.set(model_path)
-        # Try to load the model to context
-        loaded = Config.api.io.load_model(
-            model_path, stage=self.stage
-        )
+        loaded = Config.api.io.load_model(model_path, stage=self.stage)
         self.__activate_panel()
-        if loaded:
-            self.__model_success_status()
-        else:
-            self.__model_error_status()
-
-
-    ## Getters && Setters ##
-
+        self.__model_success_status() if loaded else self.__model_error_status()
+    
     def get_info(self):
+        """
+        Get model configuration.
 
-        return {
-            "model_path": self.model_path.get(),
-            "st": self.score_threshold.get(),
-        }
-
-
-    ## Internal event handlers ##
-
+        Returns
+        -------
+        dict
+            Dictionary containing model path and score threshold.
+        """
+        return {"model_path": self.model_path.get(), "st": self.score_threshold.get()}
+    
     def __activate_panel(self):
-        # Activate the buttons
+        """
+        Activate the panel for model configuration.
+        """
         self.score_threshold_scale.config(state=tk.NORMAL)
-        # Activate the labels
         self.model_path_label.config(fg="black")
         self.score_threshold_label.config(fg="black")
         self.score_threshold.set(0.5)
-
+    
     def __model_success_status(self):
+        """
+        Indicate successful model loading.
+        """
         self.model_path_label.config(bg="dark sea green")
-
+    
     def __model_error_status(self):
+        """
+        Indicate model loading failure.
+        """
         self.model_path_label.config(bg="indian red")
 
 
-
-# SECTION: Pipeline Sidebar Main Widget
-
 class PipelineSideBar(tk.Frame):
-    
+    """Sidebar for configuring the test pipeline."""
+
     def __init__(self, root):
+        """
+        Initialize the pipeline sidebar.
+
+        Parameters
+        ----------
+        root : tk.Tk
+            Root application window.
+        """
         super().__init__(root)
         self.columnconfigure(0, weight=1)
 
-        # Save the parent reference
-        self.root = root
-
-        # Create widgets
-        # Test selection Frame
-        self.test_frame = _testFrame(self)
+        self.test_frame = _TestFrame(self)
         self.test_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
-        # Pipeline label
-        tk.Label(self, text="Pipeline", font=title_font, bg='light salmon').grid(
-            row=1, column=0, padx=5, pady=5, sticky="nsew"
-        )
-
-        # First Stage Model
-        self.first_stage = _modelFrame(self, Stage.FIRST, None)
+        tk.Label(self, text="Pipeline", font=title_font, bg='light salmon').grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        self.first_stage = _ModelFrame(self, Stage.FIRST)
         self.first_stage.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
-
-        # Second Stage Model
-        self.second_stage = _modelFrame(self, Stage.SECOND, None)
+        self.second_stage = _ModelFrame(self, Stage.SECOND)
         self.second_stage.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
         # Apply button
@@ -209,10 +188,7 @@ class PipelineSideBar(tk.Frame):
 
         # Subscribe to events
         EventBus.subscribe(self.on_folder_loaded, "<<folder_loaded>>")
-
-
-    ## Getters && Setters ##
-
+    
     def get_pipeline(self):
         test = Config.selected_test_type
         fs = self.first_stage.get_info()

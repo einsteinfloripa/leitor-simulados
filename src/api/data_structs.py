@@ -1,29 +1,28 @@
 from dataclasses import dataclass
+from typing import Optional
 
-from core.image import CoreImage
 from core.detection import DetectionContainer
 from core.definitions.blocks import TestBlocks
 from core.definitions.question import TestQuestions
 
-
 @dataclass
 class ImageCacheStruct:
     """
-    Data structure to store imformation about an image.
+    Data structure to store information about an image and its related detections.
 
-    Attributes:
-
-    - img_name : str
-        Name of the image.
-    - container : DetectionContainer
-        Helper container to store the detections.
-    - blocks : TestBlocks
-        A First stage detection and the second stage detection inside of it.
-    - questions : TestQuestions
-        The questions and answers and the cpf of the owner of the image.
-    """
+    Parameters
+    ----------
     img_name : str
+        The name of the image.
     container : DetectionContainer
-    blocks : TestBlocks = None
-    questions : TestQuestions = None
+        A container that holds detected objects or regions within the image.
+    blocks : Optional[TestBlocks], default=None
+        The first-stage detection results, along with second-stage detections inside it.
+    questions : Optional[TestQuestions], default=None
+        The extracted questions, answers, and CPF (identification number) of the image owner.
+    """
 
+    img_name: str
+    container: DetectionContainer
+    blocks: Optional[TestBlocks] = None
+    questions: Optional[TestQuestions] = None

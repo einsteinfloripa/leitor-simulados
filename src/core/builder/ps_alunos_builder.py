@@ -8,84 +8,117 @@ from .tools import get_lines, get_selected_balls_index, sort_axis
 
 
 class PSAlunosBuilder(Builder):
-    # Map to convert the index of the selected ball to a letter
+    """
+    Builder class for processing PSAlunos question blocks.
+    """
 
     @classmethod
-    def resolve_cpf(cls, block : Block) -> str:
-        return cls.STANDART_BUILD_CPF_FUNCTION(block)
+    def resolve_cpf(cls, block: Block) -> str:
+        """
+        Resolves the CPF from the given block using a standard build CPF function.
+
+        Parameters
+        ----------
+        block : Block
+            The block from which to extract the CPF.
+
+        Returns
+        -------
+        str
+            The resolved CPF string.
+        """
+        return cls.STANDARD_BUILD_CPF_FUNCTION(block)
 
     @classmethod
-    def resolve_question_block(cls, block : Block) -> list[Question]:        
-        # Set variables
+    def resolve_question_block(cls, block: Block) -> list[Question]:
+        """
+        Processes a question block and generates a list of Question objects representing
+        each question's selected answer.
+
+        This method extracts ball detections from the block container, groups them into lines,
+        sorts the balls in each line, and determines the selected answer based on the index
+        of the selected ball. It also handles cases where the line is incomplete or has multiple
+        selected balls.
+
+        Parameters
+        ----------
+        block : Block
+            The block containing ball detections for a set of questions.
+
+        Returns
+        -------
+        list[Question]
+            A list of Question objects with question numbers, answers, and position points.
+        """
+        # Extract ball detections for both selected and unselected balls
         ball_detections = block.container.get_by_type(
             [
                 Detection.Type.SELECTED_BALL,
                 Detection.Type.UNSELECTED_BALL
             ],
-            to_list = True
+            to_list=True
         )
+
         order_multiplier = block.order - 1
-        block_number = (order_multiplier * 10) + 1 # Number of the Question Block
-        block_report : list[Question] = []    # Stores the answers of a single block
-        # Get the lines of balls
+        block_number = (order_multiplier * 10) + 1  # First question number in this block
+        block_report: list[Question] = []  # List to store processed questions
+
+        # Group ball detections into lines (rows)
         line_balls = get_lines(ball_detections, 0.05)
-        # TODO:Soluçao fraca, se tiver tempo implementar uma melhor
-        # Remove a primeira linha no caso de uma letra ser confundida com um número
-        if len( line_balls[0] ) < 3:
+
+        # Remove the first line if it is likely to be a letter mistaken for a number
+        if line_balls and len(line_balls[0]) < 3:
             line_balls.pop(0)
-        # Iterate over the lines and get the selected ball
-        cont = 0
-        while cont < 10:
-            # Get the number of the question to be analized
-            question_number = block_number + cont
-            # Sort the balls in the line by the x axis
-            line = sort_axis(line_balls[cont], Axis.HORIZONTAL)
-            # Stores the position of the last ball
+
+        # Process each question line (expected 10 questions per block)
+        for i in range(10):
+            question_number = block_number + i
+            line = sort_axis(line_balls[i], Axis.HORIZONTAL)
+
+            # Initialize the location of the last ball's northeast point
             last_ball_ne_point = None
             if len(line) == 5:
-                last_ball : Detection = line[-1]
-                global_pixels : IntBoundingBox = last_ball.to_global_pixels()
-                # Add offset so is not on top of the ball detections
+                last_ball: Detection = line[-1]
+                global_pixels: IntBoundingBox = last_ball.to_global_pixels()
                 offset_x = last_ball.pixel_width
                 offset_y = last_ball.pixel_height // 2
                 last_ball_ne_point = IntPoint(
                     global_pixels.p_max.x + offset_x,
                     global_pixels.p_min.y + offset_y
                 )
-            # Get the index of the selected ball
+
+            # Get indexes of selected balls in the current line
             answer_index = get_selected_balls_index(line)
-            # If the line has not 5 balls, or there are more the one selected ball
+
+            # Check for invalid cases: incomplete line or multiple selections
             if len(line) != 5 or len(answer_index) > 1:
                 block_report.append(
                     Question(
                         question_number,
                         AlphaAnswer.NULL,
                         last_ball_ne_point
-                        )
                     )
-                cont += 1
+                )
                 continue
-            # Check if there is not selected ball but the line has 5 balls
+
+            # Check for the case when no ball is selected
             if not answer_index and len(line) == 5:
                 block_report.append(
                     Question(
-                            question_number,
-                            AlphaAnswer.NOT_ANSWERED,
-                            last_ball_ne_point
-                        )
-                    )
-                cont += 1
-                continue
-
-            # Calculate the answer with the balls position
-            block_report.append(
-                Question(
                         question_number,
-                        AlphaAnswer(answer_index[0] + 1),
+                        AlphaAnswer.NOT_ANSWERED,
                         last_ball_ne_point
                     )
                 )
-            cont += 1
-        # Return the block report
-        return block_report
+                continue
 
+            # Otherwise, calculate the answer based on the selected ball index
+            block_report.append(
+                Question(
+                    question_number,
+                    AlphaAnswer(answer_index[0] + 1),
+                    last_ball_ne_point
+                )
+            )
+
+        return block_report

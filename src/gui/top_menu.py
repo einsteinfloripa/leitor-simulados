@@ -5,7 +5,22 @@ from . import EventBus
 from .popups import SaveAsPopup, ExportYoloPopup
 
 class TopMenu(tk.Menu):
+    """Represents the top menu bar in the GUI.
+    
+    Attributes
+    ----------
+    root : tk.Tk
+        The root Tkinter window.
+    """
+    
     def __init__(self, root):
+        """Initializes the top menu bar with different menu options.
+        
+        Parameters
+        ----------
+        root : tk.Tk
+            The root Tkinter window.
+        """
         super().__init__(root, bg="lightblue")
         self.root = root
 
@@ -13,8 +28,8 @@ class TopMenu(tk.Menu):
         menu_arquivo = Menu(self, tearoff=0)
         menu_arquivo.add_command(label="Abrir Pasta", command=self.open_folder)
         menu_arquivo.add_command(
-            label="Salvar respostas", command=self.sabe_report
-            )
+            label="Salvar respostas", command=self.save_report
+        )
         self.add_cascade(label="Arquivo", menu=menu_arquivo)
 
         # Menu Ferramentas
@@ -31,14 +46,15 @@ class TopMenu(tk.Menu):
         self.add_cascade(label="Detecções", menu=menu_deteccoes)
 
     def open_folder(self):
+        """Opens a folder selection dialog and publishes the selected folder path."""
         file = filedialog.askdirectory()
         if file:
             EventBus.publish("<<open_folder>>", file)
     
-    def sabe_report(self):
+    def save_report(self):
+        """Opens the 'Save As' popup to allow the user to save a report."""
         SaveAsPopup(self.root)
 
-    
     def export_yolo(self):
-        # Iterate over all images
+        """Opens the 'Export YOLO' popup for exporting image detections."""
         ExportYoloPopup(self.root)

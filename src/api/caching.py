@@ -1,70 +1,84 @@
 from core.image import CoreImage
 from core.definitions.blocks import TestBlocks
 from core.detection import DetectionContainer
-
 from api.data_structs import ImageCacheStruct
-
-
-
-# SECTION: Cache engine
+from typing import List, Optional
 
 class Cache:
     """
-    Cache class is used to store the data of the images in the memory.
+    A cache engine for storing image-related data in memory.
 
-    Attributes:
-    - __data : list[ImageCacheStruct | None]
-        A list with the base caching unit/object or none.
+    Attributes
+    ----------
+    __data : List[Optional[ImageCacheStruct]]
+        A list storing cached image data or None if not yet cached.
     """
 
-    def __init__(self, number_of_images : int):
+    def __init__(self, number_of_images: int):
         """
-        Constructor that initializes the cache with a given number of images.
-        
-        Attributes:
-        - number_of_images : int
+        Initializes the cache with a given number of image slots.
+
+        Parameters
+        ----------
+        number_of_images : int
             The number of images to be cached.
         """
-        self.__data : list[ImageCacheStruct | None] = [None] * number_of_images
+        self.__data: List[Optional[ImageCacheStruct]] = [None] * number_of_images
 
-
-
-    # SECTION: Cache operations 
-
-    def cache_image(self, index : int, image : CoreImage):
+    def cache_image(self, index: int, image: CoreImage):
         """
-        Contructs the data structures for the image and saves it in the cache
-        on the given index.
+        Constructs the data structures for the given image and stores them in the cache at the specified index.
 
-        Attributes:
-        - index : int
-            The index of the image in the cache.
-        - image : CoreImage
+        Parameters
+        ----------
+        index : int
+            The index in the cache where the image data will be stored.
+        image : CoreImage
             The image to be cached.
         """
         detections = image.detections
         if not detections:
             return
-        
-        # Get all the detections in the image
-        crops = image.crops
-        for crop in crops:
+
+        # Gather all detections, including those in cropped regions
+        for crop in image.crops:
             detections.extend(crop.detections)
         container = DetectionContainer(detections)
-        
+
         # Build blocks structure
-        blocks : TestBlocks = image.to_block()
-        
-        # Save the data
+        blocks: TestBlocks = image.to_block()
+
+        # Save the structured data in cache
         self.__data[index] = ImageCacheStruct(
             image.name,
             container,
             blocks,
             questions=None,
         )
-    
-    def from_index(self, index : int) -> ImageCacheStruct:
+
+    def from_index(self, index: int) -> Optional[ImageCacheStruct]:
+        """
+        Retrieves the cached data at the given index.
+
+        Parameters
+        ----------
+        index : int
+            The index in the cache.
+
+        Returns
+        -------
+        Optional[ImageCacheStruct]
+            The cached image data if available, otherwise None.
+        """
         return self.__data[index]
 
-    def get_all(self) -> list[ImageCacheStruct | None]:
+    def get_all(self) -> List[Optional[ImageCacheStruct]]:
+        """
+        Retrieves all cached image data.
+
+        Returns
+        -------
+        List[Optional[ImageCacheStruct]]
+            A list of all cached image data, where each entry may be None if not yet cached.
+        """
         return self.__data

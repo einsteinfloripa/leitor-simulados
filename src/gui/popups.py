@@ -5,63 +5,59 @@ from time import sleep
 from pathlib import Path
 
 from core.IO import FileExtension
-
-from gui import (
-    Config,
-    semititle_font
-)
-
-
-# SECTION: Time popups
+from gui import Config, semititle_font
 
 class TimeBombPopup(tk.Toplevel):
+    """
+    A temporary popup window that auto-closes after a set timer.
 
-    def __init__(
-            self,
-            root,
-            parent,
-            title,
-            message,
-            timer=3,
-            destroy_parent=False
-        ):
+    Parameters
+    ----------
+    root : tk.Tk
+        The root application window.
+    parent : tk.Widget
+        The parent widget that created this popup.
+    title : str
+        Title of the popup window.
+    message : str
+        Message to display in the popup.
+    timer : int, optional
+        Time (in seconds) before the popup auto-closes (default is 3 seconds).
+    destroy_parent : bool, optional
+        Whether to destroy the parent widget upon closing (default is False).
+    """
+    def __init__(self, root, parent, title, message, timer=3, destroy_parent=False):
         super().__init__(root)
         self.title(title)
         self.destroy_parent = destroy_parent
         self.timer = timer
         self.parent = parent
         self.root = root
-        self.title("Success")
         self.geometry("200x100")
         self.resizable(False, False)
         self.transient(parent)
         self.grab_set()
 
-        # Label
         tk.Label(self, text=message).pack(pady=10)
-
-        # Confirm button
-        tk.Button(
-            self,
-            text="OK",
-            command=self.destroy
-        ).pack(pady=10)
-
-        # Start the timer
-        self.after(timer*1000, self.destroy)
-
+        tk.Button(self, text="OK", command=self.destroy).pack(pady=10)
+        self.after(timer * 1000, self.destroy)
 
     def destroy(self):
+        """Closes the popup and optionally destroys the parent widget."""
         super().destroy()
         if self.destroy_parent:
             self.parent.destroy()
 
 
-
-
-# SECTION: Export popup
-
 class ExportYoloPopup(tk.Toplevel):
+    """
+    A popup window to configure and export YOLO-formatted data.
+
+    Parameters
+    ----------
+    root : tk.Tk
+        The root application window.
+    """
     def __init__(self, root):
         super().__init__(root)
         self.root = root
@@ -71,206 +67,127 @@ class ExportYoloPopup(tk.Toplevel):
         self.transient(root)
         self.grab_set()
         
-        # Label
-        tk.Label(
-            self,
-            text="Selecione a pasta de destino:",
-            font=semititle_font
-        ).grid(row=0, column=0, columnspan=2, pady=5)
-
-        # Label to show the selected folder
-        self.base_folder_var = tk.StringVar()
-        self.base_folder_var.set("Nenhuma pasta selecionada")
+        tk.Label(self, text="Selecione a pasta de destino:", font=semititle_font).grid(row=0, column=0, columnspan=2, pady=5)
+        
+        self.base_folder_var = tk.StringVar(value="Nenhuma pasta selecionada")
         self.folder_label = tk.Label(self, textvariable=self.base_folder_var)
         self.folder_label.grid(row=1, column=0, columnspan=2, pady=5)
-
-        # Button
-        tk.Button(
-            self,
-            text="Procurar",
-            command=self.select_base_folder
-        ).grid(row=2, column=0, pady=5, padx=5)
-
-        # Save images checkbox
+        
+        tk.Button(self, text="Procurar", command=self.select_base_folder).grid(row=2, column=0, pady=5, padx=5)
+        
         self.save_images_var = tk.BooleanVar(value=False)
-        tk.Checkbutton(
-            self,
-            text="Salvar imagens",
-            variable=self.save_images_var
-        ).grid(row=2, column=1, pady=5, padx=5)
-
-        # Folder name label
-        tk.Label(
-            self,
-            text="Nome da pasta:",
-            font=semititle_font
-        ).grid(row=3, column=0, pady=5, padx=5)
-
-        # Entry for folder name
-        self.folder_name_var = tk.StringVar()
-        self.folder_name_var.set("detections")
-        tk.Entry(
-            self,
-            textvariable=self.folder_name_var
-        ).grid(row=3, column=1, pady=5, padx=5)
-
-
-        # Confirm button
-        tk.Button(
-            self,
-            text="Exportar",
-            command=self.export_yolo,
-            width=25
-        ).grid(row=4, columnspan=2, column=0, pady=5)
-
-
+        tk.Checkbutton(self, text="Salvar imagens", variable=self.save_images_var).grid(row=2, column=1, pady=5, padx=5)
+        
+        tk.Label(self, text="Nome da pasta:", font=semititle_font).grid(row=3, column=0, pady=5, padx=5)
+        
+        self.folder_name_var = tk.StringVar(value="detections")
+        tk.Entry(self, textvariable=self.folder_name_var).grid(row=3, column=1, pady=5, padx=5)
+        
+        tk.Button(self, text="Exportar", command=self.export_yolo, width=25).grid(row=4, columnspan=2, column=0, pady=5)
 
     def select_base_folder(self):
-        """ Opens file dialog and saves data in the selected format. """
+        """Opens a file dialog to select the base folder for export."""
         base_folder = filedialog.askdirectory()
-        if not base_folder:
-            self.base_folder_var.set("Nenhuma pasta selecionada")
-            return
-        self.base_folder_var.set(base_folder)
+        self.base_folder_var.set(base_folder or "Nenhuma pasta selecionada")
 
     def export_yolo(self):
-        """ Opens file dialog and saves data in the selected format. """
+        """Exports data in YOLO format to the selected directory."""
         base_folder = self.base_folder_var.get()
         if base_folder == "Nenhuma pasta selecionada":
             return
         folder_name = self.folder_name_var.get()
         save_images = self.save_images_var.get()
         fullpath = Path(base_folder) / folder_name
-        success = Config.api.io.export_yolo(
-            fullpath,
-            save_images
-        )
-        if success:
-            TimeBombPopup(
-                self.root,
-                self,
-                "Success",
-                message="Success!",
-                destroy_parent=True
-            )
-        else:
-            TimeBombPopup(
-                self.root,
-                self,
-                "Error",
-                message="Erro ao exportar",
-                destroy_parent=False
-            )
-
+        success = Config.api.io.export_yolo(fullpath, save_images)
         
-    
+        TimeBombPopup(self.root, self, "Success" if success else "Error", "Success!" if success else "Erro ao exportar", destroy_parent=success)
 
-
-# SECTION: Save as popup
 
 class SaveAsPopup(tk.Toplevel):
+    """
+    A popup window for selecting a file format and saving a report.
+
+    Parameters
+    ----------
+    root : tk.Tk
+        The root application window.
+    """
     def __init__(self, root):
         super().__init__(root)
         self.root = root
         self.title("Choose Save Format")
         self.geometry("300x150")
-        self.transient(root)  # Makes it modal
-        self.grab_set()  # Disable interactions with main window
-        # Label
+        self.transient(root)
+        self.grab_set()
+        
         tk.Label(self, text="Select File Format:").pack(pady=5)
-        # Combobox
-        # Get the available formats from the API
-        # list[(export style name, export extension)]
-        self.formats_dict : dict[str, FileExtension] = \
-              Config.api.io.get_report_output_formats()
+        
+        self.formats_dict = Config.api.io.get_report_output_formats()
         formats = list(self.formats_dict.keys())
-        # Create the combobox
+        
         self.format_type_var = tk.StringVar(value=formats[0])
-        format_menu = ttk.Combobox(
-            self,
-            textvariable=self.format_type_var,
-            values=formats,
-            state="readonly"
-        )
+        format_menu = ttk.Combobox(self, textvariable=self.format_type_var, values=formats, state="readonly")
         format_menu.pack(pady=5)
-        # Confirm button
-        tk.Button(
-            self,
-            text="Procurar",
-            command=self.save_as
-        ).pack(pady=10)
+        
+        tk.Button(self, text="Procurar", command=self.save_as).pack(pady=10)
 
     def save_as(self):
-        """ Opens file dialog and saves data in the selected format. """
-        exporter_name : str = self.format_type_var.get()
-        format : FileExtension = self.formats_dict[exporter_name]
-        filetypes = [
-            (exporter_name, '*' + format.value)
-        ]
-        fullpaht = filedialog.asksaveasfilename(
-            defaultextension="", filetypes=filetypes
-        )
-
-        if not fullpaht:
-            return
-              
-        Config.api.io.save_report(
-            Config.selected_test_type,
-            fullpaht,
-            exporter_name
-        )
+        """Opens a file dialog and saves the report in the selected format."""
+        exporter_name = self.format_type_var.get()
+        format_ext = self.formats_dict[exporter_name]
+        filetypes = [(exporter_name, '*' + format_ext.value)]
+        fullpath = filedialog.asksaveasfilename(defaultextension="", filetypes=filetypes)
         
+        if fullpath:
+            Config.api.io.save_report(Config.selected_test_type, fullpath, exporter_name)
 
-
-# SECTION: Progress popup
 
 class ProgressPopup(tk.Toplevel):
-    def __init__(self, root, thread_fuction, thread_args):
+    """
+    A popup window displaying a progress bar for long-running tasks.
+
+    Parameters
+    ----------
+    root : tk.Tk
+        The root application window.
+    thread_function : callable
+        The function to execute in a separate thread.
+    thread_args : list
+        Arguments to pass to the thread function.
+    """
+    def __init__(self, root, thread_function, thread_args):
         super().__init__(root)
         self.root = root
         self.title("Aplicando pipeline")
         self.geometry("300x100")
         self.resizable(False, False)
-
-        # Disable main window interactions
-        self.transient(self.root)  # Keeps popup on top
-        self.grab_set()  # Freezes main window
-
-        # Label inside popup
+        
+        self.transient(self.root)
+        self.grab_set()
+        
         self.label = tk.Label(self, text="Aplicando pipeline...")
         self.label.pack(pady=10)
-
-        # Label to show progress percentage
+        
         self.progress_label = tk.Label(self, text="0%")
         self.progress_label.pack()
-
-        # Progress bar
+        
         self.progress = ttk.Progressbar(self, orient="horizontal", length=300, mode="determinate")
         self.progress.pack()
-
-        # Handle popup closing
+        
         self.running = True
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-
-        # Start the long operation in a separate thread
+        
         thread_args.insert(0, self)
-        self.thread = threading.Thread(
-            target=thread_fuction, args=thread_args, daemon=True
-        )
+        self.thread = threading.Thread(target=thread_function, args=thread_args, daemon=True)
         self.thread.start()
 
-
-
     def update_progress(self, img_name, value):
-        if not self.running and not self.winfo_exists():
-            return
         """Updates the progress bar safely from the main thread."""
         self.progress["value"] = value
-        self.progress_label["text"] = f"{value:2f}%"
+        self.progress_label["text"] = f"{value:.2f}%"
         self.label["text"] = img_name
-        if value == 100:
-            self.progress_label["text"] = "Done!"
 
     def on_close(self):
+        """Handles the popup closing event."""
         self.running = False
         self.destroy()
