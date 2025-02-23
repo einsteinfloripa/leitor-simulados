@@ -34,7 +34,8 @@ class _InnerPanel(tk.Frame):
         # Tkinter boilerplate for scrollable frame
         self.canvas = tk.Canvas(self)
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.inner_frame = tk.Frame(self.canvas, width=50)
+        self.inner_frame = tk.Frame(self.canvas)
+        self.inner_frame.columnconfigure(0, minsize=80)
 
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.pack(side="right", fill="y")
@@ -42,6 +43,7 @@ class _InnerPanel(tk.Frame):
 
         self.inner_window = self.canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
         self.inner_frame.bind("<Configure>", self.on_frame_configure)
+
 
         # Data widgets configuration and API coupling
         
@@ -71,15 +73,22 @@ class _InnerPanel(tk.Frame):
 
 
         # Create widget for cpf
+        def validate_entry(new_value):
+            return (
+                (new_value.isdigit() or new_value == '') 
+                and len(new_value) <= 11
+            )
         tk.Label(
             self.inner_frame,
-            text="CPF:",
+            text="CPF",
             font=semititle_font
         ).grid(row=0, column=0, columnspan=2, padx=10, pady=5)
         tk.Entry(
             self.inner_frame,
             textvariable=self.cpf_var,
-            width=11
+            width=11,
+            validate="key",
+            validatecommand=(self.register(validate_entry), "%P")
         ).grid(row=1, column=0, columnspan=2, padx=10, pady=5)
 
         # Create widgets for each question
@@ -102,14 +111,14 @@ class _InnerPanel(tk.Frame):
                     textvariable=answer_var,
                     values=self.answer_options,
                     state="readonly",
-                    width=5
+                    width=8
                 )
                 widget.current(question.answer.value + 1)
             else:
                 widget = tk.Entry(
                     self.inner_frame,
                     textvariable=answer_var,
-                    width=5
+                    width=8
                 )
 
             widget.grid(row=i+2, column=1, padx=10, pady=5)
