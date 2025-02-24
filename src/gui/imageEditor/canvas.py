@@ -8,6 +8,7 @@ from core.definitions.question import Question
 from core.definitions.geometry import IntBoundingBox, IntPoint
 from gui import Config, EventBus
 
+# TODO: Change fonts
 
 class _ZoomButtons(tk.Frame):
     """

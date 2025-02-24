@@ -71,7 +71,7 @@ class WindowApplication(tk.Tk):
         path : str
             The path to the folder containing images.
         """
-        if Config.api.io.open_folder(path):
+        if Config.api.open_folder(path, Config.selected_test_type):
             EventBus.publish("<<clear_img_app>>")
             Config.current_image_index = 0
             Config.api.select_image(0)

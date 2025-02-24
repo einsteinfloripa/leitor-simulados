@@ -31,6 +31,7 @@ class _TestFrame(tk.Frame):
 
         self.test_name = tk.StringVar(value="PS_ALUNOS")
         self.options = ["PS_ALUNOS", "SIMULINHO", "SIMUFSC", "SIMUENEM"]
+        self.locked = False
 
         self.label = tk.Label(self, text="Tipo de Prova", font=title_font)
         self.label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
@@ -39,21 +40,21 @@ class _TestFrame(tk.Frame):
         for i, option in enumerate(self.options):
             bt = tk.Radiobutton(
                 self, text=option, value=option, variable=self.test_name, 
-                command=self.set_global_test_type
             )
             bt.grid(row=i+1, column=0, sticky="ew")
             self.radio_buttons.append(bt)
-        self.radio_buttons[0].config(bg="dark sea green")
+    
+        EventBus.subscribe(self.lock_on, "<<folder_loaded>>")
 
-    def set_global_test_type(self):
+    def lock_on(self, envent=None):
         """
-        Update the global test type in the configuration.
+        Lock the test type selection.
         """
         test_type_str = self.test_name.get()
         Config.selected_test_type = TestType[test_type_str]
         for rb in self.radio_buttons:
             rb.config(bg="dark sea green" if rb.cget("value") == test_type_str else "lightgray")
-
+        self.locked = True
 
 class _ModelFrame(tk.Frame):
     """Frame for selecting and configuring a model."""
@@ -106,7 +107,7 @@ class _ModelFrame(tk.Frame):
         if not model_path:
             return
         self.model_path.set(model_path)
-        loaded = Config.api.io.load_model(model_path, stage=self.stage)
+        loaded = Config.api.load_model(model_path, stage=self.stage)
         self.__activate_panel()
         self.__model_success_status() if loaded else self.__model_error_status()
     

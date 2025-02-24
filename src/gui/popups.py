@@ -98,9 +98,11 @@ class ExportYoloPopup(tk.Toplevel):
         folder_name = self.folder_name_var.get()
         save_images = self.save_images_var.get()
         fullpath = Path(base_folder) / folder_name
-        success = Config.api.io.export_yolo(fullpath, save_images)
+        success = Config.api.export_yolo(fullpath, save_images)
         
-        TimeBombPopup(self.root, self, "Success" if success else "Error", "Success!" if success else "Erro ao exportar", destroy_parent=success)
+        title = "Success" if success else "Error"
+        message = "Exported successfully!" if success else "Error exporting data"
+        TimeBombPopup(self.root, self, title, message, destroy_parent=success)
 
 
 class SaveAsPopup(tk.Toplevel):
@@ -122,7 +124,7 @@ class SaveAsPopup(tk.Toplevel):
         
         tk.Label(self, text="Select File Format:").pack(pady=5)
         
-        self.formats_dict = Config.api.io.get_report_output_formats()
+        self.formats_dict = Config.api.get_report_output_formats()
         formats = list(self.formats_dict.keys())
         
         self.format_type_var = tk.StringVar(value=formats[0])
@@ -139,7 +141,7 @@ class SaveAsPopup(tk.Toplevel):
         fullpath = filedialog.asksaveasfilename(defaultextension="", filetypes=filetypes)
         
         if fullpath:
-            Config.api.io.save_report(Config.selected_test_type, fullpath, exporter_name)
+            Config.api.save_report(Config.selected_test_type, fullpath, exporter_name)
 
 
 class ProgressPopup(tk.Toplevel):
