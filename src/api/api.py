@@ -359,13 +359,34 @@ class CoreApi:
             self,
             fs_params : DetectionParameters = None,
             ss_params : DetectionParameters = None
-            ):
+            ) -> bool:
+        """
+        Runs the detection pipeline for the currently selected image.
+
+        Parameters
+        ----------
+        fs_params : DetectionParameters, optional
+            Parameters for the full-scale detection model, by default None.
+        ss_params : DetectionParameters, optional
+            Parameters for the small-scale detection model, by default None.
+
+        Returns
+        -------
+        bool
+            True if the pipeline was successfully run, False otherwise.
         
+        Raises
+        ------
+        ValueError
+            If the models are not correctly loaded.
+        """
         # Check if enought models are loaded
-        if not self.__fs_model:
-            return False
-        if not self.__ss_model and not self.__fs_model.target_stage == Stage.BOTH:
-            return False
+        if not self.__fs_model \
+           or ( 
+                not self.__ss_model 
+                and not self.__fs_model.target_stage == Stage.BOTH
+            ):
+            raise ValueError("Cannot run detection pipeline without valid models")
                 
         # Run the detection pipeline
         Detection.set_label_map(fs_params.label_map)
@@ -388,11 +409,36 @@ class CoreApi:
             ss_params: DetectionParameters,
             progress_queue: Optional[ProgressTracker] = None
         ):
+        """
+        Runs the detection pipeline for all images in the current set.
+
+        Parameters
+        ----------
+        fs_params : DetectionParameters
+            Parameters for the full-scale detection model.
+        ss_params : DetectionParameters
+            Parameters for the small-scale detection model.
+        progress_queue : Optional[ProgressTracker], optional
+            A progress tracker to monitor the pipeline, by default None.
+
+        Raises
+        ------
+        ValueError
+            If the models are not correctly
+
+        Returns
+        -------
+        bool
+            True if the pipeline was successfully run, False otherwise.
+        """
+
         # Check if models are loaded
-        if not self.__fs_model:
-            return False
-        if not self.__ss_model and not self.__fs_model.target_stage == Stage.BOTH:
-            return False
+        if not self.__fs_model \
+           or ( 
+                not self.__ss_model 
+                and not self.__fs_model.target_stage == Stage.BOTH
+            ):
+            raise ValueError("Cannot run detection pipeline without valid models")
         
         # Set up the progress tracker
         if progress_queue:
@@ -427,6 +473,7 @@ class CoreApi:
             if not progress_queue.running():
                 break
         self.select_image(0)
+        return True
 
 
 # =============================================================================

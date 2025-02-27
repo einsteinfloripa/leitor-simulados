@@ -50,9 +50,25 @@ class DetectionParameters:
     score_threshold : float = None
 
 
+from pathlib import Path
+from typing import Optional
+
 class ModelInfo:
     """
     Data structure to store and provide information about a model.
+    
+    Attributes
+    ----------
+    name : str
+        The name of the model.
+    model_type : ModelType
+        The type of the model (e.g., LEGACY, EFSCANALGO, YOLOV8).
+    target_stage : Stage
+        The target stage of the model (e.g., FIRST, SECOND, BOTH, or NULL).
+    rel_path : str
+        The relative path to the model file.
+    detection_parameters : Optional[DetectionParameters]
+        Additional detection parameters (if any).
     """
 
     @classmethod
@@ -68,7 +84,7 @@ class ModelInfo:
         Returns
         -------
         ModelInfo
-            The ModelInfo object.
+            A ModelInfo object containing extracted model details.
         """
         fullpath = Path(path)
         rel_path = fullpath.relative_to(MODELS_PATH)
@@ -91,26 +107,58 @@ class ModelInfo:
     def __init__(
             self,
             name: str,
-            model_type : ModelType, 
+            model_type: ModelType,
             target_stage: Stage,
-            rel_path : str,
-            detection_parameters : Optional[DetectionParameters] = None
+            rel_path: str,
         ):
+        """
+        Initialize a ModelInfo object.
+
+        Parameters
+        ----------
+        name : str
+            The name of the model.
+        model_type : ModelType
+            The type of the model.
+        target_stage : Stage
+            The target stage of the model.
+        rel_path : str
+            The relative path to the model file.
+        """
         self.name = name
         self.model_type = model_type
         self.target_stage = target_stage
         self.rel_path = rel_path
-        self.detection_parameters = detection_parameters
     
     def __repr__(self):
+        """
+        Return a string representation of the ModelInfo object.
+
+        Returns
+        -------
+        str
+            A detailed string representation of the model information.
+        """
         return f'ModelInfo(name={self.name}, model_type={self.model_type}, target_stage={self.target_stage}, rel_path={self.rel_path})'
 
     def __str__(self):
+        """
+        Return a user-friendly string representation of the model.
+
+        Returns
+        -------
+        str
+            A simple string representation with model name and type.
+        """
         return f"{self.name} ({self.model_type.name})"
 
     def __hash__(self):
+        """
+        Compute the hash of the ModelInfo object.
+
+        Returns
+        -------
+        int
+            The hash value based on name, model type, and target stage.
+        """
         return hash((self.name, self.model_type, self.target_stage))
-    
-
-
-    
