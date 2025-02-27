@@ -14,7 +14,7 @@ from core.image import CoreImage
 
 # CoreImages
 ACCEPTED_IMAGE_EXTENTIONS = {'.png', '.jpg', '.jpeg'}
-ACCEPTED_MODELS_EXTENTIONS = {'.tflite', '.py', '.pb'}
+ACCEPTED_MODELS_EXTENTIONS = {'.tflite', '.py', '.pt'}
 # Paths
 ROOT_PATH = Path(__file__).parent.parent.parent.parent # Tataravo raiz
 MODELS_PATH = ROOT_PATH / 'models'
@@ -60,7 +60,10 @@ class Importer():
             return files
         
         @staticmethod
-        def model_files(folder_path : str, recursive : bool = False):
+        def model_files(
+            folder_path : str = MODELS_PATH, 
+            recursive : bool = True
+        ) -> list[str]:
             folder = Path(folder_path)
             if recursive:
                 files = [

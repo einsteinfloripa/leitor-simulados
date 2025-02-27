@@ -1,12 +1,14 @@
 import tkinter as tk
 
-from core.definitions.question import TestType
+from core.definitions.enums import TestType, Stage
 from core.detection import (
     Detection,
     DEFAULT_FIRST_STAGE_LABEL_MAP,
     DEFAULT_SECOND_STAGE_LABEL_MAP
 )
 from core.model import EFScanAlgoModel
+
+from api import ProgressTracker, DetectionParameters
 
 from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
@@ -74,7 +76,7 @@ class WindowApplication(tk.Tk):
         if Config.api.open_folder(path, Config.selected_test_type):
             EventBus.publish("<<clear_img_app>>")
             Config.current_image_index = 0
-            Config.api.select_image(0)
+            Config.api.select_image(0, reload=True)
             EventBus.publish("<<folder_loaded>>")
             EventBus.publish("<<center_draw_call>>")
 
@@ -90,26 +92,49 @@ class WindowApplication(tk.Tk):
         """
         apply_to_all = event == "<<apply_model_to_all>>"
 
+        # TODO: Refactor this to use the pipeline configuration
         # Retrieve pipeline configuration
         pipeline_config = self.modelsSideBar.get_pipeline()
-        test: TestType = pipeline_config['test']
+        test = Config.selected_test_type
+
+        # Initialize detection parameters
         fs_config = pipeline_config['fs']
         ss_config = pipeline_config['ss']
-        fs_model = Config.api.fs_model
-        ss_model = Config.api.ss_model
+                
+        fs_model = fs_config['model']
+        Config.api.select_model(fs_model, Stage.FIRST)
+        ss_model = ss_config['model']
+        Config.api.select_model(ss_model, Stage.SECOND)
 
+
+        fs_params = DetectionParameters(
+            DEFAULT_FIRST_STAGE_LABEL_MAP, # Hardcoded for now
+            fs_config['st'],
+        )
+        ss_params = DetectionParameters(
+            DEFAULT_SECOND_STAGE_LABEL_MAP, # Hardcoded for now
+            ss_config['st'],
+        )
+        
+        # TODO: Unecessary initialization of models
         # Initialize EFScanAlgo models if needed
         self._initialize_models_if_needed(fs_model, ss_model, test)
 
         # Apply models
         if apply_to_all:
+            tracker = ProgressTracker()
             ProgressPopup(
                 self,
-                self._thread_apply_to_all,
-                [fs_model, ss_model, fs_config, ss_config]
+                Config.api.run_detection_pipeline_for_all,
+                [fs_params, ss_params, tracker],
+                tracker,
+                Config.api.image_files
             )
         else:
-            self._apply_model_to_single_image(fs_model, ss_model, fs_config, ss_config)
+            Config.api.run_detection_pipeline(
+                fs_params,
+                ss_params,
+            )
 
         # Refresh UI
         EventBus.publish("<<update_all>>")
@@ -197,51 +222,3 @@ class WindowApplication(tk.Tk):
         # Refresh the UI
         Config.api.select_image(index)
 
-    def _thread_apply_to_all(self, popup: ProgressPopup, fs_model, ss_model, fs_config, ss_config):
-        """
-        Applies the detection model to all images in a separate thread.
-
-        Parameters
-        ----------
-        popup : ProgressPopup
-            The progress popup to update the UI during processing.
-        fs_model : EFScanAlgoModel
-            First-stage detection model.
-        ss_model : EFScanAlgoModel
-            Second-stage detection model.
-        fs_config : dict
-            Configuration for the first-stage model.
-        ss_config : dict
-            Configuration for the second-stage model.
-        """
-        num_images = Config.api.number_of_images
-
-        for i in range(num_images):
-            if not popup.running:
-                break
-
-            Config.api.select_image(i, do_cache=False)
-            image = Config.api.image
-
-            # Update UI progress
-            popup.update_progress(image.name, (i + 1) / num_images * 100)
-
-            # Apply first-stage model
-            Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)
-            image.make_detections_with_model(fs_model, fs_config['st'])
-
-            # Crop image based on detected areas
-            image.make_cropped()
-
-            # Apply second-stage model
-            Detection.set_label_map(DEFAULT_SECOND_STAGE_LABEL_MAP)
-            for crop in image.crops:
-                crop.make_detections_with_model(ss_model, ss_config['st'])
-
-            # Cache the detections
-            Config.api.cache.cache_image(i, image)
-
-        # Refresh UI
-        Config.api.select_image(Config.current_image_index)
-        EventBus.publish("<<update_all>>")
-        EventBus.publish("<<center_draw_call>>")

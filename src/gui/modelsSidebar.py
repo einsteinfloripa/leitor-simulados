@@ -1,10 +1,9 @@
 __all__ = ["PipelineSideBar"]
 
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 
-from core.definitions.question import TestType
-from core.definitions import Stage
+from core.definitions.enums import TestType, Stage
 from core.IO import MODELS_PATH
 
 from gui import (
@@ -74,19 +73,32 @@ class _ModelFrame(tk.Frame):
         self.columnconfigure(0, weight=1)
         self.stage = modelstage
         
-        self.model_path = tk.StringVar(value="Não selecionado")
-        self.score_threshold = tk.DoubleVar(value=0)
-
+        # Secction title
         text = "Primeiro Estágio" if modelstage == Stage.FIRST else "Segundo Estágio"
-        tk.Label(self, text=text, font=semititle_font).grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        
-        top_frame = tk.Frame(self, border=2, relief="groove")
-        top_frame.columnconfigure(0, weight=1)
-        tk.Button(top_frame, text="Select Model", command=self.load_model).grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        self.model_path_label = tk.Label(top_frame, textvariable=self.model_path, wraplength=200, fg="gray")
-        self.model_path_label.grid(row=1, column=0, sticky="nsew")
-        top_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
-        
+        tk.Label(self, text=text, font=semititle_font).grid(
+            row=0, column=0, padx=5, pady=5, sticky="nsew"
+        )
+
+        # Variable creation
+        self.avalaible_models = {
+            str(m) : m for m in Config.api.get_available_models() \
+            if m.target_stage == modelstage or m.target_stage == Stage.BOTH
+        }
+        self.options = ['Nao selecionado'] + list(self.avalaible_models.keys())
+        self.selected_option = tk.StringVar(value=self.options[0])
+        self.score_threshold = tk.DoubleVar(value=0)
+                
+        # ComboBox widget
+        self.combobox = ttk.Combobox(
+            self,
+            values=self.options,
+            textvariable=self.selected_option,
+            state="readonly"
+        )
+        self.combobox.grid(
+            row=1, column=0, padx=5, pady=5, sticky="nsew"
+        )
+
         self.score_threshold_frame = tk.Frame(self, border=2, relief="groove")
         self.score_threshold_frame.columnconfigure(0, weight=1)
         self.score_threshold_frame.grid(row=2, column=0, padx=5, sticky="nsew")
@@ -99,18 +111,9 @@ class _ModelFrame(tk.Frame):
         )
         self.score_threshold_scale.grid(row=1, column=0, sticky="nsew")
     
-    def load_model(self):
-        """
-        Open file dialog to select and load a model.
-        """
-        model_path = filedialog.askopenfilename(filetypes=[("Model files", "*.py *.pt *.tflite")], initialdir=MODELS_PATH)
-        if not model_path:
-            return
-        self.model_path.set(model_path)
-        loaded = Config.api.load_model(model_path, stage=self.stage)
-        self.__activate_panel()
-        self.__model_success_status() if loaded else self.__model_error_status()
-    
+        # Set trace to update the panel
+        self.selected_option.trace_add("write", lambda *args: self.__update_panel())
+
     def get_info(self):
         """
         Get model configuration.
@@ -120,28 +123,28 @@ class _ModelFrame(tk.Frame):
         dict
             Dictionary containing model path and score threshold.
         """
-        return {"model_path": self.model_path.get(), "st": self.score_threshold.get()}
+        model = self.avalaible_models[self.selected_option.get()]
+        return {"model": model, "st": self.score_threshold.get()}
     
-    def __activate_panel(self):
+    def __update_panel(self):
         """
         Activate the panel for model configuration.
         """
-        self.score_threshold_scale.config(state=tk.NORMAL)
-        self.model_path_label.config(fg="black")
-        self.score_threshold_label.config(fg="black")
-        self.score_threshold.set(0.5)
-    
-    def __model_success_status(self):
-        """
-        Indicate successful model loading.
-        """
-        self.model_path_label.config(bg="dark sea green")
-    
-    def __model_error_status(self):
-        """
-        Indicate model loading failure.
-        """
-        self.model_path_label.config(bg="indian red")
+        def deactivate_panel(self):
+            self.score_threshold_scale.config(state=tk.DISABLED)
+            self.score_threshold_label.config(fg="gray")
+            self.score_threshold.set(0)
+
+        def activate_panel(self):
+            self.score_threshold_scale.config(state=tk.NORMAL)
+            self.score_threshold_label.config(fg="black")
+            self.score_threshold.set(0.5)
+
+        option = self.selected_option.get()
+        if option == 'Nao selecionado':
+            deactivate_panel(self)
+        else:
+            activate_panel(self)
 
 
 class PipelineSideBar(tk.Frame):
@@ -191,12 +194,10 @@ class PipelineSideBar(tk.Frame):
         EventBus.subscribe(self.on_folder_loaded, "<<folder_loaded>>")
     
     def get_pipeline(self):
-        test = Config.selected_test_type
         fs = self.first_stage.get_info()
         ss = self.second_stage.get_info()
         
         return {
-            'test': test,
             'fs': fs,
             'ss': ss
         }

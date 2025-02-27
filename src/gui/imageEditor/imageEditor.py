@@ -205,7 +205,7 @@ class ImageEditorApp(tk.Frame):
         """
         index = Config.current_image_index
         new_index = (index + 1) % Config.api.number_of_images
-        Config.api.select_image(new_index, do_cache=False)
+        Config.api.select_image(new_index)
         Config.current_image_index = new_index
         EventBus.publish("<<update_all>>")
         EventBus.publish("<<center_draw_call>>")
@@ -221,7 +221,7 @@ class ImageEditorApp(tk.Frame):
         """
         index = Config.current_image_index
         new_index = (index - 1) % Config.api.number_of_images
-        Config.api.select_image(new_index, do_cache=False)
+        Config.api.select_image(new_index)
         Config.current_image_index = new_index
         EventBus.publish("<<update_all>>")
         EventBus.publish("<<center_draw_call>>")

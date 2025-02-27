@@ -6,6 +6,11 @@ class Stage(Enum):
     SECOND = 2
     BOTH = 3
 
+class ModelType(Enum):
+    YOLOV8 = 'YOLOV8'
+    LEGACY = 'LEGACY'
+    EFSCANALGO = 'EFSCANALGO'
+
 class TestType(Enum):
     NULL = 0
     PS_ALUNOS = 1

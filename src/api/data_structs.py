@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from typing import Optional
+from pathlib import Path
 
-from core.detection import DetectionContainer
 from core.definitions.blocks import TestBlocks
 from core.definitions.question import TestQuestions
+from core.definitions.enums import ModelType, Stage
+from core.detection import DetectionContainer, LabelMap
+from core.IO import MODELS_PATH
+
+__all__ = [ 'ImageCacheStruct', 'ModelInfo', 'DetectionParameters' ]
 
 @dataclass
 class ImageCacheStruct:
@@ -26,3 +31,86 @@ class ImageCacheStruct:
     container: DetectionContainer
     blocks: Optional[TestBlocks] = None
     questions: Optional[TestQuestions] = None
+
+
+@dataclass
+class DetectionParameters:
+    """
+    Data structure to store the parameters for a particular detection run.
+
+    Parameters
+    ----------
+    label_map : LabelMap
+        The label map for the model.
+    score_threshold : float
+        The minimum score for a detection to be considered valid.
+    """
+
+    label_map : LabelMap = None
+    score_threshold : float = None
+
+
+class ModelInfo:
+    """
+    Data structure to store and provide information about a model.
+    """
+
+    @classmethod
+    def from_models_path(cls, path: str):
+        """
+        Create a ModelInfo object from a model file path.
+
+        Parameters
+        ----------
+        path : str
+            The path to the model file.
+
+        Returns
+        -------
+        ModelInfo
+            The ModelInfo object.
+        """
+        fullpath = Path(path)
+        rel_path = fullpath.relative_to(MODELS_PATH)
+
+        parts = rel_path.parts
+        name, extension = parts[-1].split('.')
+        model_type = (
+            ModelType.LEGACY if extension == 'tflite'
+            else ModelType.EFSCANALGO if extension == 'py'
+            else ModelType.YOLOV8
+        )
+        target_stage = (
+            Stage.FIRST if 'first_stage' in path
+            else Stage.SECOND if 'second_stage' in path
+            else Stage.BOTH if 'single_stage' in path
+            else Stage.NULL
+        )
+        return cls(name, model_type, target_stage, str(rel_path))
+
+    def __init__(
+            self,
+            name: str,
+            model_type : ModelType, 
+            target_stage: Stage,
+            rel_path : str,
+            detection_parameters : Optional[DetectionParameters] = None
+        ):
+        self.name = name
+        self.model_type = model_type
+        self.target_stage = target_stage
+        self.rel_path = rel_path
+        self.detection_parameters = detection_parameters
+    
+    def __repr__(self):
+        return f'ModelInfo(name={self.name}, model_type={self.model_type}, target_stage={self.target_stage}, rel_path={self.rel_path})'
+
+    def __str__(self):
+        return f"{self.name} ({self.model_type.name})"
+
+    def __hash__(self):
+        return hash((self.name, self.model_type, self.target_stage))
+    
+
+
+    

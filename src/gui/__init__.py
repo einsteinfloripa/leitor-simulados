@@ -1,5 +1,5 @@
-from api import CoreApi
 from core.definitions.test_defs import TestType
+from api import CoreApi
 
 
 # =============================================================================

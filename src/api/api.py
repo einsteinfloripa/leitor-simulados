@@ -5,18 +5,18 @@ from pathlib import Path
 import numpy as np
 import cv2
 
+from core.detection import Detection
 from core.image import CoreImage
-from core.model import DetectionModel, load_model
-from core.definitions import TestType, Stage
+from core.model import DetectionModel
+from core.definitions.enums import TestType, Stage
 from core.IO import Importer, FileExtension
 from core.IO.report import ReportIO, ReportData
 from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
 
-from .data_structs import ImageCacheStruct
+from .data_structs import ImageCacheStruct, ModelInfo, DetectionParameters
 from .caching import Cache
 from .builder import BuilderApi
-from .IO import IOApi
-
+from .sync_channel import ProgressTracker
 
 class CoreApi:
     """
@@ -44,7 +44,9 @@ class CoreApi:
         self.__current_test_type: Optional[TestType] = None
         
         # Internal only
-        self.__last_builder_type: TestType = TestType.NULL
+        self.__last_builder_type : TestType = TestType.NULL
+        self.__fs_model_info : ModelInfo = None
+        self.__ss_model_info : ModelInfo = None
 
 
 # =============================================================================
@@ -162,25 +164,6 @@ class CoreApi:
             The full-scale detection model, if available.
         """
         return self.__fs_model
-    
-    @fs_model.setter
-    def fs_model(self, model: DetectionModel):
-        """
-        Sets the full-scale detection model.
-        
-        Parameters
-        ----------
-        model : DetectionModel
-            The full-scale detection
-
-        Raises
-        ------
-        TypeError
-            If model is not an instance of DetectionModel.
-        """
-        if not isinstance(model, DetectionModel):
-            raise TypeError("fs_model must be an instance of DetectionModel")
-        self.__fs_model = model
 
     @property
     def ss_model(self) -> Optional[DetectionModel]:
@@ -193,25 +176,6 @@ class CoreApi:
             The small-scale detection model, if available.
         """
         return self.__ss_model
-    
-    @ss_model.setter
-    def ss_model(self, model: DetectionModel):
-        """
-        Sets the small-scale detection model.
-        
-        Parameters
-        ----------
-        model : DetectionModel
-            The small-scale detection model.
-
-        Raises
-        ------
-        TypeError
-            If model is not an instance of DetectionModel.
-        """
-        if not isinstance(model, DetectionModel):
-            raise TypeError("ss_model must be an instance of DetectionModel")
-        self.__ss_model = model
 
     @property
     def current_set_index(self) -> Optional[int]:
@@ -224,29 +188,6 @@ class CoreApi:
             The current set index.
         """
         return self.__current_set_index
-    
-    @current_set_index.setter
-    def current_set_index(self, index: int):
-        """
-        Set the current set index.
-
-        Parameters
-        ----------
-        index : int
-            The index to set as the current set index.
-
-        Raises
-        ------
-        TypeError
-            If the index is not an integer.
-        ValueError
-            If the index is out of range.
-        """
-        if not isinstance(index, int):
-            raise TypeError("index must be an integer")
-        if not (0 <= index < self.__number_of_images):
-            raise ValueError("index must be within the range of image files")
-        self.__current_set_index = index
 
     @property
     def current_test_type(self) -> Optional[TestType]:
@@ -265,6 +206,17 @@ class CoreApi:
 # Getters && Setters && Selectors
 # =============================================================================
 
+    def get_available_models(self) -> list[ModelInfo]:
+        """
+        Retrieves the available model names.
+
+        Returns
+        -------
+        list[ModelInfo]
+            A list of available model names.
+        """
+        file_paths = Importer.Find.model_files()
+        return [ModelInfo.from_models_path(path) for path in file_paths]
 
     def reset_cache(self, number_of_images: int):
         """
@@ -296,7 +248,7 @@ class CoreApi:
             self.__last_builder_type = test_type
         return self.__builder
 
-    def select_image(self, index: int = -1, do_cache: bool = True) -> bool:
+    def select_image(self, index: int = -1, reload=False) -> bool:
         """
         Selects an image by index to be the operant image and optionally caches it.
         
@@ -314,6 +266,8 @@ class CoreApi:
         """
         if index == -1:
             index = self.__current_set_index
+        elif index == self.__current_set_index and not reload:
+            return True
 
         if (
             self.__image_files is None
@@ -333,8 +287,6 @@ class CoreApi:
             # TODO: Log the error
             return False
 
-        if do_cache:
-            self.__cache.cache_image(index, self.__image)
         return True
 
     def get_report_output_formats(self) -> list[tuple[str, FileExtension]]:
@@ -348,6 +300,132 @@ class CoreApi:
         """
         return ReportIO.get_available_formats()
     
+    def select_model(self, model_info: ModelInfo, stage: Stage = Stage.NULL) -> bool:
+        """
+        Loads a detection model and assigns it to the corresponding stage.
+
+        Parameters
+        ----------
+        model_path : str
+            Path to the model file.
+        stage : Stage, optional
+            The stage of the model (first or second), by default Stage.NULL.
+
+        Returns
+        -------
+        bool
+            True if the model was successfully loaded, False otherwise.
+
+        Raises
+        ------
+        ValueError
+            If the model does not support the selected stage.
+        """
+        
+        # Check if the model is already loaded
+        if stage == Stage.FIRST and self.__fs_model_info == model_info:
+            return True
+        elif stage == Stage.SECOND and self.__ss_model_info == model_info:
+            return True
+
+        # Check if the model supports the selected stage
+        target_stage = model_info.target_stage    
+        if target_stage is not Stage.BOTH and target_stage != stage:
+            raise ValueError(
+                f"Model {model_info.name} does not support stage {stage.name}"
+            )
+        
+        # Load the model
+        model_path = model_info.rel_path
+        model = DetectionModel.from_models_path(model_path, stage)
+        if not model:
+            return False
+        if stage == Stage.SECOND:
+            self.__ss_model = model
+            self.__ss_model_info = model_info
+        else:
+            self.__fs_model = model
+            self.__fs_model_info = model_info
+        return True
+
+
+# =============================================================================
+# Detection operations
+# =============================================================================
+
+
+    def run_detection_pipeline(
+            self,
+            fs_params : DetectionParameters = None,
+            ss_params : DetectionParameters = None
+            ):
+        
+        # Check if enought models are loaded
+        if not self.__fs_model:
+            return False
+        if not self.__ss_model and not self.__fs_model.target_stage == Stage.BOTH:
+            return False
+                
+        # Run the detection pipeline
+        Detection.set_label_map(fs_params.label_map)
+        self.image.make_detections_with_model(
+            self.__fs_model, fs_params.score_threshold
+        )
+        self.image.make_cropped()
+        Detection.set_label_map(ss_params.label_map)
+        for crop in self.image.crops:
+            crop.make_detections_with_model(
+                self.__ss_model, ss_params.score_threshold
+            )
+
+        # Cache the detections
+        self.cache.cache_image(self.current_set_index, self.image)
+
+    def run_detection_pipeline_for_all(
+            self,
+            fs_params: DetectionParameters,
+            ss_params: DetectionParameters,
+            progress_queue: Optional[ProgressTracker] = None
+        ):
+        # Check if models are loaded
+        if not self.__fs_model:
+            return False
+        if not self.__ss_model and not self.__fs_model.target_stage == Stage.BOTH:
+            return False
+        
+        # Set up the progress tracker
+        if progress_queue:
+            if not progress_queue.is_zero():
+                raise ValueError("Progress tracker must be reset before use")
+            progress_queue.set_total_steps(self.number_of_images)
+
+        # Run the detection pipeline for all images
+        for i in range(self.number_of_images):
+            # Select the image
+            self.select_image(i)
+            # Run the detection pipeline
+            Detection.set_label_map(fs_params.label_map)
+            self.image.make_detections_with_model(
+                self.__fs_model, fs_params.score_threshold
+            )
+            self.image.make_cropped()
+            Detection.set_label_map(ss_params.label_map)
+            for crop in self.image.crops:
+                crop.make_detections_with_model(
+                    self.__ss_model, ss_params.score_threshold
+            )
+
+            # Cache the detections
+            self.cache.cache_image(self.current_set_index, self.image)
+
+            # Update the progress tracker
+            if progress_queue:
+                progress_queue.increment()
+            
+            # Check if the progress tracker is still running
+            if not progress_queue.running():
+                break
+        self.select_image(0)
 
 
 # =============================================================================
@@ -374,37 +452,13 @@ class CoreApi:
         files = Importer.Find.image_files(folder_path)
         if files:
             self.__current_test_type = test_type
-            self.__current_set_index = 0
             self.__image_files = files
             self.__number_of_images = len(files)
             self.reset_cache(len(files))
             return True
         return False
 
-    def load_model(self, model_path: str, stage: Stage = Stage.NULL) -> bool:
-        """
-        Loads a detection model and assigns it to the corresponding stage.
-
-        Parameters
-        ----------
-        model_path : str
-            Path to the model file.
-        stage : Stage, optional
-            The stage of the model (first or second), by default Stage.NULL.
-
-        Returns
-        -------
-        bool
-            True if the model was successfully loaded, False otherwise.
-        """
-        model = load_model(model_path, stage)
-        if not model:
-            return False
-        if stage == Stage.FIRST:
-            self.fs_model = model
-        else:
-            self.ss_model = model
-        return True
+    
 
     def save_report(self, test_type: TestType, fullpath: Path, exporter_name: str = "DefaultJSON"):
         """

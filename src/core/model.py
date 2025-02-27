@@ -9,8 +9,7 @@ from ultralytics import YOLO
 
 from core.image import CoreImage
 from core.detection.base import Detection
-from core.definitions import Stage
-from core.definitions.question import TestType
+from core.definitions.enums import ModelType, TestType, Stage
 from core.definitions.geometry import FloatBoundingBox
 from core.IO import MODELS_PATH
 
@@ -18,51 +17,42 @@ from utils.misc import normalize_image
 
 
 
-# SECTION: Load function
-
-
-def load_model(model_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
-    """
-    Load the model from the given path
-    """
-    # Convert the path to a Path object
-    model_path : Path = Path(model_path)
-    
-    # Get the model type
-    parts = model_path.parts
-    model_name = parts[-1]
-    
-    # Get the type of the model and load accordingly
-    model_suffix = model_name.split('.')[-1]
-    
-    # Legacy model
-    if model_suffix == 'tflite':
-        interpreter = tflite.Interpreter(
-            str(model_path)
-        )
-        return LegacyModel(interpreter)
-    
-    # EFScanAlgo model
-    elif model_suffix == 'py':
-        return EFScanAlgoModel(model_name, stage)
-    
-    # YOLOV8 model
-    elif model_suffix == 'pt':
-        engine = YOLO(
-            model_path
-        )
-        return YOLOModel(engine)
-
-
-
 # SECTION: Model enum and base class
 
-class ModelType(Enum):
-    YOLOV8 = 'YOLOV8'
-    LEGACY = 'LEGACY'
-    EFSCANALGO = 'EFSCANALGO'
-
 class DetectionModel(ABC):
+
+    @classmethod
+    def from_models_path(cls, rel_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
+        """
+        Load the model from the models path
+        """
+        model_path : Path = MODELS_PATH / rel_path
+        
+        # Get the model type
+        parts = model_path.parts
+        model_name = parts[-1]
+        
+        # Get the type of the model and load accordingly
+        model_suffix = model_name.split('.')[-1]
+        
+        # Legacy model
+        if model_suffix == 'tflite':
+            interpreter = tflite.Interpreter(
+                str(model_path.resolve())
+            )
+            return LegacyModel(interpreter)
+        
+        # EFScanAlgo model
+        elif model_suffix == 'py':
+            return EFScanAlgoModel(model_name, stage)
+        
+        # YOLOV8 model
+        elif model_suffix == 'pt':
+            engine = YOLO(
+                model_path
+            )
+            return YOLOModel(engine)
+
 
     def __init__(
             self,
@@ -71,6 +61,7 @@ class DetectionModel(ABC):
         ):
         self.model_type = model_type
         self.target_stage = target_stage
+
 
     @abstractmethod
     def detect(self, img : CoreImage) -> list[Detection]:

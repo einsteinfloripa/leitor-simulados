@@ -1,11 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
 import threading
-from time import sleep
 from pathlib import Path
 
-from core.IO import FileExtension
 from gui import Config, semititle_font
+from api.sync_channel import ProgressTracker
 
 class TimeBombPopup(tk.Toplevel):
     """
@@ -157,39 +156,80 @@ class ProgressPopup(tk.Toplevel):
     thread_args : list
         Arguments to pass to the thread function.
     """
-    def __init__(self, root, thread_function, thread_args):
+    def __init__(
+            self,
+            root,
+            thread_function,
+            thread_args,
+            progress_tracker,
+            img_files
+        ):
         super().__init__(root)
         self.root = root
         self.title("Aplicando pipeline")
         self.geometry("300x100")
         self.resizable(False, False)
-        
         self.transient(self.root)
         self.grab_set()
         
+        self.__init_widgets()
+        
+        self.names = [Path(img_file).name for img_file in img_files]
+        self.float_interval = 100 / len(self.names)
+        self.progress_tracker : ProgressTracker = progress_tracker
+        self.protocol("WM_DELETE_WINDOW", self.__on_close)
+        
+        # Start the worker and waching thread
+        self.thread = threading.Thread(
+            target=thread_function, args=thread_args, daemon=True
+        )
+        self.waching_thread = threading.Thread(
+            target=self.__update_progress, daemon=True
+        )
+        self.thread.start()
+        self.waching_thread.start()
+
+# =============================================================================
+# Private Methods
+# =============================================================================
+
+    def __init_widgets(self):
+        """Initializes the widgets in the popup window."""
         self.label = tk.Label(self, text="Aplicando pipeline...")
         self.label.pack(pady=10)
         
         self.progress_label = tk.Label(self, text="0%")
         self.progress_label.pack()
         
-        self.progress = ttk.Progressbar(self, orient="horizontal", length=300, mode="determinate")
+        self.progress = ttk.Progressbar(
+            self, orient="horizontal", length=300, mode="determinate"
+        )
         self.progress.pack()
-        
-        self.running = True
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-        
-        thread_args.insert(0, self)
-        self.thread = threading.Thread(target=thread_function, args=thread_args, daemon=True)
-        self.thread.start()
 
-    def update_progress(self, img_name, value):
+    def __update_progress(self):
         """Updates the progress bar safely from the main thread."""
-        self.progress["value"] = value
-        self.progress_label["text"] = f"{value:.2f}%"
-        self.label["text"] = img_name
+        
+        while True:
+            # get_step() is a blocking call
+            step = self.progress_tracker.get_step()
 
-    def on_close(self):
+            if not self.progress_tracker.running():
+                break
+            elif self.progress_tracker.is_finished():
+                self.progress["value"] = 100.0
+                self.progress_label["text"] = "100%"
+                self.label["text"] = "Concluido!"
+                break
+
+            value = self.float_interval * step
+            name = self.names[step]
+
+            self.progress["value"] = value
+            self.progress_label["text"] = f"{value:.2f}%"
+            self.label["text"] = name
+
+
+    def __on_close(self):
         """Handles the popup closing event."""
-        self.running = False
+        self.progress_tracker.shutdown()
         self.destroy()
