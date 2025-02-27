@@ -2,7 +2,6 @@ import threading
 from functools import wraps
 
 
-
 class ProgressTracker:
     """A thread-safe queue for float progress updates."""
     def __init__(self):

@@ -9,7 +9,8 @@ from core.detection import Detection
 from core.image import CoreImage
 from core.model import DetectionModel
 from core.definitions.enums import TestType, Stage
-from core.IO import Importer, FileExtension
+from core.IO import FileExtension
+from core.IO.base import Importer
 from core.IO.report import ReportIO, ReportData
 from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
 
