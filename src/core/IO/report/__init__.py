@@ -15,7 +15,8 @@ from pathlib import Path
 from core.definitions import TestType
 from core.definitions.question import TestQuestions
 
-from .. import Exporter, FileExtension
+from ..base import Exporter
+from .. import FileExtension
 
 # SECTION: data structures
 

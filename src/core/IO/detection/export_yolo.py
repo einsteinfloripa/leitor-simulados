@@ -5,8 +5,8 @@ from pathlib import Path
 from core.definitions.blocks import TestBlocks
 from core.detection import Detection
 
+from ..base import Exporter
 from .. import (
-    Exporter,
     FileExtension,
     ROOT_PATH
 )
