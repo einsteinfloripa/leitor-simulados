@@ -140,8 +140,11 @@ class SaveAsPopup(tk.Toplevel):
         fullpath = filedialog.asksaveasfilename(defaultextension="", filetypes=filetypes)
         
         if fullpath:
-            Config.api.save_report(Config.selected_test_type, fullpath, exporter_name)
-
+            try:
+                Config.api.save_report(Config.selected_test_type, fullpath, exporter_name)
+                TimeBombPopup(self.root, self, "Success", "Report saved successfully!", destroy_parent=True)
+            except Exception as e:
+                TimeBombPopup(self.root, self, "Error", str(e), destroy_parent=False)
 
 class ProgressPopup(tk.Toplevel):
     """

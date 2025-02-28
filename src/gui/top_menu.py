@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import Menu, filedialog
 
-from . import EventBus
+from .event_system import EventBus
 from .popups import SaveAsPopup, ExportYoloPopup
 
 class TopMenu(tk.Menu):

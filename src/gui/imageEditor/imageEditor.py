@@ -9,12 +9,12 @@ from core.detection import Detection
 from api.data_structs import ImageCacheStruct
 from api.builder import BuilderApi
 
-from gui import Config, EventBus
-
+from .. import Config
+from ..event_system import EventBus, Calltime
 from .canvas import ImgCanvas
 from .sidePanel import SidePanel
 
-
+@EventBus.bind
 class _FooterButtons(tk.Frame):
     """
     Auxiliary widget for footer buttons, displaying image navigation controls.
@@ -51,13 +51,7 @@ class _FooterButtons(tk.Frame):
         )
         self.next_button.grid(row=0, column=2, padx=5, pady=5)
 
-        # Subscribe to events for updating footer
-        EventBus.subscribe(
-            self.update_footer_label,
-            "<<update_all>>",
-            "<<folder_loaded>>"
-        )
-
+    @EventBus.subscribe("<<update_all>>", "<<successfully_folder_loaded>>")
     def update_footer_label(self, event=None):
         """
         Update the footer label with the current image index and total number of images.
@@ -84,7 +78,7 @@ class _FooterButtons(tk.Frame):
         self.previous_button.config(state=state)
         self.next_button.config(state=state)
 
-
+@EventBus.bind
 class ImageEditorApp(tk.Frame):
     """
     Main widget for the image editor application.
@@ -122,22 +116,7 @@ class ImageEditorApp(tk.Frame):
         self.footerButtons = _FooterButtons(root)
         self.footerButtons.pack()
 
-        # Subscribe to events
-        EventBus.subscribe(
-            self.update_detections,
-            "<<detection_checkbox_clicked>>",
-            "<<update_all>>"
-        )
-        EventBus.subscribe(
-            self.update_questions_answers,
-            "<<update_all>>",
-            "<<build_answers>>",
-            "<<build_all_answers>>"
-        )
-        EventBus.subscribe(self.load_next_image, "<<next_image_button_clicked>>")
-        EventBus.subscribe(self.load_previous_image, "<<previous_image_button_clicked>>")
-        EventBus.subscribe(self.clear, "<<clear_img_app>>")
-
+    @EventBus.subscribe("<<detection_checkbox_clicked>>","<<update_all>>")
     def update_detections(self, event=None):
         """
         Update the current drawn detections based on side panel selections.
@@ -160,6 +139,9 @@ class ImageEditorApp(tk.Frame):
         else:
             self.current_drawn_detections = {}
 
+    @EventBus.subscribe(
+        "<<build_answers>>", "<<build_all_answers>>", "<<update_all>>"
+    )
     def update_questions_answers(self, event):
         """
         Update the questions and answers report based on current image(s).
@@ -194,6 +176,7 @@ class ImageEditorApp(tk.Frame):
 
         EventBus.publish("<<update_question_panel>>")
 
+    @EventBus.subscribe("<<next_image_button_clicked>>")
     def load_next_image(self, event=None):
         """
         Load the next image in the list, update relevant data, and trigger a redraw.
@@ -210,6 +193,7 @@ class ImageEditorApp(tk.Frame):
         EventBus.publish("<<update_all>>")
         EventBus.publish("<<center_draw_call>>")
 
+    @EventBus.subscribe("<<previous_image_button_clicked>>")
     def load_previous_image(self, event=None):
         """
         Load the previous image in the list, update relevant data, and trigger a redraw.
@@ -226,6 +210,7 @@ class ImageEditorApp(tk.Frame):
         EventBus.publish("<<update_all>>")
         EventBus.publish("<<center_draw_call>>")
 
+    @EventBus.subscribe("<<clear_img_app>>")
     def clear(self, event):
         """
         Clear the canvas and side panel data.

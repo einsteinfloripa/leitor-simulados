@@ -5,9 +5,11 @@ from tkinter import ttk
 
 from core.definitions.question import TestQuestions, Question, NumericAnswer, AlphaAnswer
 from api.data_structs import ImageCacheStruct
-from gui import Config, EventBus, regular_font, semititle_font
 
+from ..event_system import EventBus
+from .. import Config, regular_font, semititle_font
 
+@EventBus.bind
 class _InnerPanel(tk.Frame):
     """
     Private auxiliary widget for displaying and editing question answers.
@@ -193,6 +195,7 @@ class _InnerPanel(tk.Frame):
         EventBus.publish("<<draw_call>>")
 
 
+@EventBus.bind
 class QuestionAnswerPanel(tk.Frame):
     """
     Public widget that serves as a panel for displaying and editing question answers.
@@ -214,13 +217,8 @@ class QuestionAnswerPanel(tk.Frame):
         self.inner_panel = ttk.Frame(self)
         self.inner_panel.pack(fill="both", expand=True)
 
-        # Subscribe to events to update the panel
-        EventBus.subscribe(
-            self.update_panel,
-            "<<update_all>>",
-            "<<update_question_panel>>"
-        )
 
+    @EventBus.subscribe("update_all", "<<update_question_panel>>")
     def update_panel(self, event):
         """
         Update the panel based on the current image cache.

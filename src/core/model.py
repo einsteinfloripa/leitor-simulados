@@ -22,7 +22,12 @@ from utils.misc import normalize_image
 class DetectionModel(ABC):
 
     @classmethod
-    def from_models_path(cls, rel_path : str, stage : Stage = Stage.NULL) -> DetectionModel:
+    def from_models_path(
+        cls,
+        rel_path : str,
+        stage : Stage = Stage.NULL,
+        test : TestType = TestType.NULL
+        ) -> DetectionModel:
         """
         Load the model from the models path
         """
@@ -44,7 +49,7 @@ class DetectionModel(ABC):
         
         # EFScanAlgo model
         elif model_suffix == 'py':
-            return EFScanAlgoModel(model_name, stage)
+            return EFScanAlgoModel(model_name, stage, test)
         
         # YOLOV8 model
         elif model_suffix == 'pt':
@@ -170,7 +175,7 @@ class EFScanAlgoModel(DetectionModel):
     __initialized = False
     __lazy_initialized = False
     __scanner = None
-    def __init__(self, name : str, stage : Stage):
+    def __init__(self, name : str, stage : Stage, test : TestType):
         super().__init__(ModelType.EFSCANALGO)
         
         # Set path to import dynamically
@@ -183,44 +188,15 @@ class EFScanAlgoModel(DetectionModel):
         # Initialize static variables
         self.name = name
         self.stage = stage
-        
-        # Initialize dynamic variables
-        self.test = None
-    
-
-    ## Lazy explicit initialization ##
-    
-    def init(self, test : TestType):
-        """
-        Explicit lazy initialization of the EFScanAlgo model, this must heppen lazily
-        because the EFScanAlgo needs to know additional info that can change
-        as the user changes the test selected.
-        So only when the user selects a test and run the model it is actualy initialized.
-        """
-        from EFScanAlgoCore import Scanner
-        
-        # Check if the model is trying to be initialized twice with the same test
-        if self.__lazy_initialized and self.test == test:
-            return
+        self.test = test
         
         # Import the relevant classes to initialize the model
         self.__scanner = Scanner(
             self.name,
-            test,
+            self.test,
             self.stage
         )
-        
-        # Check if the models target stage is correct
-        target_stage = self.__scanner.target_stage
-        if target_stage != self.stage:
-            raise ValueError(
-                f"Model {self.name} is not compatible with stage {self.stage}"
-            )
-        
-        # Stores the state of the model
-        self.test = test
-        self.__lazy_initialized = True
-        
+
 
     ## Detection function ##
 

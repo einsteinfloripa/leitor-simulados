@@ -6,10 +6,12 @@ from core.detection.base import Detection
 from api.data_structs import ImageCacheStruct
 from core.definitions.question import Question
 from core.definitions.geometry import IntBoundingBox, IntPoint
-from gui import Config, EventBus
 
-# TODO: Change fonts
+from .. import Config
+from ..event_system import EventBus, Calltime
 
+
+@EventBus.bind
 class _ZoomButtons(tk.Frame):
     """
     Auxiliary widget for zoom controls.
@@ -26,6 +28,7 @@ class _ZoomButtons(tk.Frame):
     **kwargs : dict
         Additional keyword arguments passed to the tk.Frame initializer.
     """
+    #TODO: Change font
     font = ("Helvetica", 16)
 
     def __init__(self, canvas, *args, **kwargs):
@@ -53,9 +56,7 @@ class _ZoomButtons(tk.Frame):
         )
         self.zoom_in_button.pack(side=tk.RIGHT)
 
-        # Subscribe to event to activate zoom buttons
-        EventBus.subscribe(self.activate, "<<folder_loaded>>")
-
+    @EventBus.subscribe("<<successfully_folder_loaded>>")
     def activate(self, event):
         """
         Activate the zoom buttons when a folder is loaded.
@@ -69,6 +70,7 @@ class _ZoomButtons(tk.Frame):
         self.zoom_in_button.config(state=tk.NORMAL)
 
 
+@EventBus.bind
 class ImgCanvas(tk.Canvas):
     """
     A canvas widget for displaying, zooming, and interacting with images.
@@ -106,10 +108,8 @@ class ImgCanvas(tk.Canvas):
         self.bind("<ButtonRelease-3>", self._stop_drag)   # Stop dragging
         self.bind("<MouseWheel>", self._mouse_zoom)       # Mouse wheel for zoom
 
-        # Subscribe to events
-        EventBus.subscribe(self.display_image, "<<draw_call>>")
-        EventBus.subscribe(self.center_image, "<<center_draw_call>>")
 
+    @EventBus.subscribe("<<draw_call>>")
     def display_image(self, event=None):
         """
         Display the current image on the canvas, scaling it based on the zoom factor.
@@ -148,6 +148,8 @@ class ImgCanvas(tk.Canvas):
             self.__draw_questions()
             self.__draw_cpf()
 
+    @EventBus.subscribe("<<center_draw_call>>")
+    @EventBus.subscribe("<<successfully_folder_loaded>>", calltime=Calltime.LATE)
     def center_image(self, event=None):
         """
         Center and scale the image to fit within the canvas while preserving aspect ratio.

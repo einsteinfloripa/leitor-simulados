@@ -6,7 +6,7 @@ import cv2
 from core.definitions import Stage
 from core.detection.base import Detection
 from core.image import CoreImage
-from core.model import load_model
+from core.model import DetectionModel
 from core.definitions.geometry import FloatBoundingBox, Axis, Line
 from core.IO import MODELS_PATH
 
@@ -49,7 +49,7 @@ class DinamicParams:
 
 
 def init_pipeline(scanner : Scanner, config : Config) -> None:
-    scanner.yolo = load_model(
+    scanner.yolo = DetectionModel.from_models_path(
         str((MODELS_PATH / 'YoloV8' / 'first_stage' / 'ps.pt').resolve()),
     )
 

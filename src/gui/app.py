@@ -1,12 +1,11 @@
 import tkinter as tk
 
-from core.definitions.enums import TestType, Stage
+from core.definitions.enums import Stage
 from core.detection import (
     Detection,
     DEFAULT_FIRST_STAGE_LABEL_MAP,
     DEFAULT_SECOND_STAGE_LABEL_MAP
 )
-from core.model import EFScanAlgoModel
 
 from api import ProgressTracker, DetectionParameters
 
@@ -14,13 +13,15 @@ from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
 from gui.modelsSidebar import PipelineSideBar
 from gui.popups import ProgressPopup
-from gui import Config, EventBus
+from gui import Config
+from gui.event_system import EventBus
 
 
 # =============================================================================
 # Main Application Class
 # =============================================================================
 
+@EventBus.bind
 class WindowApplication(tk.Tk):
     """
     The main application window for the image detection system.
@@ -50,18 +51,11 @@ class WindowApplication(tk.Tk):
         # Initialize UI components
         self._initialize_ui()
 
-        # Subscribe to event bus
-        EventBus.subscribe(self.open_folder, "<<open_folder>>")
-        EventBus.subscribe(
-            self.apply_model,
-            "<<apply_model>>",
-            "<<apply_model_to_all>>",
-        )
-
     # =============================================================================
     # Public Methods
     # =============================================================================
     
+    @EventBus.subscribe("<<open_folder>>")
     def open_folder(self, event: str, path: str):
         """
         Opens a folder containing images and updates the application state.
@@ -77,10 +71,9 @@ class WindowApplication(tk.Tk):
             EventBus.publish("<<clear_img_app>>")
             Config.current_image_index = 0
             Config.api.select_image(0, reload=True)
-            EventBus.publish("<<folder_loaded>>")
-            EventBus.publish("<<center_draw_call>>")
+            EventBus.publish("<<successfully_folder_loaded>>")
 
-
+    @EventBus.subscribe("<<apply_model>>", "<<apply_model_to_all>>")
     def apply_model(self, event: str):
         """
         Applies the selected detection model to the current image or all images.
@@ -115,10 +108,6 @@ class WindowApplication(tk.Tk):
             DEFAULT_SECOND_STAGE_LABEL_MAP, # Hardcoded for now
             ss_config['st'],
         )
-        
-        # TODO: Unecessary initialization of models
-        # Initialize EFScanAlgo models if needed
-        self._initialize_models_if_needed(fs_model, ss_model, test)
 
         # Apply models
         if apply_to_all:
@@ -167,23 +156,6 @@ class WindowApplication(tk.Tk):
         self.imgEditor = ImageEditorApp(self)
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
 
-    def _initialize_models_if_needed(self, fs_model, ss_model, test: TestType):
-        """
-        Initializes EFScanAlgo models if they haven't been initialized.
-
-        Parameters
-        ----------
-        fs_model : EFScanAlgoModel
-            First-stage detection model.
-        ss_model : EFScanAlgoModel
-            Second-stage detection model.
-        test : TestType
-            The test type being processed.
-        """
-        if isinstance(fs_model, EFScanAlgoModel):
-            fs_model.init(test)
-        if isinstance(ss_model, EFScanAlgoModel):
-            ss_model.init(test)
 
     def _apply_model_to_single_image(self, fs_model, ss_model, fs_config, ss_config):
         """

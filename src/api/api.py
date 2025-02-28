@@ -8,7 +8,7 @@ import cv2
 from core.detection import Detection
 from core.image import CoreImage
 from core.model import DetectionModel
-from core.definitions.enums import TestType, Stage
+from core.definitions.enums import TestType, Stage, ModelType
 from core.IO import FileExtension
 from core.IO.base import Importer
 from core.IO.report import ReportIO, ReportData
@@ -338,7 +338,11 @@ class CoreApi:
         
         # Load the model
         model_path = model_info.rel_path
-        model = DetectionModel.from_models_path(model_path, stage)
+        if model_info.model_type == ModelType.EFSCANALGO:
+            model = DetectionModel.from_models_path(model_path, stage, self.current_test_type)
+        else:
+            model = DetectionModel.from_models_path(model_path, stage)
+        
         if not model:
             return False
         if stage == Stage.SECOND:

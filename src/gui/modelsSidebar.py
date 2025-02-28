@@ -1,18 +1,18 @@
 __all__ = ["PipelineSideBar"]
 
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import ttk
 
 from core.definitions.enums import TestType, Stage
-from core.IO import MODELS_PATH
 
-from gui import (
+from . import (
     Config,
-    EventBus,
     title_font,
     semititle_font
 )
+from .event_system import EventBus, Calltime
 
+@EventBus.bind
 class _TestFrame(tk.Frame):
     """Frame for selecting the test type."""
 
@@ -43,8 +43,11 @@ class _TestFrame(tk.Frame):
             bt.grid(row=i+1, column=0, sticky="ew")
             self.radio_buttons.append(bt)
     
-        EventBus.subscribe(self.lock_on, "<<folder_loaded>>")
+    @EventBus.subscribe("<<open_folder>>", calltime=Calltime.EARLY)
+    def update_test_type(self, *args):
+        Config.selected_test_type = TestType[self.test_name.get()]
 
+    @EventBus.subscribe("<<successfully_folder_loaded>>")
     def lock_on(self, envent=None):
         """
         Lock the test type selection.
@@ -146,7 +149,7 @@ class _ModelFrame(tk.Frame):
         else:
             activate_panel(self)
 
-
+@EventBus.bind
 class PipelineSideBar(tk.Frame):
     """Sidebar for configuring the test pipeline."""
 
@@ -189,9 +192,6 @@ class PipelineSideBar(tk.Frame):
             state=tk.DISABLED
         )
         self.apply_to_all_check.grid(row=5, column=0, padx=5, pady=5, sticky="nsew")
-
-        # Subscribe to events
-        EventBus.subscribe(self.on_folder_loaded, "<<folder_loaded>>")
     
     def get_pipeline(self):
         fs = self.first_stage.get_info()
@@ -201,7 +201,7 @@ class PipelineSideBar(tk.Frame):
             'fs': fs,
             'ss': ss
         }
-
+    
 
     ## Event handlers ##
 
@@ -211,7 +211,7 @@ class PipelineSideBar(tk.Frame):
         else:
             EventBus.publish("<<apply_model>>")
 
-
+    @EventBus.subscribe("<<successfully_folder_loaded>>")
     def on_folder_loaded(self, event):
         self.apply_button.config(state=tk.NORMAL)
         self.apply_to_all_check.config(state=tk.NORMAL)

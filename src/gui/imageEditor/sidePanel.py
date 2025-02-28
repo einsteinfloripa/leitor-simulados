@@ -1,10 +1,11 @@
 __all__ = ["SidePanel"]
 
 import tkinter as tk
-from tkinter import ttk
 
 from core.detection.base import Detection
-from gui import Config, EventBus, title_font
+
+from ..event_system import EventBus
+from .. import title_font
 from .question_list import QuestionAnswerPanel
 
 
@@ -12,6 +13,7 @@ from .question_list import QuestionAnswerPanel
 # Auxiliary Widgets
 # =============================================================================
 
+@EventBus.bind
 class _ShowDetectionsBox(tk.Frame):
     """
     A widget that displays checkboxes for different detection types.
@@ -131,9 +133,8 @@ class _ShowDetectionsBox(tk.Frame):
         self.buttonList = self._ButtonList(self, imgApp)
         self.buttonList.pack(expand=True, fill=tk.X)
 
-        # Subscribe to events to activate the detection checkboxes
-        EventBus.subscribe(self.on_activate, "<<folder_loaded>>")
 
+    @EventBus.subscribe("<<successfully_folder_loaded>>")
     def on_activate(self, event):
         """
         Activate the detection checkboxes when a folder is loaded.
@@ -148,7 +149,7 @@ class _ShowDetectionsBox(tk.Frame):
         self.buttonList.cb_button.config(state=tk.NORMAL)
         self.buttonList.qb_button.config(state=tk.NORMAL)
 
-
+@EventBus.bind
 class _BuilderPanel(tk.Frame):
     """
     A widget that provides controls for building and displaying answers.
@@ -204,9 +205,6 @@ class _BuilderPanel(tk.Frame):
         )
         self.update_all_checkbox.grid(row=2, column=1, columnspan=1)
 
-        # Subscribe to event to activate update controls
-        EventBus.subscribe(self.activate_update_button, "<<folder_loaded>>")
-
     def publish(self):
         """
         Publish events to build answers based on the update mode.
@@ -229,6 +227,7 @@ class _BuilderPanel(tk.Frame):
         """
         return self.show_answers_var.get()
 
+    @EventBus.subscribe("<<successfully_folder_loaded>>")
     def activate_update_button(self, event):
         """
         Activate the update controls when a folder is loaded.
