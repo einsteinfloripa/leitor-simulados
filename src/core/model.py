@@ -7,11 +7,17 @@ import numpy as np
 import tflite_runtime.interpreter as tflite
 from ultralytics import YOLO
 
-from core.image import CoreImage
-from core.detection.base import Detection
 from core.definitions.enums import ModelType, TestType, Stage
 from core.definitions.geometry import FloatBoundingBox
+from core.image import CoreImage
+from core.detection.base import Detection
 from core.IO import MODELS_PATH
+from core.IO.base import Importer
+from core.detection.label_map import (
+    LabelMap,
+    DEFAULT_FIRST_STAGE_LABEL_MAP,
+    DEFAULT_SECOND_STAGE_LABEL_MAP
+)
 
 from utils.misc import normalize_image
 
@@ -31,7 +37,20 @@ class DetectionModel(ABC):
         """
         Load the model from the models path
         """
+
+        # Get the model label map
         model_path : Path = MODELS_PATH / rel_path
+        label_maps : dict = Importer.JSON.load_label_maps()
+        if label_maps:
+            key = rel_path.replace('\\', '/')
+            label_map = LabelMap.from_json(label_maps.get(key))
+        else:
+            label_map = None
+        if not label_map:
+            if stage == Stage.FIRST:
+                label_map = DEFAULT_FIRST_STAGE_LABEL_MAP
+            elif stage == Stage.SECOND:
+                label_map = DEFAULT_SECOND_STAGE_LABEL_MAP
         
         # Get the model type
         parts = model_path.parts
@@ -45,28 +64,29 @@ class DetectionModel(ABC):
             interpreter = tflite.Interpreter(
                 str(model_path.resolve())
             )
-            return LegacyModel(interpreter)
+            return LegacyModel(interpreter, label_map)
         
         # EFScanAlgo model
         elif model_suffix == 'py':
-            return EFScanAlgoModel(model_name, stage, test)
+            return EFScanAlgoModel(model_name, stage, test, label_map)
         
         # YOLOV8 model
         elif model_suffix == 'pt':
             engine = YOLO(
                 model_path
             )
-            return YOLOModel(engine)
+            return YOLOModel(engine, label_map)
 
 
     def __init__(
             self,
             model_type : ModelType,
-            target_stage : Stage = Stage.NULL
+            target_stage : Stage = Stage.NULL,
+            label_map : LabelMap = None
         ):
         self.model_type = model_type
         self.target_stage = target_stage
-
+        self.label_map = label_map
 
     @abstractmethod
     def detect(self, img : CoreImage) -> list[Detection]:
@@ -82,8 +102,8 @@ class DetectionModel(ABC):
 
 
 class YOLOModel(DetectionModel):
-    def __init__(self, engine : YOLO):
-        super().__init__(ModelType.YOLOV8)
+    def __init__(self, engine : YOLO, label_map : LabelMap):
+        super().__init__(ModelType.YOLOV8, label_map=label_map)
         self.engine = engine
 
     def detect(self, img : CoreImage) -> list[Detection]:
@@ -111,8 +131,8 @@ class YOLOModel(DetectionModel):
 
 
 class LegacyModel(DetectionModel):
-    def __init__(self, interpreter):
-        super().__init__(ModelType.LEGACY)
+    def __init__(self, interpreter, label_map : LabelMap):
+        super().__init__(ModelType.LEGACY, label_map=label_map)
         self.interpreter = interpreter
         self.interpreter.allocate_tensors()
         input_details = self.interpreter.get_input_details()[0]["shape"]
@@ -173,10 +193,9 @@ class LegacyModel(DetectionModel):
 class EFScanAlgoModel(DetectionModel):
     
     __initialized = False
-    __lazy_initialized = False
     __scanner = None
-    def __init__(self, name : str, stage : Stage, test : TestType):
-        super().__init__(ModelType.EFSCANALGO)
+    def __init__(self, name : str, stage : Stage, test : TestType, label_map : LabelMap):
+        super().__init__(ModelType.EFSCANALGO, label_map=label_map)
         
         # Set path to import dynamically
         if not self.__initialized:

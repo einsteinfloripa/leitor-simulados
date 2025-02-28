@@ -14,7 +14,7 @@ from core.IO.base import Importer
 from core.IO.report import ReportIO, ReportData
 from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
 
-from .data_structs import ImageCacheStruct, ModelInfo, DetectionParameters
+from .data_structs import ImageCacheStruct, ModelInfo
 from .caching import Cache
 from .builder import BuilderApi
 from .sync_channel import ProgressTracker
@@ -361,8 +361,8 @@ class CoreApi:
 
     def run_detection_pipeline(
             self,
-            fs_params : DetectionParameters = None,
-            ss_params : DetectionParameters = None
+            fs_score_threshold: float,
+            ss_score_threshold: float
             ) -> bool:
         """
         Runs the detection pipeline for the currently selected image.
@@ -393,15 +393,15 @@ class CoreApi:
             raise ValueError("Cannot run detection pipeline without valid models")
                 
         # Run the detection pipeline
-        Detection.set_label_map(fs_params.label_map)
+        Detection.set_label_map(self.fs_model.label_map)
         self.image.make_detections_with_model(
-            self.__fs_model, fs_params.score_threshold
+            self.__fs_model, fs_score_threshold
         )
         self.image.make_cropped()
-        Detection.set_label_map(ss_params.label_map)
+        Detection.set_label_map(self.ss_model.label_map)
         for crop in self.image.crops:
             crop.make_detections_with_model(
-                self.__ss_model, ss_params.score_threshold
+                self.__ss_model, ss_score_threshold
             )
 
         # Cache the detections
@@ -409,8 +409,8 @@ class CoreApi:
 
     def run_detection_pipeline_for_all(
             self,
-            fs_params: DetectionParameters,
-            ss_params: DetectionParameters,
+            fs_score_threshold: float,
+            ss_score_threshold: float,
             progress_queue: Optional[ProgressTracker] = None
         ):
         """
@@ -455,15 +455,15 @@ class CoreApi:
             # Select the image
             self.select_image(i)
             # Run the detection pipeline
-            Detection.set_label_map(fs_params.label_map)
+            Detection.set_label_map(self.fs_model.label_map)
             self.image.make_detections_with_model(
-                self.__fs_model, fs_params.score_threshold
+                self.__fs_model, fs_score_threshold
             )
             self.image.make_cropped()
-            Detection.set_label_map(ss_params.label_map)
+            Detection.set_label_map(self.ss_model.label_map)
             for crop in self.image.crops:
                 crop.make_detections_with_model(
-                    self.__ss_model, ss_params.score_threshold
+                    self.__ss_model, ss_score_threshold
             )
 
             # Cache the detections

@@ -8,7 +8,7 @@ from core.definitions.enums import ModelType, Stage
 from core.detection import DetectionContainer, LabelMap
 from core.IO import MODELS_PATH
 
-__all__ = [ 'ImageCacheStruct', 'ModelInfo', 'DetectionParameters' ]
+__all__ = [ 'ImageCacheStruct', 'ModelInfo' ]
 
 @dataclass
 class ImageCacheStruct:
@@ -31,23 +31,6 @@ class ImageCacheStruct:
     container: DetectionContainer
     blocks: Optional[TestBlocks] = None
     questions: Optional[TestQuestions] = None
-
-
-@dataclass
-class DetectionParameters:
-    """
-    Data structure to store the parameters for a particular detection run.
-
-    Parameters
-    ----------
-    label_map : LabelMap
-        The label map for the model.
-    score_threshold : float
-        The minimum score for a detection to be considered valid.
-    """
-
-    label_map : LabelMap = None
-    score_threshold : float = None
 
 
 from pathlib import Path

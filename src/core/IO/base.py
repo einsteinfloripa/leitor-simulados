@@ -1,17 +1,30 @@
 import os
 import shutil
 import inspect
+import json
 from pathlib import Path
 from typing import Generator
 from functools import wraps
 from abc import ABC, abstractmethod
 
+from core.detection.label_map import LabelMap
 from core.definitions.blocks import TestBlocks
 from core.image import CoreImage
 
 from . import ACCEPTED_IMAGE_EXTENTIONS, ACCEPTED_MODELS_EXTENTIONS, MODELS_PATH
 
 class Importer():
+
+    class JSON:
+        @staticmethod
+        def load_label_maps(serch_dir : Path = MODELS_PATH):
+            file = serch_dir / 'LabelMaps.json'
+            if not file.exists():
+                return None
+            with open(file, 'r') as f:
+                label_maps : dict = json.load(f)
+                return label_maps
+            return None
 
     class Find:
         """

@@ -6,7 +6,6 @@ so that i can easily switch out the frontend to a more advanced GUI if needed.
 """
 
 from .api import CoreApi
-from .data_structs import DetectionParameters
 from .sync_channel import ProgressTracker
 
-__all__ = ['CoreApi', 'ProgressTracker', 'DetectionParameters']
+__all__ = ['CoreApi', 'ProgressTracker']

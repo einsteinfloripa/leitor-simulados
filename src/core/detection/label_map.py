@@ -9,6 +9,18 @@ from . import Detection
 @dataclass
 class LabelMap:
 
+    @classmethod
+    def from_json(cls, json_dict : dict) -> LabelMap:
+        """
+        Create a LabelMap from a JSON dictionary
+        """
+        if not json_dict:
+            return None
+        return cls(
+            detections = [Detection.Type[detection] for detection in json_dict['values']],
+            stage = Stage[json_dict['stage']]
+        )
+
     detections : list[Detection.Type]
     stage : Stage
 

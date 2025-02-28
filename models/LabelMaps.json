@@ -1,0 +1,12 @@
+{
+    "Legacy/second_stage/saved_model/model.tflite": {
+        "stage" : "SECOND",
+        "values" : [
+            "CPF_COLUMN",
+            "QUESTION_LINE",
+            "SELECTED_BALL",
+            "UNSELECTED_BALL",
+            "QUESTION_NUMBER"
+        ]
+    }
+}

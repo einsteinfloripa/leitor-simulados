@@ -3,11 +3,9 @@ import tkinter as tk
 from core.definitions.enums import Stage
 from core.detection import (
     Detection,
-    DEFAULT_FIRST_STAGE_LABEL_MAP,
-    DEFAULT_SECOND_STAGE_LABEL_MAP
 )
 
-from api import ProgressTracker, DetectionParameters
+from api import ProgressTracker
 
 from gui.top_menu import TopMenu
 from gui.imageEditor import ImageEditorApp
@@ -99,15 +97,8 @@ class WindowApplication(tk.Tk):
         ss_model = ss_config['model']
         Config.api.select_model(ss_model, Stage.SECOND)
 
-
-        fs_params = DetectionParameters(
-            DEFAULT_FIRST_STAGE_LABEL_MAP, # Hardcoded for now
-            fs_config['st'],
-        )
-        ss_params = DetectionParameters(
-            DEFAULT_SECOND_STAGE_LABEL_MAP, # Hardcoded for now
-            ss_config['st'],
-        )
+        fs_score_threshold = fs_config['st']
+        ss_score_threshold = ss_config['st']
 
         # Apply models
         if apply_to_all:
@@ -115,14 +106,14 @@ class WindowApplication(tk.Tk):
             ProgressPopup(
                 self,
                 Config.api.run_detection_pipeline_for_all,
-                [fs_params, ss_params, tracker],
+                [fs_score_threshold, ss_score_threshold, tracker],
                 tracker,
                 Config.api.image_files
             )
         else:
             Config.api.run_detection_pipeline(
-                fs_params,
-                ss_params,
+                fs_score_threshold,
+                ss_score_threshold,
             )
 
         # Refresh UI
@@ -155,42 +146,3 @@ class WindowApplication(tk.Tk):
 
         self.imgEditor = ImageEditorApp(self)
         self.imgEditor.grid(row=1, column=1, sticky="nswe")
-
-
-    def _apply_model_to_single_image(self, fs_model, ss_model, fs_config, ss_config):
-        """
-        Applies the detection model to a single image.
-
-        Parameters
-        ----------
-        fs_model : EFScanAlgoModel
-            First-stage detection model.
-        ss_model : EFScanAlgoModel
-            Second-stage detection model.
-        fs_config : dict
-            Configuration for the first-stage model.
-        ss_config : dict
-            Configuration for the second-stage model.
-        """
-        index = Config.current_image_index
-        Config.api.select_image(index, do_cache=False)
-        image = Config.api.image
-
-        # Apply first-stage model
-        Detection.set_label_map(DEFAULT_FIRST_STAGE_LABEL_MAP)
-        image.make_detections_with_model(fs_model, fs_config['st'])
-
-        # Crop image based on detected areas
-        image.make_cropped()
-
-        # Apply second-stage model
-        Detection.set_label_map(DEFAULT_SECOND_STAGE_LABEL_MAP)
-        for crop in image.crops:
-            crop.make_detections_with_model(ss_model, ss_config['st'])
-
-        # Cache the detections
-        Config.api.cache.cache_image(index, image)
-
-        # Refresh the UI
-        Config.api.select_image(index)
-
