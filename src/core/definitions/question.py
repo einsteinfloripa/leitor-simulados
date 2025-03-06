@@ -73,7 +73,7 @@ class Question:
 
 # SECTION: Question container class
 
-class TestQuestions:
+class TestReport:
     """
     This class is responsable for storing the answers of a test.
     """
@@ -83,7 +83,7 @@ class TestQuestions:
             cls,
             test_type : TestType,
             owner_cpf : str = "XXXXXXXXXXX"
-        ) -> Type[TestQuestions]:
+        ) -> Type[TestReport]:
         if test_type == TestType.PS_ALUNOS:
             return PsQuestions(owner_cpf=owner_cpf)
         elif test_type == TestType.SIMULINHO:
@@ -129,25 +129,25 @@ class TestQuestions:
         return self._cpf_updated
 
 
-class PsQuestions(TestQuestions):
+class PsQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.PS_ALUNOS, **kwargs)
         self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 61)]
 
 
-class SimulinhoQuestions(TestQuestions):
+class SimulinhoQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMULINHO, **kwargs)
         self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 51)]
 
 
-class SimufscQuestions(TestQuestions):
+class SimufscQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUFSC, **kwargs)
         self._questions : list[NumericAnswer] = [NumericAnswer(0) for _ in range(1, 51)]
 
 
-class SimuenemQuestions(TestQuestions):
+class SimuenemQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUENEM, **kwargs)
         self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 181)]

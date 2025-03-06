@@ -141,10 +141,11 @@ class SaveAsPopup(tk.Toplevel):
         
         if fullpath:
             try:
-                Config.api.save_report(Config.selected_test_type, fullpath, exporter_name)
+                Config.api.save_report(fullpath, exporter_name)
                 TimeBombPopup(self.root, self, "Success", "Report saved successfully!", destroy_parent=True)
             except Exception as e:
                 TimeBombPopup(self.root, self, "Error", str(e), destroy_parent=False)
+                raise e
 
 class ProgressPopup(tk.Toplevel):
     """
@@ -192,9 +193,6 @@ class ProgressPopup(tk.Toplevel):
         self.thread.start()
         self.waching_thread.start()
 
-# =============================================================================
-# Private Methods
-# =============================================================================
 
     def __init_widgets(self):
         """Initializes the widgets in the popup window."""

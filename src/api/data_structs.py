@@ -3,7 +3,7 @@ from typing import Optional
 from pathlib import Path
 
 from core.definitions.blocks import TestBlocks
-from core.definitions.question import TestQuestions
+from core.definitions.question import TestReport
 from core.definitions.enums import ModelType, Stage
 from core.detection import DetectionContainer, LabelMap
 from core.IO import MODELS_PATH
@@ -23,14 +23,25 @@ class ImageCacheStruct:
         A container that holds detected objects or regions within the image.
     blocks : Optional[TestBlocks], default=None
         The first-stage detection results, along with second-stage detections inside it.
-    questions : Optional[TestQuestions], default=None
+    questions : Optional[TestReport], default=None
         The extracted questions, answers, and CPF (identification number) of the image owner.
     """
 
     img_name: str
     container: DetectionContainer
     blocks: Optional[TestBlocks] = None
-    questions: Optional[TestQuestions] = None
+    report: Optional[TestReport] = None
+
+    def has_detections(self) -> bool:
+        """
+        Check if the image has any detections cached.
+
+        Returns
+        -------
+        bool
+            True if the image has detections, False otherwise.
+        """
+        return not self.container.empty()
 
 
 from pathlib import Path

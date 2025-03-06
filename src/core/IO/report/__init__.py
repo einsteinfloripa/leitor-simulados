@@ -13,7 +13,7 @@ from functools import wraps
 from pathlib import Path
 
 from core.definitions import TestType
-from core.definitions.question import TestQuestions
+from core.definitions.question import TestReport
 
 from ..base import Exporter
 from .. import FileExtension
@@ -24,7 +24,7 @@ from .. import FileExtension
 class ReportData:
     test_type : TestType = TestType.NULL
     names : list[str] = field(default_factory=list)
-    test_questions : list[TestQuestions] = field(default_factory=list)
+    test_questions : list[TestReport] = field(default_factory=list)
 
 
 

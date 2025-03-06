@@ -7,7 +7,7 @@ from api.data_structs import ImageCacheStruct
 from core.definitions.question import Question
 from core.definitions.geometry import IntBoundingBox, IntPoint
 
-from .. import Config
+from .. import Config, title_font
 from ..event_system import EventBus, Calltime
 
 
@@ -144,7 +144,8 @@ class ImgCanvas(tk.Canvas):
         # Draw overlay elements
         if self.imgEditor.current_drawn_detections:
             self.__draw_detections()
-        if self.imgEditor.test_questions_report and self.imgEditor.sidePanel.get_show_answers():
+        has_report = Config.api.has_report()
+        if has_report and self.imgEditor.sidePanel.get_show_answers():
             self.__draw_questions()
             self.__draw_cpf()
 
@@ -214,7 +215,7 @@ class ImgCanvas(tk.Canvas):
 
         Annotations include question numbers and their answers, colored based on update status.
         """
-        questions: list[Question] = self.imgEditor.test_questions_report.get_questions()
+        questions: list[Question] = Config.api.get_report().get_questions()
         for question in questions:
             if question.position is None:
                 continue
@@ -235,7 +236,7 @@ class ImgCanvas(tk.Canvas):
                 scaled_x, scaled_y,
                 text=text,
                 fill=color,
-                font=("Helvetica", 12, "bold")
+                font=title_font
             )
 
     def __draw_cpf(self):
@@ -244,11 +245,11 @@ class ImgCanvas(tk.Canvas):
         
         Retrieves the CPF from the test questions report and draws it near the corresponding detection.
         """
-        cpf = self.imgEditor.test_questions_report.get_owner_cpf()
-        if cpf is None:
-            return
+        report = Config.api.get_report()
+        cpf = report.get_owner_cpf()
 
-        cache: ImageCacheStruct = Config.api.cache.from_index(Config.current_image_index)
+        index = Config.api.current_set_index
+        cache: ImageCacheStruct = Config.api.cache.from_index(index)
         cpf_detection: Detection = cache.blocks.cpf_block.root_detection
         middle_point: IntPoint = cpf_detection.pixel_middle_point
         offset_x = cpf_detection.pixel_width
@@ -258,13 +259,13 @@ class ImgCanvas(tk.Canvas):
         scaled_x = self.offset_x + x * self.zoom_factor
         scaled_y = self.offset_y + y * self.zoom_factor
 
-        updated = cache.questions.get_cpf_updated()
+        updated = report.get_cpf_updated()
         color = "indian red" if not updated else "orange2"
         self.create_text(
             scaled_x, scaled_y,
             text=f"CPF: {cpf}",
             fill=color,
-            font=("Helvetica", 12, "bold")
+            font=title_font
         )
 
     # Event Handlers

@@ -15,7 +15,7 @@ __all__ = [
     # Answer types
     "AlphaAnswer", "BinaryAnswer", "NumericAnswer",
     # Questions
-    "Question", "TestQuestions", "PsQuestions", "SimulinhoQuestions", "SimufscQuestions", "SimuenemQuestions",
+    "Question", "TestReport", "PsQuestions", "SimulinhoQuestions", "SimufscQuestions", "SimuenemQuestions",
     # Test-specific definitions
     "PsAlunosDefinitions", "SimulinhoDefinitions", "SimufscDefinitions", "SimuenemDefinitions"
 ]
@@ -39,7 +39,7 @@ from .blocks import Block, TestBlocks
 # Questions
 from .question import (
     Question,
-    TestQuestions,
+    TestReport,
     PsQuestions,
     SimulinhoQuestions,
     SimufscQuestions,

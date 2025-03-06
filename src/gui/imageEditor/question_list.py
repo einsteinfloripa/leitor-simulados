@@ -3,7 +3,7 @@ __all__ = ["QuestionAnswerPanel"]
 import tkinter as tk
 from tkinter import ttk
 
-from core.definitions.question import TestQuestions, Question, NumericAnswer, AlphaAnswer
+from core.definitions.question import TestReport, Question, NumericAnswer, AlphaAnswer
 from api.data_structs import ImageCacheStruct
 
 from ..event_system import EventBus
@@ -56,13 +56,14 @@ class _InnerPanel(tk.Frame):
 
         # API coupling: retrieve data from the cache
         self.img_data: ImageCacheStruct = Config.api.cache.from_index(bind_index)
-        self.cpf_var.set(self.img_data.questions.get_owner_cpf())
-        self.test_questions: TestQuestions = self.img_data.questions
-        self.questions: list[Question] = self.test_questions.get_questions()
+        self.test_report: TestReport = self.img_data.report
+        cpf = self.test_report.get_owner_cpf()
+        self.cpf_var.set(cpf)
+        self.questions: list[Question] = self.test_report.get_questions()
         
         # Save the original answers/cpf to compare with the updated ones
         self.original_answers = [question.answer.name for question in self.questions]
-        self.original_cpf = self.img_data.questions.get_owner_cpf()
+        self.original_cpf = cpf
 
         # Determine the answer type and options based on the first question
         self.answer_type = self.questions[0].answer.__class__
@@ -161,7 +162,7 @@ class _InnerPanel(tk.Frame):
 
         # Determine if the answer has been updated compared to the original
         update = self.original_answers[index] != updated_answer
-        self.test_questions.update_answer(question, updated=update)
+        self.test_report.update_answer(question, updated=update)
 
         # Trigger a redraw of the image
         EventBus.publish("<<draw_call>>")
@@ -185,11 +186,11 @@ class _InnerPanel(tk.Frame):
         """
 
         updated_cpf = self.cpf_var.get()
-        self.test_questions.set_owner_cpf(updated_cpf)
+        self.test_report.set_owner_cpf(updated_cpf)
 
         # Determine if the CPF has been updated compared to the original
         update = self.original_cpf != updated_cpf
-        self.test_questions.set_owner_cpf(updated_cpf, updated=update)
+        self.test_report.set_owner_cpf(updated_cpf, updated=update)
 
         # Trigger a redraw of the image
         EventBus.publish("<<draw_call>>")
@@ -232,19 +233,19 @@ class QuestionAnswerPanel(tk.Frame):
             The event that triggered the update.
         """
         index = Config.current_image_index
-        cache: ImageCacheStruct = Config.api.cache.from_index(index)
-        if not cache or not cache.questions:
+        report = Config.api.get_report(index)
+        if not report:
             self.__hide_questions()
         else:
             self.__show_questions(index)
 
-    def __show_questions(self, bind_index):
+    def __show_questions(self, index):
         """
         Display the inner panel with question answers bound to the given image index.
 
         Parameters
         ----------
-        bind_index : int
+        index : int
             The index of the image cache to bind the questions to.
         """
         # Destroy existing inner panel if it exists
@@ -252,7 +253,7 @@ class QuestionAnswerPanel(tk.Frame):
             self.inner_panel.destroy()
 
         # Create a new inner panel for the given bind index
-        self.inner_panel = _InnerPanel(self, bind_index)
+        self.inner_panel = _InnerPanel(self, index)
         self.inner_panel.pack(fill="both", expand=True)
 
     def __hide_questions(self):

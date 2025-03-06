@@ -5,18 +5,22 @@ from pathlib import Path
 import numpy as np
 import cv2
 
+from core.definitions.enums import TestType, Stage, ModelType
+from core.definitions.question import TestReport
+from core.definitions.blocks import TestBlocks
 from core.detection import Detection
 from core.image import CoreImage
 from core.model import DetectionModel
-from core.definitions.enums import TestType, Stage, ModelType
 from core.IO import FileExtension
 from core.IO.base import Importer
 from core.IO.report import ReportIO, ReportData
 from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
+from core.builder import Builder
+
+
 
 from .data_structs import ImageCacheStruct, ModelInfo
 from .caching import Cache
-from .builder import BuilderApi
 from .sync_channel import ProgressTracker
 
 class CoreApi:
@@ -34,7 +38,6 @@ class CoreApi:
 
         # Helpers
         self.__cache: Cache = Cache(0)
-        self.__builder: Optional[BuilderApi] = None
 
         # Context Variables
         self.__image_files: Optional[list[str]] = None
@@ -59,6 +62,7 @@ class CoreApi:
     def image(self) -> Optional[CoreImage]:
         """
         Get the currently loaded CoreImage instance.
+        This property is set by the  select_image  method.
 
         Returns
         -------
@@ -89,7 +93,9 @@ class CoreApi:
     @property
     def rgb_image_raw(self) -> Optional[np.ndarray]:
         """
-        Get the raw RGB image as a NumPy array.
+        A NumPy array using RGB color pattenr as is used in the pillow lib.
+        Used on computations on the image itself.
+        Set by the -> select_image  method.
 
         Returns
         -------
@@ -122,6 +128,8 @@ class CoreApi:
         """
         Get the cache engine instance.
 
+        Set on -> open_folder  and -> reset_cache  methods.
+
         Returns
         -------
         Cache
@@ -133,7 +141,9 @@ class CoreApi:
     @property
     def image_files(self) -> Optional[list[str]]:
         """
-        Get the list of image file paths provided to the API.
+        Get the list of image file paths found on the provided folder.
+        
+        Set by the -> open_folder  method.
 
         Returns
         -------
@@ -145,7 +155,9 @@ class CoreApi:
     @property
     def number_of_images(self) -> Optional[int]:
         """
-        Get the total number of images.
+        Get the total number of image paths.
+        
+        Set by the -> open_folder  method.
 
         Returns
         -------
@@ -157,8 +169,10 @@ class CoreApi:
     @property
     def fs_model(self) -> Optional[DetectionModel]:
         """
-        Returns the full-scale detection model.
+        Returns the detection model selected for the first stage detection.
         
+        Set by the -> select_model  method.
+
         Returns
         -------
         Optional[DetectionModel]
@@ -169,8 +183,10 @@ class CoreApi:
     @property
     def ss_model(self) -> Optional[DetectionModel]:
         """
-        Returns the small-scale detection model.
+        Returns the detection model selected for the second stage detection.
         
+        Set by the -> select_model  method.
+
         Returns
         -------
         Optional[DetectionModel]
@@ -181,7 +197,10 @@ class CoreApi:
     @property
     def current_set_index(self) -> Optional[int]:
         """
-        Get the current set index.
+        Get the current set index. The index is position of the image path
+        on the list of image files -> image_files.
+        
+        Set by the -> select_image  method.
 
         Returns
         -------
@@ -194,6 +213,10 @@ class CoreApi:
     def current_test_type(self) -> Optional[TestType]:
         """
         Get the current test type.
+        
+        Set on the -> open_folder  method.
+        
+        *Is User provided on the arguments of the method.
 
         Returns
         -------
@@ -230,24 +253,6 @@ class CoreApi:
         """
         self.__cache = Cache(number_of_images)
 
-    def get_builder(self, test_type: TestType) -> BuilderApi:
-        """
-        Returns a BuilderApi instance for the specified test type.
-        
-        Parameters
-        ----------
-        test_type : TestType
-            The type of test for the builder.
-        
-        Returns
-        -------
-        BuilderApi
-            A BuilderApi instance.
-        """
-        if self.__last_builder_type != test_type or self.__builder is None:
-            self.__builder = BuilderApi(self, test_type)
-            self.__last_builder_type = test_type
-        return self.__builder
 
     def select_image(self, index: int = -1, reload=False) -> bool:
         """
@@ -353,6 +358,96 @@ class CoreApi:
             self.__fs_model_info = model_info
         return True
 
+    def get_report(self, index: int = -1) -> Optional[TestReport]:
+        """
+        Get the report for the selected image.
+
+        Parameters
+        ----------
+        index : int, optional
+            The index of the image to process. Defaults to the current set index.
+
+        Returns
+        -------
+        Optional[TestReport]
+            The report for the selected image, if available.
+        """
+        if index == -1:
+            index = self.current_set_index
+        img_cache: Optional[ImageCacheStruct] = self.cache.from_index(index)
+        if img_cache is None:
+            return None
+        return img_cache.report 
+
+    def has_report(self, index: int = -1) -> bool:
+        """
+        Check if a report is available for the selected image.
+
+        Parameters
+        ----------
+        index : int, optional
+            The index of the image to process. Defaults to the current set index.
+
+        Returns
+        -------
+        bool
+            True if a report is available, False otherwise.
+        """
+        if index == -1:
+            index = self.current_set_index
+        return (
+            self.cache.from_index(index) is not None \
+            and self.cache.from_index(index).report is not None
+        )
+
+# =============================================================================
+# Building answers report operations
+# =============================================================================
+
+
+    def build_report(self, index : int = -1):
+        """
+        Builds a report for the selected image. ( i.e. try to get the 
+        answers for the questions in the image based on the detections )
+
+        Parameters
+        ----------
+        index : int, optional
+            The index of the image to process. Defaults to the current set index.
+
+        Raises
+        ------
+        ValueError
+            If no cache data is found for the selected image.
+        """
+        # Get the index of the image to process
+        if index == -1:
+            index = self.current_set_index
+
+        # Retrieve cached data
+        img_cache: Optional[ImageCacheStruct] = self.cache.from_index(index)
+        if img_cache is None:
+            raise ValueError("No cache data found for the current image")
+        
+        blocks: TestBlocks = img_cache.blocks
+        
+        # Get the builder engine
+        builder = Builder.from_test_type(self.current_test_type)
+
+        # Initialize the report data structure
+        report = TestReport.from_test_type(self.current_test_type)
+
+        # Resolve the CPF owner
+        report.set_owner_cpf(builder.resolve_cpf(blocks.cpf_block))
+
+        # Process each question block
+        for block in blocks.questions_blocks:
+            report.update_answers(builder.resolve_question_block(block))
+
+        # Update cache with resolved questions
+        img_cache.report = report
+
+
 
 # =============================================================================
 # Detection operations
@@ -363,22 +458,17 @@ class CoreApi:
             self,
             fs_score_threshold: float,
             ss_score_threshold: float
-            ) -> bool:
+            ):
         """
         Runs the detection pipeline for the currently selected image.
 
         Parameters
         ----------
-        fs_params : DetectionParameters, optional
-            Parameters for the full-scale detection model, by default None.
-        ss_params : DetectionParameters, optional
-            Parameters for the small-scale detection model, by default None.
+        fs_score_threshold : float
+            The score threshold for the full-scale detection model.
+        ss_score_threshold : float
+            The score threshold for the small-scale detection model.
 
-        Returns
-        -------
-        bool
-            True if the pipeline was successfully run, False otherwise.
-        
         Raises
         ------
         ValueError
@@ -390,7 +480,7 @@ class CoreApi:
                 not self.__ss_model 
                 and not self.__fs_model.target_stage == Stage.BOTH
             ):
-            raise ValueError("Cannot run detection pipeline without valid models")
+            raise ValueError("Bad models setup")
                 
         # Run the detection pipeline
         Detection.set_label_map(self.fs_model.label_map)
@@ -512,7 +602,7 @@ class CoreApi:
 
     
 
-    def save_report(self, test_type: TestType, fullpath: Path, exporter_name: str = "DefaultJSON"):
+    def save_report(self, fullpath: Path, exporter_name: str = "DefaultJSON"):
         """
         Saves a report using the specified exporter.
 
@@ -527,12 +617,12 @@ class CoreApi:
         """
         exporter: ReportIO = ReportIO.get_by_name(exporter_name)
         data: list[ImageCacheStruct] = self.cache.get_all()
-        formatted_data = ReportData(test_type=test_type)
+        formatted_data = ReportData(test_type=self.current_test_type)
         
         for img_cache in data:
             if img_cache:
                 formatted_data.names.append(img_cache.img_name)
-                formatted_data.test_questions.append(img_cache.questions)
+                formatted_data.test_questions.append(img_cache.report)
         
         exporter.write(formatted_data, fullpath)
 

@@ -53,7 +53,7 @@ class Cache:
             image.name,
             container,
             blocks,
-            questions=None,
+            report=None,
         )
 
     def from_index(self, index: int) -> Optional[ImageCacheStruct]:

@@ -2,15 +2,14 @@ __all__ = ["ImageEditorApp"]
 
 import tkinter as tk
 
-from core.definitions.question import TestQuestions
+from core.definitions.question import TestReport
 from core.definitions.blocks import TestBlocks
 from core.detection import Detection
 
 from api.data_structs import ImageCacheStruct
-from api.builder import BuilderApi
 
 from .. import Config
-from ..event_system import EventBus, Calltime
+from ..event_system import EventBus
 from .canvas import ImgCanvas
 from .sidePanel import SidePanel
 
@@ -95,7 +94,7 @@ class ImageEditorApp(tk.Frame):
 
         # Operation variables
         self.current_drawn_detections: dict[Detection.Type, list[Detection]] = None
-        self.test_questions_report: TestQuestions = None
+        self.test_questions_report: TestReport = None
 
         # Configure grid responsiveness
         self.grid_rowconfigure(0, weight=1)
@@ -151,28 +150,21 @@ class ImageEditorApp(tk.Frame):
         event : str
             The event that triggered the update.
         """
-        test_type = Config.selected_test_type
-        do_build = event != "<<update_all>>"
-        to_all = event == "<<build_all_answers>>"
+
+        do_build = (event != "<<update_all>>")
+        to_all = (event == "<<build_all_answers>>")
 
         indices = range(Config.api.number_of_images) \
                   if to_all else [Config.current_image_index]
 
         for index in indices:
-            cache: ImageCacheStruct = Config.api.cache.from_index(index)
-            if cache is not None and do_build:
-                builder: BuilderApi = Config.api.get_builder(test_type)
-                test_blocks: TestBlocks = cache.blocks
-                test_questions_report: TestQuestions = builder.resolve_test(test_blocks)
-                cache.questions = test_questions_report
+            cache = Config.api.cache.from_index(index)
+            has_detection_cached = (
+                cache is not None and cache.has_detections()
+            )
 
-        if to_all:
-            cache = Config.api.cache.from_index(Config.current_image_index)
-
-        try:
-            self.test_questions_report = cache.questions
-        except Exception:
-            self.test_questions_report = None
+            if has_detection_cached and do_build:
+                Config.api.build_report(index)
 
         EventBus.publish("<<update_question_panel>>")
 
