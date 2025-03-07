@@ -1,7 +1,9 @@
-__all__ = ['Block', 'TestBlocks']
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from core.detection import DetectionContainer, Detection
+
+__all__ = ['Block', 'TestBlocks']
 
 @dataclass
 class Block:

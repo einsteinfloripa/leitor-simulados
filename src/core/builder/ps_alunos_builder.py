@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.definitions.geometry import Axis, IntPoint, IntBoundingBox
 from core.definitions.question import Question, AlphaAnswer
 from core.definitions.blocks import Block

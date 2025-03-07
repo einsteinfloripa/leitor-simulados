@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterator, Generator
 from dataclasses import dataclass
 from pathlib import Path

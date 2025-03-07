@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.definitions.geometry import Axis
 from ..detection import Detection
 
