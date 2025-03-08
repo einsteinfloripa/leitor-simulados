@@ -34,13 +34,13 @@ class DefaultCSV(ReportIO):
         # Iterate over the data making the data lists
         config_values = list(config_dict.values())
         output_data = []
-        for name, test_questions in zip(data.names, data.test_questions):
+        for name, test_report in zip(data.names, data.test_reports):
 
             # Cpf
-            student_data = config_values + [test_questions.get_owner_cpf()]
+            student_data = config_values + [test_report.get_owner_cpf()]
             
             # Answers
-            questions : list[Question] = test_questions.get_questions()
+            questions : list[Question] = test_report.get_questions()
             for question in questions:
                 number : int = question.number
                 answer : AlphaAnswer | NumericAnswer = question.answer

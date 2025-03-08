@@ -29,12 +29,12 @@ class DefaultJSON(ReportIO):
         output_dict.update(self.get_config())
         
         # Iterate over the data
-        for name, test_questions in zip(data.names, data.test_questions):
+        for name, test_report in zip(data.names, data.test_reports):
 
             # Create the student output
             student_output = {}
-            student_output['owner_cpf'] = test_questions.get_owner_cpf()
-            questions : list[Question] = test_questions.get_questions()
+            student_output['owner_cpf'] = test_report.get_owner_cpf()
+            questions : list[Question] = test_report.get_questions()
             for question in questions:
                 number : int = question.number
                 answer : AlphaAnswer | NumericAnswer = question.answer

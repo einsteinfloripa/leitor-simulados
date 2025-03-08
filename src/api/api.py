@@ -622,7 +622,7 @@ class CoreApi:
         for img_cache in data:
             if img_cache:
                 formatted_data.names.append(img_cache.img_name)
-                formatted_data.test_questions.append(img_cache.report)
+                formatted_data.test_reports.append(img_cache.report)
         
         exporter.write(formatted_data, fullpath)
 

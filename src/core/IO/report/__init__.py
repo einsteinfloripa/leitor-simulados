@@ -18,17 +18,16 @@ from core.definitions.question import TestReport
 from ..base import Exporter
 from .. import FileExtension
 
-# SECTION: data structures
+
 
 @dataclass
 class ReportData:
     test_type : TestType = TestType.NULL
     names : list[str] = field(default_factory=list)
-    test_questions : list[TestReport] = field(default_factory=list)
+    test_reports : list[TestReport] = field(default_factory=list)
 
 
 
-# SECTION: Base report exporter class
 
 class ReportIO(Exporter):
     """
@@ -102,7 +101,7 @@ class ReportIO(Exporter):
             # Assert has quastions and names
             assert len(data.names) > 0, \
                 "The names list must have at least one name"
-            assert len(data.names) == len(data.test_questions), \
+            assert len(data.names) == len(data.test_reports), \
                 "The number of names and test questions must be the same"
             # Assert right fullpath
             assert fullpath.endswith(self.extension.value), \
