@@ -356,11 +356,11 @@ class CoreApi:
         if stage == Stage.SECOND:
             self.__ss_model = model
             self.__ss_model_info = model_info
-            logger.info(f"Model {model_info.name} loaded for stage {stage.name}")
+            logger.info(f'"{model_info.name}" loaded for stage {stage.name}')
         else:
             self.__fs_model = model
             self.__fs_model_info = model_info
-            logger.info(f"Model {model_info.name} loaded for stage {stage.name}")
+            logger.info(f'"{model_info.name}" loaded for stage {stage.name}')
         return True
 
     def get_report(self, index: int = -1) -> Optional[TestReport]:
