@@ -101,7 +101,7 @@ class TestReport:
         self._cpf_updated : bool = False
         # Test variables
         self._test_type : TestType = test_type
-        self._questions : list[AlphaAnswer | NumericAnswer | BinaryAnswer] = []
+        self._questions : list[Question] = []
 
     def update_answer(self, question : Question, updated=False) -> None:
         self._questions[question.number - 1].answer = question.answer
@@ -127,6 +127,13 @@ class TestReport:
     
     def get_cpf_updated(self) -> bool:
         return self._cpf_updated
+    
+    def to_dict(self) -> list:
+        d = {
+            'owner_cpf': self._owner_student_cpf,
+            **{ f"{q.number:02}" : q.answer.name for q in self._questions }
+        }
+        return d
 
 
 class PsQuestions(TestReport):

@@ -1,6 +1,7 @@
 from pathlib import Path
 from enum import Enum
 
+
 # CoreImages
 ACCEPTED_IMAGE_EXTENTIONS = {'.png', '.jpg', '.jpeg'}
 ACCEPTED_MODELS_EXTENTIONS = {'.tflite', '.py', '.pt'}
@@ -20,4 +21,8 @@ class FileExtension(Enum):
     JSON = '.json'
     EXCEL = '.xlsx'
     TXT = '.txt'
-    
+
+
+class IOError(Exception):
+    """Base class for exceptions in this module."""
+    pass    

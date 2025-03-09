@@ -17,12 +17,15 @@ from core.IO.report import ReportIO, ReportData
 from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
 from core.builder import Builder
 
-
+from utils.log import LoggingSystem
 
 from .data_structs import ImageCacheStruct, ModelInfo
 from .caching import Cache
 from .sync_channel import ProgressTracker
 
+logger = LoggingSystem.get_new_logger("API")
+
+@LoggingSystem.trace_methods(logger, header="Api Call", footer="End Call")
 class CoreApi:
     """
     Core API class responsible for managing images, caching, and models.
@@ -290,7 +293,7 @@ class CoreApi:
             self.rgb_image_raw = cv2.cvtColor(img.raw, cv2.COLOR_BGR2RGB)
             self.__current_set_index = index
         except Exception as e:
-            # TODO: Log the error
+            logger.exception(f"Failed to load image at index {index}: {e}")
             return False
 
         return True
@@ -353,9 +356,11 @@ class CoreApi:
         if stage == Stage.SECOND:
             self.__ss_model = model
             self.__ss_model_info = model_info
+            logger.info(f"Model {model_info.name} loaded for stage {stage.name}")
         else:
             self.__fs_model = model
             self.__fs_model_info = model_info
+            logger.info(f"Model {model_info.name} loaded for stage {stage.name}")
         return True
 
     def get_report(self, index: int = -1) -> Optional[TestReport]:

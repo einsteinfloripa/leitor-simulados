@@ -16,7 +16,11 @@ from core.definitions.question import (
     NumericAnswer
 )
 
+from utils.log import LoggingSystem
+
 class DefaultCSV(ReportIO):
+
+    _logger = LoggingSystem.get_new_logger(__name__)
 
     @property
     def extension(self) -> FileExtension:
@@ -24,7 +28,7 @@ class DefaultCSV(ReportIO):
 
     @ReportIO.assert_data
     def write(self, data: ReportData, fullpath : Path) -> None:
-        
+
         # Create header list
         header = _get_header(data.test_type)
         config_dict : dict = self.get_config()['config']
