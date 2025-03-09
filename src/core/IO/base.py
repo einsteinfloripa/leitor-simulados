@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 import inspect
@@ -11,9 +13,19 @@ from core.detection.label_map import LabelMap
 from core.definitions.blocks import TestBlocks
 from core.image import CoreImage
 
-from . import ACCEPTED_IMAGE_EXTENTIONS, ACCEPTED_MODELS_EXTENTIONS, MODELS_PATH
+from utils.log import LoggingSystem
+
+from . import (
+    IOError,
+    ACCEPTED_IMAGE_EXTENTIONS,
+    ACCEPTED_MODELS_EXTENTIONS,
+    MODELS_PATH
+)
+
 
 class Importer():
+
+    _logger = LoggingSystem.get_new_logger(__name__)
 
     class JSON:
         @staticmethod
@@ -33,6 +45,8 @@ class Importer():
         """
         @staticmethod
         def image_files(folder_path : str, recursive : bool = False):
+            Importer._logger.info(f"Searching for images in {folder_path}")
+            
             folder = Path(folder_path)
             if recursive:
                 files = [
@@ -44,6 +58,8 @@ class Importer():
                         str(f) for f in folder.glob('*.*') \
                         if f.suffix.lower() in ACCEPTED_IMAGE_EXTENTIONS
                 ]
+            
+            Importer._logger.debug(f"Found {len(files)} images: {files}")
             return files
         
         @staticmethod
@@ -51,6 +67,8 @@ class Importer():
             folder_path : str = MODELS_PATH, 
             recursive : bool = True
         ) -> list[str]:
+            Importer._logger.info(f"Searching for models in {folder_path}")
+
             folder = Path(folder_path)
             if recursive:
                 files = [
@@ -62,18 +80,26 @@ class Importer():
                         str(f) for f in folder.glob('*.*') \
                         if f.suffix.lower() in ACCEPTED_MODELS_EXTENTIONS
                 ]
+
+            Importer._logger.debug(f"Found {len(files)} models: {files}")
             return files
 
-
 class Exporter(ABC):
+
+    _logger = LoggingSystem.get_new_logger(__name__)
 
     @property
     @abstractmethod
     def extension(self):
         self.extension
 
-
+    
     def folder_export(func : callable):
+        """
+        Decorator to create a folder for the output before calling the 
+        decorated function.
+        If the function fails, the folder is deleted.
+        """
         @wraps(func)
         def wrapper(*args, **kwargs):
 
@@ -95,8 +121,11 @@ class Exporter(ABC):
                     Exporter.clear_folder(fullpath)
                     return False
             except Exception as e:
+                if isinstance(e, IOError):
+                    Exporter._logger.error(e)
+                else:
+                    Exporter._logger.exception(e)
                 Exporter.clear_folder(fullpath)
-                raise e
                 return False
             return True
 
@@ -104,6 +133,8 @@ class Exporter(ABC):
 
     @staticmethod
     def clear_folder(folder_path : str | Path):
+        Exporter._logger.debug(f"Deleting folder {folder_path}")
+        
         if isinstance(folder_path, str):
             folder_path = Path(folder_path)
         for item in os.listdir(folder_path):

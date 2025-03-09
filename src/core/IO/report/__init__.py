@@ -2,7 +2,6 @@
 This module is intended to provide customizable functions to
 export the final report of the answers to different formats.
 """
-
 # Definitions
 from __future__ import annotations
 
@@ -12,23 +11,53 @@ from abc import abstractmethod
 from functools import wraps
 from pathlib import Path
 
+import pandas as pd
+
 from core.definitions import TestType
-from core.definitions.question import TestQuestions
+from core.definitions.question import TestReport
 
 from ..base import Exporter
 from .. import FileExtension
 
-# SECTION: data structures
+
 
 @dataclass
 class ReportData:
+    """
+    The data class that holds the data to be exported.
+    """
     test_type : TestType = TestType.NULL
     names : list[str] = field(default_factory=list)
-    test_questions : list[TestQuestions] = field(default_factory=list)
+    test_reports : list[TestReport] = field(default_factory=list)
+
+    def to_pandas(self):
+        """
+        Method to convert the data to a pandas DataFrame.
+
+        The DataFrame will have the following structure:
+        ┌──────────┬──────────┬──────────┬──────────┐
+        │          │ cpf_owner│     1    │     2    │  .  .  .
+        ├──────────┼──────────┼──────────┼──────────┤  
+        │ img name │ XXXXXXXX │     A    │    B     │  .  .  .
+        ├──────────┼──────────┼──────────┼──────────┤
+        │   ...    │    ...   │    ...   │    ...   │  .  .  .
+        └──────────┴──────────┴──────────┴──────────┘
+        
+        returns:
+        --------
+        pd.DataFrame: The DataFrame with the data.
+        """
+        # Create the data dictionary
+        for name, test_report in zip(self.names, self.test_reports):
+            data_dict = {}
+            data_dict[name] = test_report.to_dict()
+        # Create the DataFrame
+        df = pd.DataFrame(data_dict).T
+        df = df[['owner_cpf'] + [c for c in df.columns if c != 'owner_cpf']]
+        return df
 
 
 
-# SECTION: Base report exporter class
 
 class ReportIO(Exporter):
     """
@@ -82,6 +111,7 @@ class ReportIO(Exporter):
     @classmethod
     def get_config(cls) -> dict:
         """Return the configuration of the exporter."""
+        #TODO: is this needed?
         now = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         return {'config': {'date': now}}
 
@@ -89,25 +119,36 @@ class ReportIO(Exporter):
     ## Decorators ##
     @classmethod
     def assert_data(cls, func):
+        """
+        Decorator to assert the data structure and variables before
+        calling the write method.
+
+        raises:
+        --------
+        IOError: If the data is not valid.            
+        """
         @wraps(func)
         def wrapper(self, data: ReportData, fullpath: str):
-            # Assert right data structure
-            assert isinstance(data, ReportData), \
-                "The data must be a ReportData object"
-            # Assert right variables
-            assert isinstance(data.test_type, TestType), \
-                "The test type must be a TestType object"
-            assert data.test_type is not TestType.NULL, \
-                "The test type must be a valid TestType object"
-            # Assert has quastions and names
-            assert len(data.names) > 0, \
-                "The names list must have at least one name"
-            assert len(data.names) == len(data.test_questions), \
-                "The number of names and test questions must be the same"
-            # Assert right fullpath
-            assert fullpath.endswith(self.extension.value), \
-                f"The fullpath must have the extension {self.extension}"
-            return func(self, data, fullpath)
+            try:
+                # Assert right data structure
+                assert isinstance(data, ReportData), \
+                    "The data must be a ReportData object"
+                # Assert right variables
+                assert isinstance(data.test_type, TestType), \
+                    "The test type must be a TestType object"
+                assert data.test_type is not TestType.NULL, \
+                    "The test type must be a valid TestType object"
+                # Assert has quaetions and names
+                assert len(data.names) > 0, \
+                    "The names list must have at least one name"
+                assert len(data.names) == len(data.test_reports), \
+                    "The number of names and test questions must be the same"
+                # Assert right fullpath
+                assert fullpath.endswith(self.extension.value), \
+                    f"The fullpath must have the extension {self.extension}"
+                return func(self, data, fullpath)
+            except AssertionError as e:
+                raise IOError(e) # This error wont be interpreted as a code error
         return wrapper
 
 

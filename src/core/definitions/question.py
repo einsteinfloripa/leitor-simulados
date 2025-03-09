@@ -73,7 +73,7 @@ class Question:
 
 # SECTION: Question container class
 
-class TestQuestions:
+class TestReport:
     """
     This class is responsable for storing the answers of a test.
     """
@@ -83,7 +83,7 @@ class TestQuestions:
             cls,
             test_type : TestType,
             owner_cpf : str = "XXXXXXXXXXX"
-        ) -> Type[TestQuestions]:
+        ) -> Type[TestReport]:
         if test_type == TestType.PS_ALUNOS:
             return PsQuestions(owner_cpf=owner_cpf)
         elif test_type == TestType.SIMULINHO:
@@ -101,7 +101,7 @@ class TestQuestions:
         self._cpf_updated : bool = False
         # Test variables
         self._test_type : TestType = test_type
-        self._questions : list[AlphaAnswer | NumericAnswer | BinaryAnswer] = []
+        self._questions : list[Question] = []
 
     def update_answer(self, question : Question, updated=False) -> None:
         self._questions[question.number - 1].answer = question.answer
@@ -127,27 +127,34 @@ class TestQuestions:
     
     def get_cpf_updated(self) -> bool:
         return self._cpf_updated
+    
+    def to_dict(self) -> list:
+        d = {
+            'owner_cpf': self._owner_student_cpf,
+            **{ f"{q.number:02}" : q.answer.name for q in self._questions }
+        }
+        return d
 
 
-class PsQuestions(TestQuestions):
+class PsQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.PS_ALUNOS, **kwargs)
         self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 61)]
 
 
-class SimulinhoQuestions(TestQuestions):
+class SimulinhoQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMULINHO, **kwargs)
         self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 51)]
 
 
-class SimufscQuestions(TestQuestions):
+class SimufscQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUFSC, **kwargs)
         self._questions : list[NumericAnswer] = [NumericAnswer(0) for _ in range(1, 51)]
 
 
-class SimuenemQuestions(TestQuestions):
+class SimuenemQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUENEM, **kwargs)
         self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 181)]

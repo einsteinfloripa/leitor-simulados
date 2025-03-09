@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterator, Generator
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,10 +8,7 @@ from core.definitions.blocks import TestBlocks
 from core.detection import Detection
 
 from ..base import Exporter
-from .. import (
-    FileExtension,
-    ROOT_PATH
-)
+from .. import FileExtension
 
 
 @dataclass
