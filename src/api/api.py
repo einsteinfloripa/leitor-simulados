@@ -14,7 +14,7 @@ from core.model import DetectionModel
 from core.IO import FileExtension
 from core.IO.base import Importer
 from core.IO.report import ReportIO, ReportData
-from core.IO.detection.export_yolo import DetectionsExportData, YOLOExporter
+from core.IO.export.export_yolo import DetectionsExportData, YOLOExporter
 from core.builder import Builder
 
 from utils.log import LoggingSystem
@@ -257,7 +257,7 @@ class CoreApi:
         self.__cache = Cache(number_of_images)
 
 
-    def select_image(self, index: int = -1, reload=False) -> bool:
+    def select_image(self, index: int = -1, force_reload=False) -> bool:
         """
         Selects an image by index to be the operant image and optionally caches it.
         
@@ -275,7 +275,7 @@ class CoreApi:
         """
         if index == -1:
             index = self.__current_set_index
-        elif index == self.__current_set_index and not reload:
+        elif index == self.__current_set_index and not force_reload:
             return True
 
         if (
@@ -382,7 +382,19 @@ class CoreApi:
         img_cache: Optional[ImageCacheStruct] = self.cache.from_index(index)
         if img_cache is None:
             return None
-        return img_cache.report 
+        return img_cache.report
+    
+    def get_all_reports(self) -> list[TestReport]:
+        """
+        Get all reports in the cache.
+
+        Returns
+        -------
+        list[TestReport]
+            A list of all reports in the cache.
+        """
+        data: list[ImageCacheStruct] = self.cache.get_all()
+        return [img_cache.report for img_cache in data if img_cache]
 
     def has_report(self, index: int = -1) -> bool:
         """

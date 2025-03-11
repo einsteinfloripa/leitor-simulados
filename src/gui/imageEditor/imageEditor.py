@@ -1,10 +1,11 @@
 __all__ = ["ImageEditorApp"]
 
 import tkinter as tk
+import cv2
 
-from core.definitions.question import TestReport
-from core.definitions.blocks import TestBlocks
+from core.definitions.question import TestReport, Question
 from core.detection import Detection
+from core.IO.export.export_image import ImageReportExportData, ImageReportExporter
 
 from api.data_structs import ImageCacheStruct
 
@@ -214,3 +215,20 @@ class ImageEditorApp(tk.Frame):
         """
         self.current_drawn_detections = {}
         self.test_questions_report = None
+
+    @EventBus.subscribe("<<export_report_images>>")
+    def export_images(self, event, export_path):
+        """
+        Export the images with detections to a selected folder.
+
+        Parameters
+        ----------
+        event : any
+            The event that triggered the export action.
+        """
+        data = ImageReportExportData(
+            images=Config.api.image_files,
+            reports=Config.api.get_all_reports()
+        )
+        exporter = ImageReportExporter()
+        exporter.export(export_path, data)

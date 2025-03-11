@@ -4,6 +4,8 @@ import os
 import shutil
 import inspect
 import json
+import numpy as np
+import cv2
 from pathlib import Path
 from typing import Generator
 from functools import wraps
@@ -83,6 +85,11 @@ class Importer():
 
             Importer._logger.debug(f"Found {len(files)} models: {files}")
             return files
+        
+    @staticmethod
+    def load_cv2_image(image_path : str) -> np.ndarray:
+        return cv2.imread(image_path)
+
 
 class Exporter(ABC):
 
@@ -93,50 +100,76 @@ class Exporter(ABC):
     def extension(self):
         self.extension
 
-    
-    def folder_export(func : callable):
+    @classmethod    
+    def folder_export(cls, func : callable):
         """
-        Decorator to create a folder for the output before calling the 
-        decorated function.
-        If the function fails, the folder is deleted.
+        Decorator to automatically create a folder for the export
+        function. If the operation fails (i.e. the decorated function returns false
+        or raises an error), the folder is deleted.
+
+        The decorator expects the decorated function to have a
+        paeameter named 'out_dir' which is the path of the folder
+        the decorated function is meant to write on.
+
+        Usage example:
+
+        @Exporter.folder_export
+        def export(self, out_dir : Path, data : dict) -> bool:
+            ...
+            return True
         """
         @wraps(func)
         def wrapper(*args, **kwargs):
-
-            # Get an argument or kwarg named 'fullpath'
-            fullpath = None
+            
+            # Get an argument or kwarg named 'out_dir'
+            out_dir = None
             sig = inspect.signature(func)
             bound_args = sig.bind_partial(*args, **kwargs)
             bound_args.apply_defaults()
-            fullpath = bound_args.arguments.get('fullpath')
-            
-            # Make the directory
-            # If the directory already exists, raise an error
-            fullpath.mkdir()
-            
-            # Call the actual function
+            out_dir = bound_args.arguments.get('out_dir')
+
+            if out_dir is None:
+                cls._logger.error("The decorated function must have an argument named 'out_dir'")
+                return False
+            else:
+                cls._logger.debug(f"out_dir parameter found: {out_dir}")
+
             try:
-                status = func(*args, **kwargs)
-                if not status:
-                    Exporter.clear_folder(fullpath)
-                    return False
+                if not isinstance(out_dir, Path):
+                    out_dir = Path(out_dir)
+                    # Also update the arg
+                    bound_args.arguments['out_dir'] = out_dir
+                # Make the directory
+                # If the directory already exists, raise an error
+                out_dir.mkdir()
+                
+            
+                # Call the actual function
+                status = func(*bound_args.args, **bound_args.kwargs)
+                cls._logger.debug(f"Function status returned: {status}")
             except Exception as e:
-                if isinstance(e, IOError):
+                if e is IOError or e is FileExistsError:
                     Exporter._logger.error(e)
+                    Exporter.clear_folder(out_dir)
+                    return False
                 else:
                     Exporter._logger.exception(e)
-                Exporter.clear_folder(fullpath)
-                return False
-            return True
+                    Exporter.clear_folder(out_dir)
+                    raise e
+            return status
 
         return wrapper
 
     @staticmethod
     def clear_folder(folder_path : str | Path):
         Exporter._logger.debug(f"Deleting folder {folder_path}")
-        
+        # Transform the path to a Path object if it is a string
         if isinstance(folder_path, str):
             folder_path = Path(folder_path)
+        # Check if the folder exists
+        if not folder_path.exists():
+            return
+        # Recursively delete the folder and its contents
         for item in os.listdir(folder_path):
             item_path = os.path.join(folder_path, item)
             if os.path.isfile(item_path) or os.path.islink(item_path):  
@@ -168,5 +201,8 @@ class Exporter(ABC):
         for crop in image.crops:
             crop.save(dest)
 
+    @staticmethod
+    def save_cv2_image(out_fullpath : str, image : np.ndarray):
+        cv2.imwrite(out_fullpath, image)
             
             

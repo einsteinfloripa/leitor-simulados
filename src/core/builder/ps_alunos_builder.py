@@ -5,6 +5,8 @@ from core.definitions.question import Question, AlphaAnswer
 from core.definitions.blocks import Block
 from core.detection import Detection
 
+from utils.log import LoggingSystem
+
 from .base import Builder
 from .tools import get_lines, get_selected_balls_index, sort_axis
 
@@ -13,6 +15,8 @@ class PSAlunosBuilder(Builder):
     """
     Builder class for processing PSAlunos question blocks.
     """
+
+    _logger = LoggingSystem.get_new_logger("Core.PSAlunosBuilder")
 
     @classmethod
     def resolve_cpf(cls, block: Block) -> str:
@@ -88,12 +92,25 @@ class PSAlunosBuilder(Builder):
                     global_pixels.p_max.x + offset_x,
                     global_pixels.p_min.y + offset_y
                 )
+            elif len(line) > 0:
+                last_ball: Detection = line[-1]
+                global_pixels: IntBoundingBox = last_ball.to_global_pixels()
+                offset_x = last_ball.pixel_width // 2
+                offset_y = last_ball.pixel_height // 2
+                last_ball_ne_point = IntPoint(
+                    global_pixels.p_max.x + offset_x,
+                    global_pixels.p_min.y + offset_y
+                )
 
             # Get indexes of selected balls in the current line
             answer_index = get_selected_balls_index(line)
 
             # Check for invalid cases: incomplete line or multiple selections
             if len(line) != 5 or len(answer_index) > 1:
+                cls._logger.warning(
+                    f"Invalid line detected in block {block.order} at question {question_number} \
+| image position: {last_ball_ne_point}."
+                )
                 block_report.append(
                     Question(
                         question_number,
@@ -105,6 +122,10 @@ class PSAlunosBuilder(Builder):
 
             # Check for the case when no ball is selected
             if not answer_index and len(line) == 5:
+                cls._logger.info(
+                    f"Black answer detected in block {block.order} at question {question_number} \
+| image position: {last_ball_ne_point}."
+                )
                 block_report.append(
                     Question(
                         question_number,
@@ -115,10 +136,15 @@ class PSAlunosBuilder(Builder):
                 continue
 
             # Otherwise, calculate the answer based on the selected ball index
+            answer = AlphaAnswer(answer_index[0] + 1)
+            cls._logger.debug(
+                f"Question {question_number} in block {block.order} has answer {answer}. \
+| image position: {last_ball_ne_point}."
+            )
             block_report.append(
                 Question(
                     question_number,
-                    AlphaAnswer(answer_index[0] + 1),
+                    answer,
                     last_ball_ne_point
                 )
             )

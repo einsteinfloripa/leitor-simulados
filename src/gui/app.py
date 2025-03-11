@@ -68,7 +68,7 @@ class WindowApplication(tk.Tk):
         if Config.api.open_folder(path, Config.selected_test_type):
             EventBus.publish("<<clear_img_app>>")
             Config.current_image_index = 0
-            Config.api.select_image(0, reload=True)
+            Config.api.select_image(0, force_reload=True)
             EventBus.publish("<<successfully_folder_loaded>>")
 
     @EventBus.subscribe("<<apply_model>>", "<<apply_model_to_all>>")

@@ -43,7 +43,11 @@ class TopMenu(tk.Menu):
             label="Exportar YOLO",
             command=self.export_yolo
         )
-        self.add_cascade(label="Detecções", menu=menu_deteccoes)
+        menu_deteccoes.add_command(
+            label="Exportar Imagens com Respostas",
+            command=self.export_images
+        )
+        self.add_cascade(label="Exportar", menu=menu_deteccoes)
 
     def open_folder(self):
         """Opens a folder selection dialog and publishes the selected folder path."""
@@ -58,3 +62,10 @@ class TopMenu(tk.Menu):
     def export_yolo(self):
         """Opens the 'Export YOLO' popup for exporting image detections."""
         ExportYoloPopup(self.root)
+
+    def export_images(self):
+        out_path = filedialog.askdirectory()
+        if out_path:
+            EventBus.publish("<<export_report_images>>", out_path)
+        
+        
