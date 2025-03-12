@@ -7,7 +7,7 @@ from api.data_structs import ImageCacheStruct
 from core.definitions.question import Question
 from core.definitions.geometry import IntBoundingBox, IntPoint
 
-from .. import Config, title_font
+from .. import Config, title_font, semititle_font
 from ..event_system import EventBus, Calltime
 
 
@@ -139,7 +139,17 @@ class ImgCanvas(tk.Canvas):
 
         # Clear the canvas and draw the image
         self.delete("all")
+        if hasattr(self, "nameframe") and self.nameframe:
+            self.nameframe.destroy()
+
+        # Make a new image on the canvas
         self.create_image(self.offset_x, self.offset_y, image=self.photo_image, anchor=tk.NW)
+        
+        # Draw image on the middle of the canvas
+        self.nameframe = tk.Label(
+            self, text=image.name, font=title_font, bg="light gray", fg="DarkSlateGray",
+        )
+        self.nameframe.place(relx=0.5, y=10, anchor=tk.N)
 
         # Draw overlay elements
         if self.imgEditor.current_drawn_detections:

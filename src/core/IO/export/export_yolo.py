@@ -30,7 +30,7 @@ class YOLOExporter(Exporter):
     @Exporter.folder_export
     def export(
             self,
-            fullpath : Path,
+            out_dir : Path,
             data : DetectionsExportData,
             imgs : list | Iterator | Generator = None
         ) -> bool:
@@ -48,7 +48,7 @@ class YOLOExporter(Exporter):
 
             # Make the image folder
             name = name.split('.')[0]
-            output_folder = fullpath / name
+            output_folder = out_dir / name
             output_folder.mkdir(parents=True)
             
             # Write the detections to the file
@@ -85,7 +85,7 @@ class YOLOExporter(Exporter):
         if imgs:
             names = data.names
             blockss = data.test_blocks
-            dest = [fullpath / name.split('.')[0] for name in names]
+            dest = [out_dir / name.split('.')[0] for name in names]
             self.save_images(dest, imgs, blockss)
 
 
