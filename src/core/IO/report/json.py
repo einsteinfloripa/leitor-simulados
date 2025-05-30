@@ -15,13 +15,14 @@ from core.definitions.question import (
     NumericAnswer
 )
 
+__all__ = ['DefaultJSON']
+
 class DefaultJSON(ReportIO):
 
     @property
     def extension(self) -> FileExtension:
         return FileExtension.JSON
 
-    @ReportIO.assert_data
     def write(self, data: ReportData, fullpath : Path) -> None:
 
         # Create the output dictionary

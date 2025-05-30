@@ -139,22 +139,30 @@ class TestReport:
 class PsQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.PS_ALUNOS, **kwargs)
-        self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 61)]
+        self._questions : list[Question] = [
+            Question(number,AlphaAnswer.NULL,None,False) for number in range(1, 61)
+        ]
 
 
 class SimulinhoQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMULINHO, **kwargs)
-        self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 51)]
+        self._questions : list[Question] = [
+            AlphaAnswer.NULL for _ in range(1, 51)
+        ]
 
 
 class SimufscQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUFSC, **kwargs)
-        self._questions : list[NumericAnswer] = [NumericAnswer(0) for _ in range(1, 51)]
+        self._questions : list[Question] = [
+            Question(number,NumericAnswer(),None,False) for number in range(1, 61)    
+        ]
 
 
 class SimuenemQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUENEM, **kwargs)
-        self._questions : list[AlphaAnswer] = [AlphaAnswer.NULL for _ in range(1, 181)]
+        self._questions : list[Question] = [
+            Question(number,AlphaAnswer.NULL,None,False) for number in range(1, 181)
+        ]

@@ -1,9 +1,6 @@
 import tkinter as tk
 
 from core.definitions.enums import Stage
-from core.detection import (
-    Detection,
-)
 
 from api import ProgressTracker
 

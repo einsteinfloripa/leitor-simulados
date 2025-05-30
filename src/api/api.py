@@ -455,11 +455,18 @@ class CoreApi:
         report = TestReport.from_test_type(self.current_test_type)
 
         # Resolve the CPF owner
-        report.set_owner_cpf(builder.resolve_cpf(blocks.cpf_block))
+        if blocks.cpf_block:
+            report.set_owner_cpf(builder.resolve_cpf(blocks.cpf_block))
+        else:
+            logger.warning(f"CPF block not found in the image: [{img_cache.img_name}]")
+            report.set_owner_cpf("XXXXXXXXXXX")
 
         # Process each question block
-        for block in blocks.questions_blocks:
-            report.update_answers(builder.resolve_question_block(block))
+        if blocks.questions_blocks:
+            for block in blocks.questions_blocks:
+                report.update_answers(builder.resolve_question_block(block))
+        else:
+            logger.warning(f"No question blocks found in the image: [{img_cache.img_name}]")
 
         # Update cache with resolved questions
         img_cache.report = report
@@ -617,8 +624,6 @@ class CoreApi:
             return True
         return False
 
-    
-
     def save_report(self, fullpath: Path, exporter_name: str = "DefaultJSON"):
         """
         Saves a report using the specified exporter.
@@ -673,3 +678,8 @@ class CoreApi:
         )
         exporter = YOLOExporter()
         return exporter.export(fullpath, formatted_data, imgs=imgs)
+    
+
+# TODO:
+# =============================================================================
+#     Add a txt repot showing the not detected images, the not detected questions etc...

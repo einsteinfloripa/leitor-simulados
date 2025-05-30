@@ -11,18 +11,18 @@ from core.IO.report import (
 
 from utils.log import LoggingSystem
 
-__all__ = ["DefaultCSV"]
+__all__ = ["DefaultEXCEL"]
 
-class DefaultCSV(ReportIO):
+class DefaultEXCEL(ReportIO):
 
     _logger = LoggingSystem.get_new_logger(__name__)
 
     @property
     def extension(self) -> FileExtension:
-        return FileExtension.CSV
+        return FileExtension.EXCEL
 
     def write(self, data: ReportData, fullpath: Path) -> bool:
-        self._logger.info(f"Writing data to CSV file: {fullpath}")
+        self._logger.info(f"Writing data to EXCEL file: {fullpath}")
         self._logger.debug(f"Data: {data}")
 
         data: pd.DataFrame = data.to_pandas()
@@ -34,6 +34,6 @@ class DefaultCSV(ReportIO):
         data = data.rename(columns={"index": "image"})
 
         # Write the DataFrame to CSV
-        data.to_csv(fullpath, index=False)
+        data.to_excel(fullpath, index=False)
 
         return True  # Ensure the function returns a boolean

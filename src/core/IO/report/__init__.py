@@ -8,7 +8,6 @@ from __future__ import annotations
 from datetime import datetime
 from dataclasses import dataclass, field
 from abc import abstractmethod
-from functools import wraps
 from pathlib import Path
 
 import pandas as pd
@@ -48,9 +47,13 @@ class ReportData:
         pd.DataFrame: The DataFrame with the data.
         """
         # Create the data dictionary
+        data_dict = {}
         for name, test_report in zip(self.names, self.test_reports):
-            data_dict = {}
-            data_dict[name] = test_report.to_dict()
+            if not test_report:
+                null_report = TestReport.from_test_type(self.test_type)
+                data_dict[name] = null_report.to_dict()
+            else:
+                data_dict[name] = test_report.to_dict()
         # Create the DataFrame
         df = pd.DataFrame(data_dict).T
         df = df[['owner_cpf'] + [c for c in df.columns if c != 'owner_cpf']]
@@ -116,44 +119,50 @@ class ReportIO(Exporter):
         return {'config': {'date': now}}
 
 
-    ## Decorators ##
     @classmethod
-    def assert_data(cls, func):
+    def assert_data(self, data: ReportData, fullpath: str):
         """
-        Decorator to assert the data structure and variables before
-        calling the write method.
+        Method to assert the data structure and variables before writing.
 
-        raises:
-        --------
-        IOError: If the data is not valid.            
+        
+        Parameters
+        ----------
+        data : ReportData
+            The data to be written.
+        fullpath : str
+            The fullpath of the file to be written.
+
+        Raises
+        ------
+        IOError
+            If the data structure or variables are not as expected.
         """
-        @wraps(func)
-        def wrapper(self, data: ReportData, fullpath: str):
-            try:
-                # Assert right data structure
-                assert isinstance(data, ReportData), \
-                    "The data must be a ReportData object"
-                # Assert right variables
-                assert isinstance(data.test_type, TestType), \
-                    "The test type must be a TestType object"
-                assert data.test_type is not TestType.NULL, \
-                    "The test type must be a valid TestType object"
-                # Assert has quaetions and names
-                assert len(data.names) > 0, \
-                    "The names list must have at least one name"
-                assert len(data.names) == len(data.test_reports), \
-                    "The number of names and test questions must be the same"
-                # Assert right fullpath
-                assert fullpath.endswith(self.extension.value), \
-                    f"The fullpath must have the extension {self.extension}"
-                return func(self, data, fullpath)
-            except AssertionError as e:
-                raise IOError(e) # This error wont be interpreted as a code error
-        return wrapper
+        try:
+            # Assert right data structure
+            assert isinstance(data, ReportData), \
+                "The data must be a ReportData object"
+            # Assert right variables
+            assert isinstance(data.test_type, TestType), \
+                "The test type must be a TestType object"
+            assert data.test_type is not TestType.NULL, \
+                "The test type must be a valid TestType object"
+            # Assert has quaetions and names
+            assert len(data.names) > 0, \
+                "The names list must have at least one name"
+            assert len(data.names) == len(data.test_reports), \
+                "The number of names and test questions must be the same"
+            # Assert right fullpath
+            assert fullpath.endswith(self.extension.value), \
+                f"The fullpath must have the extension {self.extension}"
+        except AssertionError as e:
+            raise IOError(e) # This error wont be interpreted as a code error
+        
 
 
 
-# SECTION: concrete classes imports
+# Concrete classes imports
+# this ensures that the concrete classes are created and registered
 
-from .json import DefaultJSON
-from .csv import DefaultCSV
+from .json import *
+from .csv import *
+from .excel import *
