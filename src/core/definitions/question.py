@@ -148,7 +148,7 @@ class SimulinhoQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMULINHO, **kwargs)
         self._questions : list[Question] = [
-            AlphaAnswer.NULL for _ in range(1, 51)
+            Question(number,AlphaAnswer.NULL,None,False) for number in range(1, 51)
         ]
 
 
