@@ -26,8 +26,16 @@ class BinaryAnswer(Enum):
     FALSE = 2
 
 class NumericAnswer:
-    NULL = -1
-    NOT_ANSWERD = 0
+
+    @classmethod
+    def NULL(cls):
+        """Factory for creating a NULL answer instance."""
+        return cls(-1)
+
+    @classmethod
+    def NOT_ANSWERD(cls):
+        """Factory for creating a NOT_ANSWERED answer instance."""
+        return cls(0)
 
     def __init__(self, value : int = -1):
         if value == -1: self.set_null()
@@ -156,7 +164,7 @@ class SimufscQuestions(TestReport):
     def __init__(self, **kwargs) -> None:
         super().__init__(TestType.SIMUFSC, **kwargs)
         self._questions : list[Question] = [
-            Question(number,NumericAnswer(),None,False) for number in range(1, 61)    
+            Question(number,NumericAnswer(),None,False) for number in range(1, 41)    
         ]
 
 

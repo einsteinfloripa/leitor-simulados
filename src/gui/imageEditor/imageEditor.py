@@ -165,11 +165,10 @@ class ImageEditorApp(tk.Frame):
             )
 
             if has_detection_cached and do_build:
-                try:
-                    Config.api.build_report(index)
-                except Exception as e:
-                    print(e)
-                    continue
+                # try:
+                Config.api.build_report(index)
+                # except Exception as e:  
+                #     continue
 
         EventBus.publish("<<update_question_panel>>")
 

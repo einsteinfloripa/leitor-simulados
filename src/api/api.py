@@ -51,7 +51,6 @@ class CoreApi:
         self.__current_test_type: Optional[TestType] = None
         
         # Internal only
-        self.__last_builder_type : TestType = TestType.NULL
         self.__fs_model_info : ModelInfo = None
         self.__ss_model_info : ModelInfo = None
 
