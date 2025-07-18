@@ -100,6 +100,7 @@ class Exporter(ABC):
     def extension(self):
         self.extension
 
+    # TODO: FIX DELETING THE FOLDER IF EXISTS!!!!!!!!!!!!!!!
     @classmethod    
     def folder_export(cls, func : callable):
         """
@@ -150,11 +151,11 @@ class Exporter(ABC):
             except Exception as e:
                 if e is IOError or e is FileExistsError:
                     Exporter._logger.error(e)
-                    Exporter.clear_folder(out_dir)
+                    # Exporter.clear_folder(out_dir)
                     return False
                 else:
                     Exporter._logger.exception(e)
-                    Exporter.clear_folder(out_dir)
+                    # Exporter.clear_folder(out_dir)
                     raise e
             return status
 
@@ -183,23 +184,27 @@ class Exporter(ABC):
     def save_images(
             destination : list[str],
             images : Generator[CoreImage, None, None],
-            blockss : list[TestBlocks]
+            blockss : list[TestBlocks],
+            full_save : bool = True
         ):
         for dest, img, blocks in zip(destination, images, blockss):
-            Exporter.save_image(dest, img, blocks)
+            Exporter.save_image(dest, img, blocks, full_save=full_save)
 
     @staticmethod
     def save_image(
             dest : str,
             image : CoreImage,
-            blocks : TestBlocks
+            blocks : TestBlocks,
+            full_save : bool = True
         ):
         if not os.path.exists(dest):
             os.makedirs(dest)
-        image.import_blocks(blocks)
+        # TODO: This is the the apis job
+        image.import_blocks(blocks) # Import the blocks from cache
         image.save(dest)
-        for crop in image.crops:
-            crop.save(dest)
+        if full_save:
+            for crop in image.crops:
+                crop.save(dest)
 
     @staticmethod
     def save_cv2_image(out_fullpath : str, image : np.ndarray):

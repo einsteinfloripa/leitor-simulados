@@ -32,29 +32,78 @@ class YOLOExporter(Exporter):
             self,
             out_dir : Path,
             data : DetectionsExportData,
-            imgs : list | Iterator | Generator = None
+            imgs : list | Iterator | Generator = None,
+            global_anchoring_ref : bool = False,
         ) -> bool:
 
         # If no data is provided, return False
         if len(data.names) == 0 or len(data.test_blocks) == 0:
             return False
+        
+        
+        if global_anchoring_ref:
+            status = self.__global_yolo_export(out_dir, data)
+        else:
+            status = self.__relative_yolo_export(out_dir, data)
+
+        if imgs:
+            fullsave = not global_anchoring_ref
+            names = data.names
+            blocks = data.test_blocks
+            #TODO: Change this, dest coud be a single folder 
+            dest = [out_dir for _ in names]
+            self.save_images(dest, imgs, blocks, full_save=fullsave)
+
+        return status
+
+
+    def __global_yolo_export(
+            self,
+            out_dir : Path,
+            data : DetectionsExportData,
+        ) -> bool:
+
+        for name, blocks in data.zip():
+            # Make the image folder
+            name = name.split('.')[0]
+
+            text = ''
+            
+            for block in blocks.questions_blocks + [blocks.cpf_block]:
+                # List all selected and unselected balls detections in a block
+                detections : list[Detection] = block.container.get_by_type(
+                    [
+                        Detection.Type.SELECTED_BALL,
+                        Detection.Type.UNSELECTED_BALL
+                    ],
+                    to_list=True
+                )
+                for detection in detections:
+                    text += detection.to_yolo(global_anchoring_ref = True) + '\n'
+        
+            # Write the detections to the file
+            with open(out_dir / f"{name}.txt", "w") as file:
+                file.write(text)
+
+        return True
+
+
+    def __relative_yolo_export(
+            self,
+            out_dir : Path,
+            data : DetectionsExportData,
+        ) -> bool:
 
         # Main for loop
         for name, blocks in data.zip():
-            
-            # Check if the blocks are None
-            if not blocks:
-                continue
 
             # Make the image folder
             name = name.split('.')[0]
-            output_folder = out_dir / name
-            output_folder.mkdir(parents=True)
             
             # Write the detections to the file
             # First stage detections
             text = ''
-            with open(output_folder / f"{name}.txt", "w") as file:
+            with open(out_dir / f"{name}.txt", "w") as file:
                 text += blocks.cpf_block.root_detection.to_yolo() + '\n'
                 for block in blocks.questions_blocks:
                     text += block.root_detection.to_yolo() + '\n'
@@ -63,7 +112,7 @@ class YOLOExporter(Exporter):
             # Second stage detections
             for block in blocks.questions_blocks + [blocks.cpf_block]:
                 text = ''
-                
+
                 # List all selected and unselected balls detections in a block
                 detections : list[Detection] = block.container.get_by_type(
                     [
@@ -77,18 +126,10 @@ class YOLOExporter(Exporter):
                 block_name = name + \
                     f"_{block.root_detection.class_type.name.lower()}" + \
                     f"_{block.order:02}"
-                with open(output_folder / f"{block_name}.txt", "w") as file:
+
+                with open(out_dir / f"{block_name}.txt", "w") as file:
                     for detection in detections:
                         text += detection.to_yolo() + '\n'
                     file.write(text)
 
-        if imgs:
-            names = data.names
-            blockss = data.test_blocks
-            dest = [out_dir / name.split('.')[0] for name in names]
-            self.save_images(dest, imgs, blockss)
-
-
         return True
-
-

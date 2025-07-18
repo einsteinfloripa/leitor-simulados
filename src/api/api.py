@@ -650,7 +650,12 @@ class CoreApi:
         
         exporter.write(formatted_data, fullpath)
 
-    def export_yolo(self, fullpath: str | Path, save_images: bool = False) -> bool:
+    def export_yolo(
+            self, 
+            fullpath: str | Path, 
+            save_images: bool = False,
+            global_anchoring_ref: bool = False
+            ) -> bool:
         """
         Exports detection results in YOLO format.
 
@@ -679,7 +684,10 @@ class CoreApi:
         CoreImage.from_paths(self.image_files, lazy=True) if save_images else None
         )
         exporter = YOLOExporter()
-        return exporter.export(fullpath, formatted_data, imgs=imgs)
+        return exporter.export(
+            fullpath, formatted_data, imgs=imgs,
+            global_anchoring_ref=global_anchoring_ref
+        )
     
 
 # TODO:

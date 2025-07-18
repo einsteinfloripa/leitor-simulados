@@ -74,11 +74,14 @@ class ExportYoloPopup(tk.Toplevel):
         
         tk.Button(self, text="Procurar", command=self.select_base_folder).grid(row=2, column=0, pady=5, padx=5)
         
+        self.config_frame = tk.Frame(self)
+        self.config_frame.grid(row=2, column=1, pady=5, padx=5)
         self.save_images_var = tk.BooleanVar(value=False)
-        tk.Checkbutton(self, text="Salvar imagens", variable=self.save_images_var).grid(row=2, column=1, pady=5, padx=5)
+        tk.Checkbutton(self.config_frame, text="Salvar imagens", variable=self.save_images_var).pack()
+        self.global_anchoring_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(self.config_frame, text="Referência global", variable=self.global_anchoring_var).pack()
         
         tk.Label(self, text="Nome da pasta:", font=semititle_font).grid(row=3, column=0, pady=5, padx=5)
-        
         self.folder_name_var = tk.StringVar(value="detections")
         tk.Entry(self, textvariable=self.folder_name_var).grid(row=3, column=1, pady=5, padx=5)
         
@@ -96,8 +99,9 @@ class ExportYoloPopup(tk.Toplevel):
             return
         folder_name = self.folder_name_var.get()
         save_images = self.save_images_var.get()
+        ref = self.global_anchoring_var.get()
         fullpath = Path(base_folder) / folder_name
-        success = Config.api.export_yolo(fullpath, save_images)
+        success = Config.api.export_yolo(fullpath, save_images, ref)
         
         title = "Success" if success else "Error"
         message = "Exported successfully!" if success else "Error exporting data"

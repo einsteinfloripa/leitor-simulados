@@ -39,6 +39,9 @@ class DetectionContainer:
 
     def empty(self) -> bool:
         return len(self.__detections) == 0
+    
+    def len(self) -> int:
+        return len(self.__detections)
 
     # Construction
     def __build_by_type(self) -> None:
