@@ -34,3 +34,6 @@ class TestBlocks:
     cpf_block: Block = field(default=None)
     questions_blocks: list[Block] = field(default_factory=list)
 
+    def __iter__(self):
+        return iter(self.questions_blocks + [self.cpf_block])
+

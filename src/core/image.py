@@ -109,9 +109,12 @@ class CoreImage():
         # Filter detections by score
         self.detections = [d for d in detections if d.score > score_threshold]
         # If the image is a crop, then add the ancor point to the detections
+        # as the point where the crop was made
         if self.anchored_at:
             for detection in self.detections:
                 detection.anchored_at = self.anchored_at
+                detection.parent_image = self
+                # TODO: Change this to a set function
                 detection.global_pixel_bounding_box = detection.to_global_pixels()
         else:
             for detection in self.detections:
@@ -138,7 +141,7 @@ class CoreImage():
             xmin, ymin, xmax, ymax = detection.to_pixels()
             cropped.append(
                 CoreImage(
-                    f"{self.name[:-4]}_{detection.class_type.name.lower()}_{cont:02}.jpg",
+                    f"{self.name.split('.')[0]}_{detection.class_type.name.lower()}_{cont:02}.jpg",
                     self.raw[ymin:ymax, xmin:xmax],
                     None,
                     cropped_from = self,
@@ -210,7 +213,7 @@ class CoreImage():
                 )
             
             # Get the first stage detections
-            self.detections = [block.root_detection for block in blocks.questions_blocks]
+            self.detections = [block.root_detection for block in blocks]
             
             # Make the cropped images
             self.make_cropped()

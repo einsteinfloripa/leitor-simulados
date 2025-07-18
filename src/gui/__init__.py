@@ -33,5 +33,6 @@ class Config:
     api: CoreApi = CoreApi()
 
     # Global dynamic variables
+    # TODO: This variable is duplicated in the API, consider removing it
     selected_test_type: TestType = TestType.PS_ALUNOS
     current_image_index: int = 0

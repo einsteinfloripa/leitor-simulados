@@ -9,6 +9,8 @@ from core.detection import Detection
 
 from .tools import get_lines, get_columns, get_selected_balls_index
 
+
+# TODO: It would be better if the full report was returned
 class Builder(ABC):
     """
     Abstract base class for builders, defining the required methods 
@@ -40,6 +42,9 @@ class Builder(ABC):
         if test_type in {TestType.PS_ALUNOS, TestType.SIMULINHO}:
             from core.builder.ps_alunos_builder import PSAlunosBuilder
             return PSAlunosBuilder
+        elif test_type == TestType.SIMUFSC:
+            from core.builder.simufsc_builder import SimufscBuilder
+            return SimufscBuilder
         else:
             raise NotImplementedError(f"Test type {test_type} not implemented")
 
