@@ -289,6 +289,8 @@ class CoreApi:
         # Load the image data from disk
         try:
             img = CoreImage.from_path(self.image_files[index])
+            if self.image:
+                self.image.free()  # Clear the previous image
             self.image = img
             self.rgb_image_raw = cv2.cvtColor(img.raw, cv2.COLOR_BGR2RGB)
             self.__current_set_index = index

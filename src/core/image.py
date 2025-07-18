@@ -240,3 +240,22 @@ class CoreImage():
     def save(self, path : Path) -> None:
         out_path = path / self.name     
         cv2.imwrite(str(out_path), self.raw)
+    
+    ## Memory management functions ##
+
+    def free(self) -> None:
+        """
+        Recursively frees the memory used by this image and all its 
+        cropped sub-images.
+
+        This method breaks both parent-to-child (`crops`) and 
+        child-to-parent (`cropped_from`) references to aid garbage collection.
+        """
+        for crop in self.crops:
+            crop.free()
+        
+        self.raw = None
+        self.detections = None
+
+        self.crops = []
+        self.cropped_from = None
