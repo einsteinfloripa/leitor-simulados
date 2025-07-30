@@ -2,10 +2,12 @@ import tkinter as tk
 import cv2
 from PIL import Image, ImageTk
 
+from core.definitions.test_defs import TestType
 from core.detection.base import Detection
-from api.data_structs import ImageCacheStruct
 from core.definitions.question import Question
 from core.definitions.geometry import IntBoundingBox, IntPoint
+
+from api.data_structs import ImageCacheStruct
 
 from .. import Config, title_font, semititle_font
 from ..event_system import EventBus, Calltime
@@ -226,28 +228,65 @@ class ImgCanvas(tk.Canvas):
         Annotations include question numbers and their answers, colored based on update status.
         """
         questions: list[Question] = Config.api.get_report().get_questions()
-        for question in questions:
-            if question.position is None:
-                continue
-            x, y = question.position
-            # Scale and offset the coordinates
-            scaled_x = self.offset_x + x * self.zoom_factor
-            scaled_y = self.offset_y + y * self.zoom_factor
+        
+        test_type = Config.selected_test_type
 
-            if question.answer.value == 0:
-                text = "BRANCO"
-            elif question.answer.value == -1:
-                text = "NAO DETECTADO"
-            else:
-                text = f"{question.number} : {question.answer.name}"
+        if test_type == TestType.SIMUFSC:
+            
+            index = Config.api.current_set_index
+            cache: ImageCacheStruct = Config.api.cache.from_index(index)
+            question_block_detection: Detection = \
+                cache.blocks.questions_blocks[0].root_detection
+            offset_y = question_block_detection.pixel_height
+            offset_x = question_block_detection.pixel_width // 2
 
-            color = "indian red" if not question.updated else "orange2"
-            self.create_text(
-                scaled_x, scaled_y,
-                text=text,
-                fill=color,
-                font=title_font
-            )
+            # Draw in the side
+            for question in questions:
+                if question.position is None:
+                    continue
+                
+                x = question.position.x + offset_x
+                y = question.position.y + offset_y
+                scaled_x = self.offset_x + x * self.zoom_factor
+                scaled_y = self.offset_y + y * self.zoom_factor
+
+                if question.answer.value == 0:
+                    text = "BRANCO"
+                elif question.answer.value == -1:
+                    text = "NAO DETECTADO"
+                else:
+                    text = f"{question.answer.name}"
+
+                color = "indian red" if not question.updated else "orange2"
+                self.create_text(
+                    scaled_x, scaled_y,
+                    text=text,
+                    fill=color,
+                    font=semititle_font
+                )
+        else:
+            for question in questions:
+                if question.position is None:
+                    continue
+                x, y = question.position
+                # Scale and offset the coordinates
+                scaled_x = self.offset_x + x * self.zoom_factor
+                scaled_y = self.offset_y + y * self.zoom_factor
+
+                if question.answer.value == 0:
+                    text = "BRANCO"
+                elif question.answer.value == -1:
+                    text = "NAO DETECTADO"
+                else:
+                    text = f"{question.number} : {question.answer.name}"
+
+                color = "indian red" if not question.updated else "orange2"
+                self.create_text(
+                    scaled_x, scaled_y,
+                    text=text,
+                    fill=color,
+                    font=title_font
+                )
 
     def __draw_cpf(self):
         """
