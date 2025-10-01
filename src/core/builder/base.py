@@ -143,8 +143,22 @@ class Builder(ABC):
 
         # Construct CPF by detecting selected balls in each column
         cpf = ""
-        for column in columns:
+        for col_i, column in enumerate(columns):
             selected_indices = get_selected_balls_index(column)
+
+            # ATENTION: This check is temporary and it accounts for the '0' digit
+            # being darker in some columns of the PS-Alunos test print.
+            if len(selected_indices) > 1 and col_i in {4, 7, 10}:
+                # See if there is a '0' digit (first index)
+                
+                # Get the digit of each ball and remove it if is '0'
+                for index in selected_indices:
+                    ball = column[index]
+                    zero_limit = max_values[0]
+                    if ball.bounding_box[3] <= zero_limit:
+                        selected_indices.remove(index)
+                        break
+
 
             # If there is more than one selected ball or none, mark as 'X'
             if len(selected_indices) != 1:
